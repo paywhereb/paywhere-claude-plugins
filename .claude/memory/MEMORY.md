@@ -1,0 +1,1 @@
+- [Plugins are Claude Code only](feedback-plugins-claude-code-only.md) — `/plugin marketplace` doesn't work in Claude Desktop; Desktop users can only add bare MCP servers via Custom Connectors UI.
