@@ -1,0 +1,17 @@
+{
+  "name": "paywhere-claude-plugins",
+  "owner": {
+    "name": "Paywhere",
+    "url": "https://paywhere.com"
+  },
+  "plugins": [
+    {
+      "name": "paywhere-smb",
+      "source": "./paywhere-smb",
+      "description": "Small-business workflows (payroll planning, month-end close, weekly briefs, growth campaigns) running against Paywhere + QuickBooks + your connected tools.",
+      "version": "0.1.0",
+      "category": "finance",
+      "tags": ["smb", "finance", "banking", "paywhere", "quickbooks"]
+    }
+  ]
+}
