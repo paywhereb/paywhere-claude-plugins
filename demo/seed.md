@@ -105,7 +105,10 @@ April 14.
 
 ## Running the demo
 
-After seeding both sandboxes, install the plugin in Claude Desktop:
+After seeding both sandboxes, install the plugin **in Claude Code**
+(the Claude Code plugin system is the only client that runs the
+packaged skills and slash commands — Claude Desktop and claude.ai don't
+support `/plugin marketplace`):
 
 ```bash
 /plugin marketplace add paywhereb/paywhere-claude-plugins

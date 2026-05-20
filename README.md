@@ -12,8 +12,11 @@ Today this marketplace ships one plugin:
 
 ## Installation
 
-From inside Claude Code or Claude Desktop, install with two slash
-commands:
+### Claude Code (full plugin)
+
+The Claude Code plugin system is the only client that supports skills +
+slash commands + bundled MCP servers in one install. From inside Claude
+Code:
 
 ```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
@@ -24,6 +27,16 @@ Then ask Claude to "set me up" — it'll walk you through connecting
 Paywhere (via OAuth at <https://mcp.paywhere.com>) and QuickBooks, and
 run a demo flow against your real data to prove value before going any
 further.
+
+### Claude Desktop / claude.ai (MCP server only)
+
+Claude Desktop and claude.ai do not support the Claude Code plugin
+system — the `/plugin` slash commands and packaged skills are
+unavailable in those clients. You can still connect the **Paywhere MCP
+server** alone via Settings → Connectors → Add custom connector, pasting
+`https://mcp.paywhere.com` as the URL. See
+[`paywhere-smb/README.md`](paywhere-smb/README.md#claude-desktop--claudeai-mcp-server-only-partial)
+for the full Desktop install path.
 
 ## Repository layout
 

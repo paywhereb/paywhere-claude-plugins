@@ -3,7 +3,7 @@
 Pre-built small-business workflows that run against your **Paywhere bank
 account** + QuickBooks + the rest of your stack. Install it once and you
 get 15 building-block skills, 15 ready-to-use workflows, and a router that
-understands plain English. Works in Claude Desktop and Claude Code.
+understands plain English.
 
 You don't need to memorize anything. Just tell Claude what you need — "I'm
 stressed about making payroll," "a customer is angry," "what should I
@@ -18,10 +18,10 @@ your say-so.
 
 ## Installation
 
-This plugin is published through the public
-[`paywhereb/paywhere-claude-plugins`](https://github.com/paywhereb/paywhere-claude-plugins)
-marketplace. Install with two slash commands from inside Claude Code or
-Claude Desktop:
+### Claude Code (full plugin — recommended)
+
+The skills, slash commands, and bundled MCP servers all run inside the
+Claude Code plugin system. From inside Claude Code:
 
 ```bash
 /plugin marketplace add paywhereb/paywhere-claude-plugins
@@ -31,6 +31,34 @@ Claude Desktop:
 Once installed, say **"set me up"** to run the `smb-onboard` skill — it'll
 help Claude understand your business, your pain points, and the tools you
 already use.
+
+### Claude Desktop / claude.ai (MCP server only, partial)
+
+> **Heads up:** Claude Desktop and claude.ai do **not** support the Claude
+> Code plugin system. They have no `/plugin` slash command, and the
+> packaged skills (`cash-flow-snapshot`, `month-end-prep`, etc.) and
+> command shortcuts (`/close-month`, `/plan-payroll`, …) are not
+> available in those clients. Full plugin install is Claude Code only.
+
+What you *can* do in Claude Desktop / claude.ai is connect the bare
+**Paywhere MCP server** as a custom connector. You'll lose the packaged
+workflow scaffolding, but Claude can still call every Paywhere tool
+(`list_accounts`, `get_account_balance`, `get_account_transactions`,
+ACH/wire/stablecoin flows, etc.) when you ask it to.
+
+**Claude Desktop:** Settings → Connectors → Add custom connector. Paste:
+
+```
+https://mcp.paywhere.com
+```
+
+(The server root URL — Claude Desktop appends the `/mcp` path itself.)
+
+**claude.ai:** Same flow under "Add custom connector"; paste the same root URL.
+
+For QuickBooks / HubSpot / Canva / etc., add each one separately as its
+own custom connector. The full URL list lives in
+[`paywhere-smb/.mcp.json`](.mcp.json).
 
 ## What you'll need to connect
 
