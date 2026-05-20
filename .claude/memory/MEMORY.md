@@ -1,1 +1,1 @@
-- [Plugins are Claude Code only](feedback-plugins-claude-code-only.md) — `/plugin marketplace` doesn't work in Claude Desktop; Desktop users can only add bare MCP servers via Custom Connectors UI.
+- [Plugin install paths per client](feedback-plugin-install-paths.md) — Claude Code = marketplace slash commands (verified). Cowork = side-load `.plugin` zip via `scripts/package.sh`. Desktop / claude.ai chat = no plugin support, raw MCP only.
