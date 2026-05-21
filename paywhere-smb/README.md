@@ -3,7 +3,7 @@
 Pre-built small-business workflows that run against your **Paywhere bank
 account** + QuickBooks + the rest of your stack. Install it once and you
 get 15 building-block skills, 15 ready-to-use workflows, and a router that
-understands plain English. Works in Claude Desktop and Claude Code.
+understands plain English.
 
 You don't need to memorize anything. Just tell Claude what you need — "I'm
 stressed about making payroll," "a customer is angry," "what should I
@@ -18,19 +18,74 @@ your say-so.
 
 ## Installation
 
-This plugin is published through the public
-[`paywhereb/paywhere-claude-plugins`](https://github.com/paywhereb/paywhere-claude-plugins)
-marketplace. Install with two slash commands from inside Claude Code or
-Claude Desktop:
+The Anthropic plugin system runs in two clients:
+[Claude Code](https://claude.com/product/claude-code) and
+[Cowork](https://claude.com/product/cowork). Claude Desktop and
+claude.ai chat do **not** support plugins — they only support raw MCP
+servers via the Custom Connectors UI.
 
-```bash
+### Claude Code — install from the marketplace
+
+From inside a Claude Code session:
+
+```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
 /plugin install paywhere-smb@paywhere-claude-plugins
 ```
 
-Once installed, say **"set me up"** to run the `smb-onboard` skill — it'll
-help Claude understand your business, your pain points, and the tools you
-already use.
+Once installed, ask Claude to "set me up" — it'll run the `smb-onboard`
+skill, walk you through connecting Paywhere (OAuth at
+<https://mcp.paywhere.com>) and QuickBooks, and run a demo recipe.
+
+### Cowork — side-load the `.plugin` archive
+
+Cowork supports side-loading a plugin from a packaged `.plugin` file
+(any plugin packaged as a `.plugin` file can be installed directly
+without going through the curated marketplace).
+
+1. Clone this repo and build the artifact:
+
+   ```bash
+   git clone https://github.com/paywhereb/paywhere-claude-plugins.git
+   cd paywhere-claude-plugins
+   ./scripts/package.sh
+   ```
+
+   This writes `dist/paywhere-smb-<version>.plugin`.
+
+2. In Cowork, use the "side-load a plugin file" flow and select the
+   `.plugin` file you just built.
+
+> The `.plugin` file is a zip archive of the plugin folder contents,
+> matching the same layout Claude Code accepts via
+> `claude --plugin-dir <archive.zip>`. The script also emits a
+> `.zip` copy with identical contents under `dist/`.
+
+### Claude Desktop / claude.ai (MCP server only — no skills, no slash commands)
+
+> Claude Desktop and claude.ai do **not** support the plugin system.
+> They have no `/plugin` slash command, and the packaged skills
+> (`cash-flow-snapshot`, `month-end-prep`, etc.) and command shortcuts
+> (`/close-month`, `/plan-payroll`, …) won't load.
+
+You *can* still connect the bare **Paywhere MCP server** as a custom
+connector. You'll lose the packaged workflow scaffolding, but Claude
+can call every Paywhere tool (`list_accounts`, `get_account_balance`,
+`get_account_transactions`, ACH/wire/stablecoin flows, etc.) when you
+ask it to.
+
+**claude.ai:** Settings → Connectors → Add custom connector. Paste the
+server root URL:
+
+```
+https://mcp.paywhere.com
+```
+
+(Root URL only — claude.ai appends the protocol path itself.)
+
+For QuickBooks / HubSpot / Canva / etc., add each one separately as
+its own custom connector. The full URL list lives in
+[`.mcp.json`](.mcp.json).
 
 ## What you'll need to connect
 

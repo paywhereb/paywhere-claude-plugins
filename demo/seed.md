@@ -105,12 +105,22 @@ April 14.
 
 ## Running the demo
 
-After seeding both sandboxes, install the plugin in Claude Desktop:
+After seeding both sandboxes, install the plugin in either
+**Claude Code** or **Cowork** — those are the two clients that run
+the packaged skills and slash commands. Claude Desktop and claude.ai
+chat do not.
 
-```bash
+**Claude Code:**
+
+```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
 /plugin install paywhere-smb@paywhere-claude-plugins
 ```
+
+**Cowork:** build the `.plugin` archive with `./scripts/package.sh`
+(in the repo root) and side-load it via Cowork's plugin file picker.
+See [`paywhere-smb/README.md`](../paywhere-smb/README.md#installation)
+for full instructions.
 
 Authorize Paywhere (mock-dev OAuth) and QuickBooks (sandbox company)
 through the connector flow. Then run the three demo flows in order:

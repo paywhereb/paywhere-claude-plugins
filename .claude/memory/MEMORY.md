@@ -1,0 +1,1 @@
+- [Plugin install paths per client](feedback-plugin-install-paths.md) — Claude Code = marketplace slash commands (verified). Cowork = side-load `.plugin` zip via `scripts/package.sh`. Desktop / claude.ai chat = no plugin support, raw MCP only.

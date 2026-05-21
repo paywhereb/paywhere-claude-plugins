@@ -12,18 +12,40 @@ Today this marketplace ships one plugin:
 
 ## Installation
 
-From inside Claude Code or Claude Desktop, install with two slash
-commands:
+The plugin system runs in **Claude Code** and **Cowork**. Claude
+Desktop and claude.ai chat don't support plugins; they only support
+raw MCP servers via Custom Connectors.
+
+### Claude Code
 
 ```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
 /plugin install paywhere-smb@paywhere-claude-plugins
 ```
 
-Then ask Claude to "set me up" — it'll walk you through connecting
-Paywhere (via OAuth at <https://mcp.paywhere.com>) and QuickBooks, and
-run a demo flow against your real data to prove value before going any
-further.
+### Cowork (side-load)
+
+Build a `.plugin` archive and side-load it through Cowork's plugin
+file picker:
+
+```bash
+git clone https://github.com/paywhereb/paywhere-claude-plugins.git
+cd paywhere-claude-plugins
+./scripts/package.sh
+# → dist/paywhere-smb-<version>.plugin
+```
+
+### Claude Desktop / claude.ai
+
+No plugin support. You can still add the bare Paywhere MCP server
+(`https://mcp.paywhere.com`) via Settings → Connectors → Add custom
+connector — see
+[`paywhere-smb/README.md`](paywhere-smb/README.md#claude-desktop--claudeai-mcp-server-only--no-skills-no-slash-commands)
+for the full Desktop / claude.ai path.
+
+After install (Claude Code or Cowork), ask Claude to "set me up" —
+the `smb-onboard` skill will walk you through Paywhere + QuickBooks
+OAuth and run a demo recipe.
 
 ## Repository layout
 
