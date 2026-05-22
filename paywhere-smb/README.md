@@ -48,7 +48,7 @@ without going through the curated marketplace).
    ```bash
    git clone https://github.com/paywhereb/paywhere-claude-plugins.git
    cd paywhere-claude-plugins
-   ./scripts/package.sh
+   ./scripts/package.sh paywhere-smb
    ```
 
    This writes `dist/paywhere-smb-<version>.plugin`.

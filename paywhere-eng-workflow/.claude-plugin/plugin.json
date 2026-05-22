@@ -1,0 +1,11 @@
+{
+  "name": "paywhere-eng-workflow",
+  "version": "0.1.0",
+  "description": "Shared Paywhere engineering workflow: Linear-ticket-driven branch/PR flow, dependency refresh, TeamCity reconcile, and production cuts. Parameterised per-repo via .claude/eng-workflow.json.",
+  "author": {
+    "name": "Paywhere",
+    "url": "https://paywhere.com"
+  },
+  "homepage": "https://github.com/paywhereb/paywhere-claude-plugins",
+  "keywords": ["paywhere", "engineering", "workflow", "linear", "github", "teamcity", "dev-tools"]
+}
