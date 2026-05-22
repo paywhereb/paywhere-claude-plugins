@@ -12,6 +12,14 @@
       "version": "0.1.0",
       "category": "finance",
       "tags": ["smb", "finance", "banking", "paywhere", "quickbooks"]
+    },
+    {
+      "name": "paywhere-eng-workflow",
+      "source": "./paywhere-eng-workflow",
+      "description": "Shared Paywhere engineering workflow: Linear-ticket-driven branch/PR flow, dependency refresh, TeamCity reconcile, production cuts. Parameterised per-repo via .claude/eng-workflow.json.",
+      "version": "0.1.0",
+      "category": "dev-tools",
+      "tags": ["paywhere", "engineering", "workflow", "linear", "github", "teamcity"]
     }
   ]
 }

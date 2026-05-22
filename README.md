@@ -3,12 +3,17 @@
 Public marketplace of Claude Code / Claude Desktop plugins maintained by
 [Paywhere](https://paywhere.com).
 
-Today this marketplace ships one plugin:
+Today this marketplace ships two plugins:
 
 - **[`paywhere-smb`](paywhere-smb/)** — Pre-built small-business workflows
   (cash forecasting, month-end close, weekly briefs, growth campaigns,
   invoice chase, tax prep) running against your Paywhere bank account,
   QuickBooks, HubSpot, and the rest of your stack.
+- **[`paywhere-eng-workflow`](paywhere-eng-workflow/)** — Shared
+  engineering workflow for Paywhere repos: `/start`, `/finish`,
+  `/create`, `/review`, plus `safe-deps`, `tc-reconcile`,
+  `pr-to-production`, and `pull-latest` / `squash`. Parameterised per
+  repo via `.claude/eng-workflow.json`.
 
 ## Installation
 
@@ -21,6 +26,7 @@ raw MCP servers via Custom Connectors.
 ```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
 /plugin install paywhere-smb@paywhere-claude-plugins
+/plugin install paywhere-eng-workflow@paywhere-claude-plugins
 ```
 
 ### Cowork (side-load)
@@ -31,7 +37,7 @@ file picker:
 ```bash
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
-./scripts/package.sh
+./scripts/package.sh paywhere-smb
 # → dist/paywhere-smb-<version>.plugin
 ```
 
@@ -56,12 +62,18 @@ paywhere-claude-plugins/
 ├── README.md                # you are here
 ├── demo/
 │   └── seed.md              # demo / sales-asset sandbox seeding notes
-└── paywhere-smb/            # the SMB plugin
+├── paywhere-smb/            # the SMB plugin
+│   ├── .claude-plugin/
+│   │   └── plugin.json
+│   ├── .mcp.json            # Paywhere + QuickBooks + HubSpot + Canva + Slack + Mail + Calendar + Drive
+│   ├── README.md
+│   └── skills/              # 15 building-block + 15 workflow skills
+└── paywhere-eng-workflow/   # the engineering workflow plugin
     ├── .claude-plugin/
     │   └── plugin.json
-    ├── .mcp.json            # Paywhere + QuickBooks + HubSpot + Canva + Slack + Mail + Calendar + Drive
     ├── README.md
-    └── skills/              # 15 building-block + 15 workflow skills
+    ├── commands/            # start, finish, create, review, eng-init
+    └── skills/              # pull-latest, squash, pr-to-production, tc-reconcile, safe-deps, conventions
 ```
 
 ## What's inside the SMB plugin
@@ -77,6 +89,29 @@ sends to customers without explicit owner approval.
 
 See [`paywhere-smb/README.md`](paywhere-smb/README.md) for the full
 catalog of commands and skills.
+
+## What's inside the eng-workflow plugin
+
+A shared Linear-ticket-driven dev workflow that any Paywhere repo can
+opt into:
+
+- `/start <ticket>` — branch off the default branch for an existing
+  Linear ticket; reopens the ticket if it's closed.
+- `/finish` — commit, push, open a PR, comment on Linear, transition to
+  In Review. Refuses to run if the current branch isn't associated with
+  a ticket.
+- `/create` — bootstrap a Linear ticket from the working diff.
+- `/review` — review the current implementation against the ticket and
+  the shared conventions.
+- `safe-deps`, `tc-reconcile`, `pr-to-production`, `pull-latest`,
+  `squash` — the operational skills.
+- `/eng-init` — write `.claude/eng-workflow.json` for a fresh repo.
+
+Each host repo configures the plugin via a per-repo
+`.claude/eng-workflow.json` (Linear team + labels, default branch,
+branch pattern, optional guards). See
+[`paywhere-eng-workflow/README.md`](paywhere-eng-workflow/README.md) for
+the config schema and field reference.
 
 ## Demo
 
