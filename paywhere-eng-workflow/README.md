@@ -143,6 +143,13 @@ ticket can spawn multiple branches and PRs — running `/start <ticket-id>`
 again on an open ticket creates a fresh branch off the default branch
 (prompting for a new slug if the previous branch still exists).
 
+Prefer this multi-PR pattern over splitting related fixes into new
+tickets. When a fix surfaces a follow-up issue in the same problem
+domain (e.g. fix A lands, the next run reveals bug B, that fix reveals
+bug C), keep all the PRs under the original ticket and widen its
+title/description as the scope grows. Don't proactively propose
+splitting — let the user ask if they want narrower tracking.
+
 ## Repo-local invariants
 
 Anything that's specific to one repo lives in that repo's
