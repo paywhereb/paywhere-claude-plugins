@@ -15,7 +15,7 @@ TeamCity, and release skills.
 | `finish` | `/paywhere-eng-workflow:finish` | Commit, push, open a PR, post a Linear comment, transition the ticket to In Review. Refuses if the current branch isn't associated with a ticket. |
 | `create` | `/paywhere-eng-workflow:create` | Bootstrap a Linear ticket from the working diff, then `/start` + commit. |
 | `review` | `/paywhere-eng-workflow:review` | Review the current implementation against the ticket and project conventions. |
-| `eng-init` | `/paywhere-eng-workflow:eng-init` | Bootstrap `.claude/eng-workflow.json` for a fresh repo. |
+| `eng-init` | `/paywhere-eng-workflow:eng-init` | Bootstrap `.claude/eng-workflow.json` for a fresh repo, and declare the plugin requirement in `.claude/settings.json` so teammates auto-install it. |
 
 ### Skills (invokable by short name)
 
