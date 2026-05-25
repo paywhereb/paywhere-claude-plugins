@@ -78,7 +78,7 @@ Look for `.claude/skills/local-checks/SKILL.md`. If it exists, set
 `extraGuardsSkill` to `.claude/skills/local-checks`. Otherwise omit
 the field — `safe-deps` will skip the hook when it's absent.
 
-### 6. Write the file
+### 6. Write `.claude/eng-workflow.json`
 
 Compose the JSON (preserving key ordering for readability — `linear`,
 `repo`, `guards`, `extraGuardsSkill`). Write it to
@@ -86,19 +86,67 @@ Compose the JSON (preserving key ordering for readability — `linear`,
 
 If `.claude/` does not exist yet, create it.
 
-### 7. Report next steps
+### 7. Declare the plugin requirement in `.claude/settings.json`
+
+So teammates who trust this repo get prompted to install the plugin
+automatically (and so any IDE / sandbox tooling that respects
+`extraKnownMarketplaces` picks it up), update `.claude/settings.json`
+to register the marketplace and enable the plugin.
+
+Procedure:
+
+1. Read `.claude/settings.json` if it exists. Parse the JSON. If the
+   file is missing, start from `{}`.
+2. Merge in (do **not** overwrite other top-level keys like
+   `permissions`):
+
+   ```json
+   {
+     "extraKnownMarketplaces": {
+       "paywhere-claude-plugins": {
+         "source": {
+           "source": "github",
+           "repo": "paywhereb/paywhere-claude-plugins"
+         }
+       }
+     },
+     "enabledPlugins": {
+       "paywhere-eng-workflow@paywhere-claude-plugins": true
+     }
+   }
+   ```
+
+   For nested keys: deep-merge. If the user already has an entry under
+   `extraKnownMarketplaces["paywhere-claude-plugins"]` with a different
+   `source`, **stop and surface the conflict** rather than silently
+   overwriting it — they may be pointing at a fork or a local checkout
+   on purpose.
+
+3. Write the merged JSON back, pretty-printed with two-space
+   indentation. Preserve any unrelated existing fields.
+
+If the user has both `.claude/settings.json` and
+`.claude/settings.local.json`, write only to the shared
+`settings.json` (so the requirement is committed and shared with the
+team — `settings.local.json` is user-only).
+
+### 8. Report next steps
 
 Tell the user:
 
 - That `.claude/eng-workflow.json` was written (with the path).
+- That `.claude/settings.json` was updated to register the marketplace
+  and enable `paywhere-eng-workflow` (mention if the file was created
+  vs. merged into an existing file).
 - That the plugin's `/start`, `/finish`, `/create`, `/review`, and the
   `safe-deps`, `tc-reconcile`, `pr-to-production` skills are now active
   in this repo.
 - That if they had a previous repo-local copy of any of those (in
   `.claude/commands/` or `.claude/skills/`), they should delete it so
   the plugin version takes over.
-- That they should commit `.claude/eng-workflow.json` so the rest of
-  the team picks up the same config.
+- That they should commit both `.claude/eng-workflow.json` and
+  `.claude/settings.json` so the rest of the team picks up the same
+  config and the plugin requirement.
 
 ## Notes
 

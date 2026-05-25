@@ -7,26 +7,45 @@ TeamCity, and release skills.
 
 ## What's in the box
 
-### Commands (user-triggered)
+### Commands (always invoked with the `paywhere-eng-workflow:` prefix)
 
-| Command | What it does |
-| --- | --- |
-| `/start <ticket-id> [slug]` | Open a feature branch off the default branch for an existing Linear ticket. Reopens the ticket if closed. |
-| `/finish` | Commit, push, open a PR, post a Linear comment, transition the ticket to In Review. Refuses if the current branch isn't associated with a ticket. |
-| `/create` | Bootstrap a Linear ticket from the working diff, then `/start` + commit. |
-| `/review` | Review the current implementation against the ticket and project conventions. |
-| `/eng-init` | Bootstrap `.claude/eng-workflow.json` for a fresh repo. |
+| Command | Invocation | What it does |
+| --- | --- | --- |
+| `start` | `/paywhere-eng-workflow:start <ticket-id> [slug]` | Open a feature branch off the default branch for an existing Linear ticket. Reopens the ticket if closed. |
+| `finish` | `/paywhere-eng-workflow:finish` | Commit, push, open a PR, post a Linear comment, transition the ticket to In Review. Refuses if the current branch isn't associated with a ticket. |
+| `create` | `/paywhere-eng-workflow:create` | Bootstrap a Linear ticket from the working diff, then `/start` + commit. |
+| `review` | `/paywhere-eng-workflow:review` | Review the current implementation against the ticket and project conventions. |
+| `eng-init` | `/paywhere-eng-workflow:eng-init` | Bootstrap `.claude/eng-workflow.json` for a fresh repo, and declare the plugin requirement in `.claude/settings.json` so teammates auto-install it. |
 
-### Skills (model-invocable)
+### Skills (invokable by short name)
 
-| Skill | What it does |
-| --- | --- |
-| `pull-latest` | Checkout the default branch and pull. |
-| `squash` | Squash the current branch into one commit. |
-| `pr-to-production` | Create a Linear release ticket + a `main → production` PR. |
-| `tc-reconcile` | Fold the auto-raised TeamCity reconcile PR's patches back into `.teamcity/settings.kts`. |
-| `safe-deps` | Curated dependency refresh: bundle safe bumps into a single PR, report risky ones. Can hand off to a per-repo `local-checks` skill for repo-specific invariants. |
-| `conventions` | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
+| Skill | Invocation | What it does |
+| --- | --- | --- |
+| `pull-latest` | `/pull-latest` | Checkout the default branch and pull. |
+| `squash` | `/squash` | Squash the current branch into one commit. |
+| `pr-to-production` | `/pr-to-production` | Create a Linear release ticket + a `main → production` PR. |
+| `tc-reconcile` | `/tc-reconcile` | Fold the auto-raised TeamCity reconcile PR's patches back into `.teamcity/settings.kts`. |
+| `safe-deps` | `/safe-deps` | Curated dependency refresh: bundle safe bumps into a single PR, report risky ones. Can hand off to a per-repo `local-checks` skill for repo-specific invariants. |
+| `conventions` | — | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
+
+### Why the prefix split
+
+It's a Claude Code convention, not a Paywhere choice:
+
+- **Commands** (files in `commands/`) are namespaced because `/start`,
+  `/finish`, and similar names would collide across plugins. Claude
+  Code requires the `<plugin-name>:` prefix on every invocation.
+- **Skills** (directories with `SKILL.md`) get a globally unique
+  invocation name from their frontmatter `name:` field. Claude Code
+  resolves the short form (`/pr-to-production`) directly when the name
+  is unambiguous. Skills with `disable-model-invocation: true` (e.g.
+  `pull-latest`, `squash`, `pr-to-production`) are still user-invokable
+  by short name; the flag only hides them from automatic model
+  discovery.
+
+The namespaced form `/paywhere-eng-workflow:<name>` always works for
+both commands and skills — use it explicitly if you ever hit a
+collision with another plugin that defines a same-named skill.
 
 ## Installation
 
@@ -142,6 +161,13 @@ has nowhere to file tickets without them.
 ticket can spawn multiple branches and PRs — running `/start <ticket-id>`
 again on an open ticket creates a fresh branch off the default branch
 (prompting for a new slug if the previous branch still exists).
+
+Prefer this multi-PR pattern over splitting related fixes into new
+tickets. When a fix surfaces a follow-up issue in the same problem
+domain (e.g. fix A lands, the next run reveals bug B, that fix reveals
+bug C), keep all the PRs under the original ticket and widen its
+title/description as the scope grows. Don't proactively propose
+splitting — let the user ask if they want narrower tracking.
 
 ## Repo-local invariants
 
