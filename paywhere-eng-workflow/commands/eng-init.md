@@ -34,25 +34,44 @@ user wants something else (see step 4).
 
 ### 3. Ask for Linear config
 
-Use AskUserQuestion. Offer these choices on the team:
+The on-disk schema for the file you're about to write is defined in
+the plugin README's "Schema" section — every key you emit must match
+those names exactly (`linear.team`, `linear.teamId`,
+`linear.defaultLabels`, etc.), since every consumer command and skill
+reads those names. Don't invent alternates (no `teamName`, no plain
+`labels`).
 
-- **Engineering (recommended)** — pre-fills team name `Engineering`
-  and team id `19c916e9-7be3-40f1-adc3-fbf03fe53b5d`.
+Use AskUserQuestion. Offer these choices on the team (the answers
+land as `linear.team` for the display name and `linear.teamId` for the
+UUID):
+
+- **Engineering (recommended)** — pre-fills `linear.team =
+  "Engineering"` and `linear.teamId =
+  "19c916e9-7be3-40f1-adc3-fbf03fe53b5d"`.
 - **Other** — prompt for the team name; the user runs
   `mcp__claude_ai_Linear__list_teams` ahead of time to find the id, or
   asks Claude to call it directly during this command.
 
-For labels, offer:
+For labels (the answers land under `linear.defaultLabels`, an object
+keyed by Linear label-group — `type`, `component`, `category` — each
+mapping `<label-name>` → `<uuid>`), offer:
 
-- **Admin App defaults** — pre-fills `Change` /
-  `c1eebf96-1092-4a84-a136-16d830d9b9e1`, `Admin App` /
-  `4309ea9d-6978-4d79-b7aa-1b4c92cd308e`, `Admin` /
-  `9cf65af6-fa6d-4ec0-a0ca-a4b48dbb82a4`.
+- **Admin App defaults** — pre-fills:
+
+  ```json
+  "defaultLabels": {
+    "type":      { "Change":    "c1eebf96-1092-4a84-a136-16d830d9b9e1" },
+    "component": { "Admin App": "4309ea9d-6978-4d79-b7aa-1b4c92cd308e" },
+    "category":  { "Admin":     "9cf65af6-fa6d-4ec0-a0ca-a4b48dbb82a4" }
+  }
+  ```
+
 - **Custom** — prompt for one label per axis (`type`, `component`,
   `category`). Use
   `mcp__claude_ai_Linear__list_issue_labels` against the chosen team to
-  resolve names → UUIDs. Persist as `{ "<axis>": { "<label-name>":
-  "<uuid>" } }` so the resulting JSON documents what each id is.
+  resolve names → UUIDs. If the team doesn't use a given axis, write
+  it as an empty object (`"component": {}`) — keep the key present so
+  consumer commands' `defaultLabels[<axis>]` iteration succeeds.
 
 Confirm `linear.activeStates` (default `["Todo", "In Progress"]`) and
 `linear.reviewState` (default `"In Review"`) — keep the defaults
@@ -80,9 +99,47 @@ the field — `safe-deps` will skip the hook when it's absent.
 
 ### 6. Write `.claude/eng-workflow.json`
 
-Compose the JSON (preserving key ordering for readability — `linear`,
-`repo`, `guards`, `extraGuardsSkill`). Write it to
-`.claude/eng-workflow.json`. Pretty-print with two-space indentation.
+Compose the JSON to **exactly match the canonical schema** in the
+plugin README's "Schema" section. Top-level key order: `linear`,
+`repo`, `guards`, then `extraGuardsSkill` if present. Pretty-print
+with two-space indentation.
+
+Template (drop optional keys when not applicable — `extraGuardsSkill`
+when no repo-local skill exists, `guards.tcReconcile.settingsPath`
+when `tcReconcile.enabled` is `false`, `guards.safeDeps.mirrorPins`
+when there are no pins yet):
+
+```json
+{
+  "linear": {
+    "team": "<display name>",
+    "teamId": "<uuid>",
+    "defaultLabels": {
+      "type":      { "<name>": "<uuid>" },
+      "component": { "<name>": "<uuid>" },
+      "category":  { "<name>": "<uuid>" }
+    },
+    "activeStates": ["Todo", "In Progress"],
+    "reviewState": "In Review"
+  },
+  "repo": {
+    "name": "<repo-name>",
+    "defaultBranch": "main",
+    "branchPattern": "{ticket-id-lc}/{slug}"
+  },
+  "guards": {
+    "tcReconcile":    { "enabled": <bool>, "settingsPath": "<path>" },
+    "safeDeps":       { "enabled": <bool> },
+    "prToProduction": { "enabled": <bool> }
+  },
+  "extraGuardsSkill": "<path>"
+}
+```
+
+Do not rename keys (no `teamName` instead of `team`, no plain `labels`
+instead of `defaultLabels`) — every consumer command and skill reads
+the exact names above and will silently fail to find the team/labels
+otherwise.
 
 If `.claude/` does not exist yet, create it.
 

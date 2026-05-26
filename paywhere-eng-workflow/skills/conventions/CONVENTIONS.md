@@ -29,6 +29,13 @@ Pay attention to the following keys: `linear.team`, `linear.teamId`,
 `guards.*.enabled`, `guards.tcReconcile.settingsPath`,
 `guards.safeDeps.mirrorPins`, `extraGuardsSkill`.
 
+These are the on-disk key names exactly as every command and skill
+expects them. The full annotated schema (with a complete JSON example
+and per-field reference) lives in the plugin README's "Schema"
+section — that section is the source of truth for the file's shape.
+When in doubt, copy the structure from there rather than improvising
+key names.
+
 ## Linear
 
 ### Resolving the team
