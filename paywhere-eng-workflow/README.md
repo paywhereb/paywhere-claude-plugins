@@ -26,6 +26,7 @@ TeamCity, and release skills.
 | `pr-to-production` | `/pr-to-production` | Create a Linear release ticket + a `main → production` PR. |
 | `tc-reconcile` | `/tc-reconcile` | Fold the auto-raised TeamCity reconcile PR's patches back into `.teamcity/settings.kts`. |
 | `safe-deps` | `/safe-deps` | Curated dependency refresh: bundle safe bumps into a single PR, report risky ones. Can hand off to a per-repo `local-checks` skill for repo-specific invariants. |
+| `prune-merged-branches` | `/prune-merged-branches` | Safely delete local branches whose PR has been merged. Reports first, deletes only after confirmation. Refuses any branch with commits past the merged PR head, so un-pushed work is never lost. Squash-merge-aware — uses GitHub's merged-PR signal, not git's ancestry check. |
 | `conventions` | — | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
 
 ### Why the prefix split

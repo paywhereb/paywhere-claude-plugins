@@ -12,8 +12,9 @@ Today this marketplace ships two plugins:
 - **[`paywhere-eng-workflow`](paywhere-eng-workflow/)** — Shared
   engineering workflow for Paywhere repos: `/start`, `/finish`,
   `/create`, `/review`, plus `safe-deps`, `tc-reconcile`,
-  `pr-to-production`, and `pull-latest` / `squash`. Parameterised per
-  repo via `.claude/eng-workflow.json`.
+  `pr-to-production`, `pull-latest`, `squash`, and
+  `prune-merged-branches`. Parameterised per repo via
+  `.claude/eng-workflow.json`.
 
 ## Installation
 

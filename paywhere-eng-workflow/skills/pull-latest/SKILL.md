@@ -17,3 +17,9 @@ Checkout the repo's default branch and pull the latest changes from origin.
 4. **Pull latest**: Run `git pull origin <branch>`.
 
 5. **Confirm**: Show the user the current branch and the latest commit (`git log --oneline -1`).
+
+6. **Surface local branch count**: Run `git for-each-ref --format='%(refname:short)' refs/heads | wc -l` to count local branches. Tell the user the count. If the count is greater than 1 (i.e., there are local branches besides the default), append a one-line nudge to invoke the cleanup skill:
+
+   > *"N local branches. Run `/paywhere-eng-workflow:prune-merged-branches` to safely review and delete the ones whose PR has merged."*
+
+   This is signposting only — do **not** run the prune skill or any branch-delete commands from `/pull-latest`. The point is to make the cleanup gesture discoverable; the actual deletion belongs in the dedicated skill where the user opts in explicitly and sees the full DELETE/KEEP/SKIP table before anything is removed.
