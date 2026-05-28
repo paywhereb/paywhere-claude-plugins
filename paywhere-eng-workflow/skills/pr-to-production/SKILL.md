@@ -1,6 +1,6 @@
 ---
 name: pr-to-production
-description: Create a Linear release ticket and a PR to merge the default branch into production, listing all included changes with a summary
+description: Raise a Linear release ticket and a PR to merge the default branch into production, listing all included changes with a summary
 disable-model-invocation: true
 ---
 

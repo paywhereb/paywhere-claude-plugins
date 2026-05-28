@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "paywhere-claude-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "paywhereb/paywhere-claude-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "paywhere-eng-workflow@paywhere-claude-plugins": true
+  }
+}
