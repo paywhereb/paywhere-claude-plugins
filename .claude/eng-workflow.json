@@ -1,0 +1,23 @@
+{
+  "linear": {
+    "team": "DevOps",
+    "teamId": "b509adbb-6003-47d3-b9b1-7a17082a8937",
+    "defaultLabels": {
+      "type":      { "Change": "c1eebf96-1092-4a84-a136-16d830d9b9e1" },
+      "component": {},
+      "category":  {}
+    },
+    "activeStates": ["Todo", "In Progress"],
+    "reviewState": "In Review"
+  },
+  "repo": {
+    "name": "paywhere-claude-plugins",
+    "defaultBranch": "main",
+    "branchPattern": "{ticket-id-lc}/{slug}"
+  },
+  "guards": {
+    "tcReconcile":    { "enabled": false },
+    "safeDeps":       { "enabled": false },
+    "prToProduction": { "enabled": false }
+  }
+}
