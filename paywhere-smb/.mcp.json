@@ -2,7 +2,7 @@
   "mcpServers": {
     "quickbooks": {
       "type": "http",
-      "url": "https://ai-inc.quickbooks.intuit.com/v1/mcp"
+      "url": "https://qbo-demo.paywhere.com/mcp"
     },
     "paywhere": {
       "type": "http",
