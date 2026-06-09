@@ -15,7 +15,7 @@ Variables in `{{double braces}}` are placeholders — replace with computed valu
 
 - {{Most important number-backed fact, e.g. "Cash balance $84k, down $6k WoW — two large vendor payments cleared."}}
 - {{Second most important, e.g. "$3,400 from Acme Corp is 47 days overdue — no response since Mar 12."}}
-- {{Third, e.g. "Pipeline $128k weighted; two deals gone cold this week."}}
+- {{Third, e.g. "$2,000 wire to a vendor is pending past its same-day window — confirm it cleared."}}
 
 ---
 
@@ -49,28 +49,6 @@ Variables in `{{double braces}}` are placeholders — replace with computed valu
 
 ---
 
-## 🔮 Pipeline — {{🟢|🟡|🔴}}
-
-- **Weighted pipeline**: ${{WEIGHTED}} ({{▲|▼|▬}} ${{DELTA}} WoW)
-- **Coverage vs. target**: {{RATIO}}x monthly target {{🟢|🟡|🔴}}
-- **Closed-won this week**: ${{CW}} across {{N}} deals
-- **New deals created**: {{N}} (${{TOTAL}})
-
-**Deals needing attention**
-- {{deal name}} — {{stage}} — {{why: gone cold / slipped / stalled}}
-- {{or "No deals flagged this week."}}
-
----
-
-## 📅 This Week
-
-- {{Meeting/deadline — external party, why it matters}}
-- {{Meeting/deadline}}
-- {{Meeting/deadline}}
-{{3–5 items max. Omit internal-only calendar noise.}}
-
----
-
 ## ✉️ Watch List
 
 - {{sender / source}} — {{one-line summary of what needs attention}}
@@ -93,7 +71,7 @@ overdue. Call Sarah Chen at 415-555-0192 today."}}
 
 **Sources pulled**: {{list of connectors that returned data}}
 
-**Sources unavailable**: {{list with reason, e.g. "Gmail — auth error" or "Zendesk — not connected"}}
+**Sources unavailable**: {{list with reason, e.g. "Gmail — auth error" or "QuickBooks — sync pending"}}
 
 **Thresholds used**: {{note any TODO thresholds that are still defaults}}
 ```

@@ -1,16 +1,15 @@
 ---
 name: business-pulse
 description: >
-  Produces a one-page cross-functional business snapshot for SMB owners —
-  cash position (Paywhere + QuickBooks), sales trend (QuickBooks),
-  pipeline movement (HubSpot), this week's commitments (Calendar), urgent
-  watch-list items (Gmail/Slack), and the single most important thing
-  needing attention today. Proactively tries every available connector and
-  gracefully scopes to whatever is connected — one connector gives a
-  partial pulse; the full stack gives the full picture. Trigger when the
-  user asks how the business is doing, wants a snapshot, a weekly summary,
-  a Monday brief, or says anything like "what am I missing" or "catch me
-  up on the business."
+  Produces a one-page financial snapshot for SMB owners — cash position
+  (Paywhere + QuickBooks), sales/revenue trend (QuickBooks), pending money
+  movement (Paywhere wires/ACH), urgent watch-list items (Gmail), and the
+  single most important thing needing attention today. Proactively tries
+  every available connector and gracefully scopes to whatever is connected —
+  one connector gives a partial pulse; the full stack gives the full
+  picture. Trigger when the user asks how the business is doing, wants a
+  snapshot, a weekly summary, a Monday brief, or says anything like "what am
+  I missing" or "catch me up on the business."
 ---
 
 # Business Pulse
@@ -29,12 +28,7 @@ Connectors to attempt simultaneously:
   pending wires/ACH (`get_wire_payment_status`,
   `get_ach_payment_status`). Set `intent` to "Producing the owner's weekly
   pulse — cash position and pending money movement."
-- **HubSpot** — pipeline by stage, deals moved/closed, deals gone cold, new leads
-- **Google Calendar** — key meetings, deadlines, events this week and next 7 days
 - **Gmail** — threads flagged urgent, customer complaints, time-sensitive requests
-- **Slack / Teams** — urgent internal signals, threads needing owner attention
-- **Intercom / Zendesk** — open tickets, escalations (if connected)
-- **Shopify** — fulfillment issues (if connected)
 
 If a connector errors or returns no data, record it internally and move on. Never block the pulse on a single bad integration.
 
@@ -47,7 +41,6 @@ If a connector errors or returns no data, record it internally and move on. Neve
 Read `reference/thresholds.md` for red/yellow/green cutoffs. Compute:
 
 - **AR aging** — open QuickBooks invoices grouped by days since due date (0–30, 31–60, 61+)
-- **Pipeline coverage** — HubSpot weighted pipeline ÷ monthly revenue target
 - **Revenue trend** — this month's QBO revenue vs. prior month; supplement with Paywhere 7-day inflow vs. prior 7-day inflow when available (real cash, not booked revenue)
 - **Cash position** — sum of available Paywhere balances across accounts plus QB cash account; show as a single number with a per-account breakdown in the appendix
 
@@ -58,7 +51,6 @@ Assign a 🟢/🟡/🔴 status to each section. If a source returned nothing, ma
 Scan for actionable items. Every risk entry must name a specific record and a next step — "some overdue invoices" is useless; "$3,400 from Acme Corp, 47 days overdue, no response since Mar 12" is actionable.
 
 - QuickBooks invoices past due > 30 days — name customer, amount, days overdue
-- HubSpot deals with no activity in 7+ days, or close date in past but still open
 - Gmail threads marked urgent or containing "escalation," "complaint," "cancel," "refund"
 - Pending wire/ACH > $500 still unsettled past the expected clearing window — pull pending payment ids from Paywhere and poll `get_wire_payment_status` / `get_ach_payment_status`. Flag with counterparty (from `description`), amount, and days outstanding past the expected window (wire same-day, ACH 1–3 business days).
 
@@ -66,7 +58,7 @@ Scan for actionable items. Every risk entry must name a specific record and a ne
 
 Use the exact template in `reference/output_template.md`. Include only sections where real data exists — omit headers for connectors that weren't available. Adapt depth to context: a casual "how are we doing" gets a fuller report; "quick snapshot before a call" gets a tighter one.
 
-Cross-connector synthesis is where this skill earns its keep. If a Slack message connects to a stalled HubSpot deal, surface that link in the #1 Priority section. Synthesis is what makes the pulse more useful than checking each tool separately.
+Cross-connector synthesis is where this skill earns its keep. If a Gmail thread about a late payment connects to an overdue QuickBooks invoice and a missing Paywhere credit, surface that link in the #1 Priority section. Synthesis is what makes the pulse more useful than checking each tool separately.
 
 Writing rules:
 - Numbers lead, words follow. Never write "revenue is healthy" — write "$43k this month, ▲ 8% MoM" and let the owner judge.
@@ -77,8 +69,7 @@ Writing rules:
 ## Step 5 — Export and share (once)
 
 After presenting the pulse, offer once:
-- "Want me to save this as a file?" (use Files connector if available)
-- "Should I post this to your Slack?" (only if Slack is connected and the user confirms — Slack write requires explicit approval)
+- "Want me to save this as a file?" (use Google Drive / OneDrive if available)
 
 If they say yes, do it. If they say no or don't respond, move on — don't ask again.
 
@@ -87,7 +78,7 @@ If they say yes, do it. If they say no or don't respond, move on — don't ask a
 The owner may ask for a narrower cut:
 
 - **"Just cash" / "financial check"** → only Cash & Finance + AR-related risks
-- **"Pipeline only" / "deals check"** → only Pipeline section + stalled-deal risks
+- **"Revenue only" / "sales check"** → only Revenue & Sales section + revenue-trend risks
 - **"Watch list" / "anything urgent"** → only Watch List + all risks, no metric sections
 - **"Quick snapshot before a call"** → TL;DR + #1 Priority only, no full sections
 
@@ -103,4 +94,4 @@ The owner may ask for a narrower cut:
 - `reference/data_sources.md` — exact connector tool → metric mapping with fallbacks
 - `reference/thresholds.md` — 🟢/🟡/🔴 cutoffs, tunable per owner
 - `reference/output_template.md` — exact markdown structure; do not deviate
-- `reference/gotchas.md` — known failure modes (QB states, Gmail auth, Slack write)
+- `reference/gotchas.md` — known failure modes (QB states, Gmail auth, asking permission)

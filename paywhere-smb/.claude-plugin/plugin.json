@@ -1,11 +1,11 @@
 {
   "name": "paywhere-smb",
-  "version": "0.1.0",
-  "description": "Pre-built small business workflows (payroll planning, month-end close, weekly briefs, growth campaigns) using your Paywhere account, QuickBooks, HubSpot, DocuSign, Gsuite, O365, Canva, and other connected tools. You approve every step that touches money or customers.",
+  "version": "0.2.0",
+  "description": "Pre-built small business finance workflows (cash-flow forecasting, month-end close, payroll planning, invoice chasing, commission payouts across ACH/Wire/Stablecoin) using your Paywhere account, QuickBooks, Gmail, Google Drive, and O365. You approve every step that touches money.",
   "author": {
     "name": "Paywhere",
     "url": "https://paywhere.com"
   },
   "homepage": "https://github.com/paywhereb/paywhere-claude-plugins",
-  "keywords": ["smb", "finance", "marketing", "hr", "operations", "all-in-one", "small business", "paywhere", "banking"]
+  "keywords": ["smb", "finance", "payments", "payroll", "commissions", "ach", "wire", "stablecoin", "month-end-close", "small business", "paywhere", "quickbooks", "banking"]
 }

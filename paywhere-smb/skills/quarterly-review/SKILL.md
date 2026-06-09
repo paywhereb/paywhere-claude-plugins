@@ -19,11 +19,11 @@ Using the `business-pulse` skill in deep mode:
 3. Pull Paywhere inflows for the same period (`get_account_transactions` across accounts, positive `amount` only) to validate QB revenue against cash actually received.
 4. Calculate: revenue growth %, margin change in points, top 3 revenue categories.
 
-## Step 2 — Customer health
+## Step 2 — Customer concentration
 
-1. Pull HubSpot deal data: new customers won, churned, average deal size, pipeline entering next quarter.
-2. Calculate customer acquisition cost (if data available) and revenue per customer.
-3. Flag any customers representing >20% of revenue (concentration risk).
+1. Pull QuickBooks revenue by customer for the quarter (invoices / sales receipts grouped by `CustomerRef`).
+2. Calculate revenue per customer and rank customers by contribution.
+3. Flag any customers representing >20% of revenue (concentration risk) and any large customer whose revenue dropped sharply vs. the prior quarter.
 
 ## Step 3 — Top opportunities
 
@@ -37,7 +37,7 @@ Identify 3 specific opportunities for next quarter based on the data:
 Identify 3 specific risks for next quarter:
 - Revenue risk (concentration, trend, seasonality)
 - Margin risk (rising cost, pricing pressure)
-- Operational risk (pipeline gap, vendor dependency)
+- Operational risk (demand gap, vendor dependency)
 
 ## Step 5 — QBR narrative
 
@@ -45,7 +45,7 @@ Write a 500–800 word narrative in plain business English with this structure:
 1. Quarter headline (one sentence)
 2. Revenue story (trend + why)
 3. Margin story (trend + why)
-4. Customer story (health + pipeline)
+4. Customer story (concentration + revenue mix)
 5. Three opportunities
 6. Three risks
 7. One-paragraph call to action for next quarter
@@ -58,7 +58,7 @@ Generate:
 
 ## Connector failures
 
-If QuickBooks is unreachable, stop — the QBR requires QB financial data as the foundation. If Paywhere is missing, skip cash cross-validation and note "Paywhere not connected — revenue validated from QB only." If HubSpot is missing, skip customer health (Step 2) and note "HubSpot not connected — customer health section skipped."
+If QuickBooks is unreachable, stop — the QBR requires QB financial data as the foundation (revenue, margin, and customer concentration all derive from it). If Paywhere is missing, skip cash cross-validation and note "Paywhere not connected — revenue validated from QB only."
 
 ## Approval gates
 

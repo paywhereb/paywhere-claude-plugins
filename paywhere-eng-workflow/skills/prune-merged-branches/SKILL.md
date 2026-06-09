@@ -54,14 +54,31 @@ This is purely a tracking-ref cleanup — local branches are untouched.
 
 ## Step 3 — Build the merged-PR map
 
+**Pin `gh` to the `origin` remote.** With bare `gh pr list`, `gh`
+resolves the repo from its own default, which is *not* guaranteed to be
+`origin`. In a fork — e.g. this org forks `intuit/quickbooks-online-mcp-server`,
+so the repo has `origin` (the paywhere fork) **and** `upstream` (intuit)
+— and with no `gh repo set-default`, `gh` silently queries `upstream`.
+The map then describes the wrong repository, every local branch falls
+into SKIP-noPR, and the skill quietly does nothing. Derive the slug
+from `origin`'s URL and pass it explicitly:
+
 ```bash
-gh pr list --state merged --limit 200 \
+ORIGIN_SLUG=$(git remote get-url origin \
+  | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
+
+gh pr list --repo "$ORIGIN_SLUG" --state merged --limit 200 \
   --json headRefName,headRefOid \
   --jq '.[] | [.headRefName, .headRefOid] | @tsv' \
   > /tmp/merged-prs.tsv
 ```
 
 Each line: `<branch-name>\t<head-SHA-at-merge>`.
+
+Sanity-check the map before trusting it: if `/tmp/merged-prs.tsv` is
+empty or none of its branch names resemble your local branches, you are
+probably pointed at the wrong repo — re-derive `ORIGIN_SLUG` and
+confirm it matches `git remote get-url origin`.
 
 200 is a sensible upper bound for normal repos; bump it (`--limit
 1000`) if the repo has a long tail of stale merged PRs that still
@@ -213,6 +230,16 @@ refuse anyway, but skipping before the loop produces a cleaner report.
 
 **`gh` returns nothing because the user isn't authenticated for this
 host.** `gh pr list` fails with a clear error. Surface it and stop.
+
+**A fork with an `upstream` remote (`gh` queries the wrong repo).**
+The most dangerous *quiet* failure: the map is built, has plenty of
+rows, and looks healthy — but the rows are `upstream`'s merged PRs, not
+`origin`'s. None match local branch names, so everything becomes
+SKIP-noPR and the skill reports "nothing to clean up" while real merged
+branches sit there. Step 3's `--repo "$ORIGIN_SLUG"` pin prevents this;
+the sanity-check (do the map's branch names resemble local ones?)
+catches it if the pin is ever dropped. This bit us on
+`paywhere-qbo-mcp`, which forks `intuit/quickbooks-online-mcp-server`.
 
 ## Why this design
 

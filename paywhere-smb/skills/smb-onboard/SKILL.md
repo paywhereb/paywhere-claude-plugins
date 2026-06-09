@@ -27,10 +27,10 @@ User: "get me started"
 
 ## Tone for connectors
 
-Whenever a connector comes up — recommending one, naming what to try next, or clarifying mid-flow — describe **what Claude will be able to do once it's connected**, not what the platform itself is or sells. Owners already know what HubSpot, QuickBooks, Gmail, and Calendar do; they don't need a product pitch from us.
+Whenever a connector comes up — recommending one, naming what to try next, or clarifying mid-flow — describe **what Claude will be able to do once it's connected**, not what the platform itself is or sells. Owners already know what QuickBooks, Paywhere, and Gmail do; they don't need a product pitch from us.
 
-- Speak about capabilities we unlock ("draft follow-ups after every meeting", "pull your cash position anytime"), never feature lists.
-- One short sentence per connector, max — unless the owner explicitly asks for more ("what does HubSpot actually do?"), in which case answer that directly.
+- Speak about capabilities we unlock ("reconcile your books against the bank in one pass", "pull your cash position anytime"), never feature lists.
+- One short sentence per connector, max — unless the owner explicitly asks for more ("what does Paywhere actually do?"), in which case answer that directly.
 - This rule applies to every step below.
 
 ## Workflow
@@ -42,7 +42,7 @@ Whenever a connector comes up — recommending one, naming what to try next, or 
    Name the two **functions** we want (e.g. "a place to track customers and deals" and "your inbox") — not the platform features. One short sentence each, max. Then ask whether the owner uses a supported tool for each.
 
    For each function, branch:
-   - **Owner uses a supported connector** (e.g. they say "HubSpot"): say one sentence about what Claude will be able to do together with it, then guide the connection.
+   - **Owner uses a supported connector** (e.g. they say "QuickBooks"): say one sentence about what Claude will be able to do together with it, then guide the connection.
    - **Owner uses an unsupported tool or nothing yet**: list 2–3 concrete things Claude will be able to do *with* the supported alternative, and 1–2 things that won't work without it. Then let the owner decide whether to switch or add it. Do not push.
 
    Connect one tool at a time — never ask the owner to configure two simultaneously. See [reference/gotchas.md](reference/gotchas.md) for the failure pattern this replaces.

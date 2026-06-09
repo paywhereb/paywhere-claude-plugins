@@ -45,20 +45,11 @@ Listen to the owner's request. Match it against this routing table — pick the 
 | "What are my margins?" / "should I raise prices?" / "cost per unit" | `/price-check` |
 | "Tax stuff" / "estimated taxes" / "1099s" / "accountant needs..." | `/tax-prep` |
 
-**Sales & marketing:**
+**Commissions:**
 | Owner says something like... | Route to |
 |---|---|
-| "Who should I call?" / "any hot leads?" / "pipeline" | `/call-list` |
-| "Run a campaign" / "sales are down" / "I need more customers" | `/run-campaign` |
-| "What's selling?" / "what should I promote?" | `/sales-brief` |
-
-**Customers & operations:**
-| Owner says something like... | Route to |
-|---|---|
-| "What are customers saying?" / "complaints" / "reviews" | `/customer-pulse-check` |
-| "A customer is upset" / "handle this complaint" / "angry email" | `/handle-complaint` |
-| "Clean up the CRM" / "HubSpot is a mess" / "stale deals" | `/crm-cleanup` |
-| "Review this contract" / "NDA" / "should I sign this?" | `/review-contract` |
+| "Pay commissions" / "pay my reps" / "run commissions for last week" / "who's owed commission?" | `/pay-commissions` |
+| "Set up commissions" / "seed the commission demo" / "reset commission data" | `/commission-setup` |
 
 **Business intelligence:**
 | Owner says something like... | Route to |
@@ -88,11 +79,10 @@ If the owner's request genuinely spans multiple commands, pick the most urgent o
 
 When the owner asks for a general overview, organize by what matters to them — not by a flat list. Use their business context if available.
 
-Group into four buckets and lead with the one most relevant to their stored headaches:
+Group into three buckets and lead with the one most relevant to their stored headaches:
 
 **Your money:** `/plan-payroll` · `/month-heads-up` · `/close-month` · `/price-check` · `/tax-prep`
-**Your customers:** `/call-list` · `/run-campaign` · `/sales-brief` · `/customer-pulse-check` · `/handle-complaint` · `/crm-cleanup`
-**Your contracts:** `/review-contract`
+**Your commissions:** `/pay-commissions` · `/commission-setup`
 **Your week:** `/monday-brief` · `/friday-brief` · `/quarterly-review`
 
 Keep it to 2-3 sentences per bucket. End with: "What's on your mind? I'll get you to the right place."
@@ -116,27 +106,22 @@ Before recommending a command, check which connectors are active. If the best-ma
 **Connector requirements by command:**
 | Command | Required | Optional |
 |---|---|---|
-| `/plan-payroll` | QuickBooks, Paywhere | Mail |
-| `/close-month` | QuickBooks, Paywhere | — |
+| `/plan-payroll` | QuickBooks, Paywhere | Gmail |
+| `/close-month` | QuickBooks, Paywhere | Google Drive |
 | `/month-heads-up` | QuickBooks | Paywhere |
 | `/price-check` | QuickBooks | — |
 | `/tax-prep` | QuickBooks | Paywhere |
-| `/call-list` | HubSpot | Mail, Google Calendar |
-| `/run-campaign` | HubSpot, Canva | QuickBooks |
-| `/sales-brief` | QuickBooks | HubSpot |
-| `/crm-cleanup` | HubSpot | — |
-| `/customer-pulse-check` | HubSpot or Intercom or Gmail | — |
-| `/review-contract` | — (works with file upload) | DocuSign |
-| `/monday-brief` | — (degrades gracefully) | QuickBooks, Paywhere, HubSpot, Calendar, Gmail |
-| `/friday-brief` | QuickBooks or Paywhere or HubSpot | — |
-| `/quarterly-review` | QuickBooks | Paywhere, HubSpot |
-| `/handle-complaint` | — (works with pasted text) | Gmail, HubSpot, Paywhere |
+| `/pay-commissions` | QuickBooks, Paywhere, Google Drive | — |
+| `/commission-setup` | QuickBooks, Paywhere, Google Drive | — |
+| `/monday-brief` | — (degrades gracefully) | QuickBooks, Paywhere, Gmail |
+| `/friday-brief` | QuickBooks or Paywhere | — |
+| `/quarterly-review` | QuickBooks | Paywhere |
 | `smb-onboard` | — | all |
 
 ### Step 7 — Handle tiebreakers
 
 If the owner's request matches two commands equally well:
-1. Pick the one that addresses the more urgent concern. Cash concerns beat marketing concerns. Customer complaints beat pipeline reviews.
+1. Pick the one that addresses the more urgent concern. A payroll/cash crunch beats a routine close; money already owed (overdue invoices, unpaid commissions) beats a retrospective brief.
 2. If urgency is equal, pick the one with the smaller scope — get a quick win, then suggest the bigger one.
 3. If still tied, ask one clarifying question: "I could go two ways with that — are you more concerned about [X] or [Y]?"
 4. Never present more than two options in a tiebreaker. Never dump the full menu.
@@ -144,8 +129,8 @@ If the owner's request matches two commands equally well:
 ### Step 8 — Handle no match
 
 If the owner's request doesn't match any command:
-1. Check if it matches an individual skill that doesn't have a command (unlikely — all 15 skills have commands).
-2. If it's genuinely outside scope, say so plainly: "That's outside what I can help with right now. Here's what I'm good at:" and give the four-bucket overview from Step 4.
+1. Check if it matches an individual skill that doesn't have a command (unlikely — every workflow is reachable by name).
+2. If it's genuinely outside scope, say so plainly: "That's outside what I can help with right now. Here's what I'm good at:" and give the three-bucket overview from Step 4. This plugin is finance-focused — cash, close, taxes, commissions, and weekly/quarterly briefs. Non-finance asks (marketing, CRM, hiring, support) are out of scope; say so rather than improvising.
 3. Never hallucinate a capability. Never say "I can do that" if no skill covers it.
 
 ## Guardrails
@@ -154,4 +139,4 @@ If the owner's request doesn't match any command:
 - **Never dump a full menu unprompted.** One recommendation, one sentence why, one confirmation ask.
 - **Never skip confirmation.** Always ask before triggering a command. The owner might want something slightly different than what you matched.
 - **Never silently route to a broken command.** If a required connector is missing, tell the owner before routing — not after.
-- **Adapt to context.** If the owner has run onboarding and their top headache is "cash flow," lead with money commands. If it's "getting more customers," lead with sales commands. The business context makes your routing smarter.
+- **Adapt to context.** If the owner has run onboarding and their top headache is "cash flow," lead with `/plan-payroll` and `/month-heads-up`. If it's "paying my reps," lead with `/pay-commissions`. The business context makes your routing smarter.
