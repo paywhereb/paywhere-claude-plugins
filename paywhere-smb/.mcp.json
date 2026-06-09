@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://qbo-demo.paywhere.com/mcp"
     },
-    "Paywhere": {
+    "paywhere": {
       "type": "http",
       "url": "https://demo.paywhere.com/mcp"
     },
@@ -16,7 +16,7 @@
       "type": "http",
       "url": "https://gmailmcp.googleapis.com/mcp/v1"
     },
-    "google drive": {
+    "google-drive": {
       "type": "http",
       "url": "https://drivemcp.googleapis.com/mcp/v1"
     }
