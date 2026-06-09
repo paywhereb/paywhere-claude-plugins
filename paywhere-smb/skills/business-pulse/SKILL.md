@@ -71,7 +71,11 @@ Writing rules:
 After presenting the pulse, offer once:
 - "Want me to save this as a file?" (use Google Drive / OneDrive if available)
 
-If they say yes, do it. If they say no or don't respond, move on — don't ask again.
+If they say yes, save it with a dated filename `business-pulse-YYYY-MM-DD.md` to the owner's drive root (or `~/Desktop/` if they prefer local; honor a `--save-to files|desktop|both` argument if given). If they say no or don't respond, move on — don't ask again.
+
+### Weekly cadence / "Monday brief"
+
+This pulse doubles as the weekly check-in. When the owner asks for a "Monday brief," "weekly check-in," or "start of week," run the full pulse, expand the **#1 Priority** into the **top 3 things that need them this week** (ranked), and save a dated file as above. The owner can schedule it via Cowork's task scheduler — run Monday at 7am ET, the brief lands in their drive automatically.
 
 ## Scope variants
 

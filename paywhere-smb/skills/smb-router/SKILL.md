@@ -54,7 +54,7 @@ Listen to the owner's request. Match it against this routing table — pick the 
 **Business intelligence:**
 | Owner says something like... | Route to |
 |---|---|
-| "Monday brief" / "what's on my plate?" / "start of week" | `/monday-brief` |
+| "Monday brief" / "what's on my plate?" / "start of week" / "weekly check-in" | `business-pulse` |
 | "End of week" / "how'd we do?" / "Friday recap" | `/friday-brief` |
 | "Quarterly review" / "board deck" / "QBR" | `/quarterly-review` |
 
@@ -71,7 +71,7 @@ Don't dump a menu. Recommend **one thing** based on what the owner just said. Ex
 > "Sounds like you want to see where your money is going before month-end. I'll run `/close-month` — it reconciles QuickBooks against your Paywhere bank lines and flags anything that looks off. Want me to start?"
 
 **Bad:**
-> "Here are 15 commands you can try: /monday-brief, /friday-brief, /plan-payroll..."
+> "Here are all the commands you can try: /friday-brief, /plan-payroll, /close-month, /pay-commissions..."
 
 If the owner's request genuinely spans multiple commands, pick the most urgent one first and mention the follow-up: "After that, we could also run `/price-check` to look at your margins — but let's start with cash."
 
@@ -83,7 +83,7 @@ Group into three buckets and lead with the one most relevant to their stored hea
 
 **Your money:** `/plan-payroll` · `/month-heads-up` · `/close-month` · `/price-check` · `/tax-prep`
 **Your commissions:** `/pay-commissions` · `/commission-setup`
-**Your week:** `/monday-brief` · `/friday-brief` · `/quarterly-review`
+**Your week:** `business-pulse` (Monday / weekly check-in) · `/friday-brief` · `/quarterly-review`
 
 Keep it to 2-3 sentences per bucket. End with: "What's on your mind? I'll get you to the right place."
 
@@ -113,7 +113,7 @@ Before recommending a command, check which connectors are active. If the best-ma
 | `/tax-prep` | QuickBooks | Paywhere |
 | `/pay-commissions` | QuickBooks, Paywhere, Google Drive | — |
 | `/commission-setup` | QuickBooks, Paywhere, Google Drive | — |
-| `/monday-brief` | — (degrades gracefully) | QuickBooks, Paywhere, Gmail |
+| `business-pulse` (incl. Monday / weekly check-in) | — (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | `/friday-brief` | QuickBooks or Paywhere | — |
 | `/quarterly-review` | QuickBooks | Paywhere |
 | `smb-onboard` | — | all |

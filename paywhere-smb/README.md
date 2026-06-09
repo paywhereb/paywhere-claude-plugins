@@ -151,9 +151,13 @@ checkpoints for your approval before taking action.
 
 | Command | What it does | Just say... | Skills used | Required | Optional |
 |---|---|---|---|---|---|
-| `/monday-brief` | Monday morning briefing: cash, revenue trend, watch-list, top 3 to-dos. | "Monday brief", "what's on my plate", "start of week" | business-pulse | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | `/friday-brief` | Friday end-of-week pulse: revenue vs last week, top sellers, wins and watches. | "end of week", "how'd we do", "Friday recap" | business-pulse | QuickBooks or Paywhere | -- |
 | `/quarterly-review` | Full QBR narrative: revenue, margin, customer concentration, opportunities, risks. | "quarterly review", "board deck", "QBR" | business-pulse | QuickBooks | Paywhere |
+
+> The **Monday / weekly check-in** brief is handled directly by the
+> `business-pulse` skill (below) — just say "Monday brief", "weekly
+> check-in", or "what's on my plate". It produces the one-page snapshot and
+> can save a dated file to your drive.
 
 ## Building-block skills
 
@@ -168,7 +172,7 @@ commands above compose them.
 | **tax-season-organizer** | Quarterly estimated tax calc or year-end 1099-NEC prep with accountant handoff packet. | "quarterly taxes", "estimated tax payment", "1099s", "1099-NEC", "year-end tax prep" | QuickBooks | Paywhere |
 | **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from a Google Sheet "commission register," matching Paywhere credits to QBO customer payments, deduping, and booking a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere, Google Drive | — |
 | **commission-setup** | Seeds/resets the commission demo: register Sheet, QBO payee vendors + history, verified Paywhere stablecoin recipient. Idempotent. | "set up commissions", "seed the commission demo" | QuickBooks, Paywhere, Google Drive | — |
-| **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. | "how's the business doing", "snapshot", "weekly summary", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
+| **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
 
 ## Demo
@@ -193,9 +197,9 @@ in the marketplace root for setup notes.
   preview to surface the 1% fee), and books a marker Bill + Bill Payment.
   A second run reports everything "already paid" — dedupe proof from both
   the QBO DocNumber and the register's PaidLog.
-- **`/monday-brief`** — cross-connector synthesis: QBO revenue trend,
-  Paywhere balances + 7-day inflow, and a $2,000+ wire pending past its
-  same-day clearing window.
+- **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector
+  synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and a
+  $2,000+ wire pending past its same-day clearing window.
 
 ## Customizing
 

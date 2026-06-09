@@ -88,7 +88,7 @@ recipient. It is idempotent (search-before-create), so re-running is safe.
 ### 4. Optional: Gmail account
 
 A throwaway Gmail account for invoice-reminder and payroll mail drafts
-(`/plan-payroll`, `invoice-chase`) and the `/monday-brief` watch-list.
+(`/plan-payroll`, `invoice-chase`) and the `business-pulse` watch-list.
 Not required for the core demo flows; nice-to-have polish.
 
 ---
@@ -110,7 +110,7 @@ described above for **April 2026**:
 | Apr 18  | Bill      | Vendor wire · $5,000                      | Wire debit · $5,000 · "WIRE TO Larkspur Studios"             | ✓ matched    |
 | Apr 18  | Bill      | Bank fees · $0.00 (miscategorized)        | Fee debit · $1.20 · "Wire fee"                               | ⚠ $1.20 DELTA |
 | Apr 22  | Deposit   | Crestwood Inc · $6,000 · INV-3850         | ACH credit · $6,000 · "ACH Crestwood Inc / INV-3850"         | ✓ matched    |
-| Apr 25  | Pending   | (booked as receivable, not yet cleared)   | Wire pending · $2,400 · "WIRE FROM Greenfield Ventures"      | IN_TRANSIT past expected window — surfaces in `/monday-brief` Risks |
+| Apr 25  | Pending   | (booked as receivable, not yet cleared)   | Wire pending · $2,400 · "WIRE FROM Greenfield Ventures"      | IN_TRANSIT past expected window — surfaces in `business-pulse` Risks |
 | Apr 28  | Bill      | Software subs · $480                      | ACH debit · $480 · "ACH Notion Labs"                         | ✓ matched    |
 
 The seeded receivables and the April 15 payroll line together produce a
@@ -146,8 +146,9 @@ through the connector flow. Then run the demo flows in order:
 2. `/close-month` — closing April 2026. Should produce a close packet
    whose Reconciliation sheet flags exactly two discrepancies: the
    $43.17 interest credit (MISSING_IN_QB) and the $1.20 wire-fee delta.
-3. `/monday-brief` — should surface the $2,400 wire from Greenfield
-   Ventures as still pending past its same-day clearing window.
+3. `business-pulse` ("Monday brief" / "weekly check-in") — should surface
+   the $2,400 wire from Greenfield Ventures as still pending past its
+   same-day clearing window.
 4. `/commission-setup` then `/pay-commissions "last week"` — seeds the
    register + QBO vendors/history + verified stablecoin recipient, then
    matches payments, shows the commission table, gates on approval,
