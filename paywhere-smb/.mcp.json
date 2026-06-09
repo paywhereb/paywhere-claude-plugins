@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "quickbooks": {
+    "smb-quickbooks": {
       "type": "http",
       "url": "https://qbo-demo.paywhere.com/mcp"
     },
-    "paywhere": {
+    "smb-paywhere": {
       "type": "http",
       "url": "https://demo.paywhere.com/mcp"
     },
