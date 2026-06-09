@@ -7,7 +7,7 @@ Ask one at a time. Wait for the full answer before moving on. One follow-up is f
 1. **Industry and business type.** "What kind of business do you run? Give me the one-liner."
 2. **Team size.** "How many people work with you, including yourself?"
 3. **Top three headaches.** "What are your three biggest headaches right now — the things that eat your time or keep you up at night?"
-4. **Tools already in use.** "Which tools do you already use day-to-day? Things like QuickBooks, Gmail, Slack, Paywhere…"
+4. **Tools already in use.** "Which tools do you already use day-to-day? Things like QuickBooks, Paywhere, Gmail, Google Drive…"
 5. **Preferred cadence.** "How would you like me to check in — daily, weekly, or only when you ask?"
 
 If the owner is short on time, compress to questions 1, 3, and 4 — those three feed the most downstream skills.
@@ -21,10 +21,11 @@ Map the owner's stated headache to the best two connectors to link first.
 | Primary headache | First connector | Second connector | Prove-value recipe |
 |---|---|---|---|
 | Cash flow / invoicing | Paywhere | QuickBooks | `cash-flow-snapshot` |
-| Customer follow-up | HubSpot | Gmail | `crm-maintenance` (read-only demo) |
-| Hiring / job posts | Gmail | Google Calendar | `job-post-builder` |
-| Staying organized | Desktop (folder setup) | Gmail | Desktop folder structure demo |
-| Scheduling overload | Google Calendar | Gmail | `business-pulse` |
+| Making payroll | Paywhere | QuickBooks | `plan-payroll` |
+| Month-end close / reconciliation | QuickBooks | Paywhere | `close-month` |
+| Paying reps / commissions | Paywhere | QuickBooks | `pay-commissions` (needs Google Drive too) |
+| Taxes | QuickBooks | Paywhere | `tax-prep` |
+| Chasing unpaid invoices | QuickBooks | Gmail | `invoice-chase` |
 | General / unsure | Paywhere | QuickBooks | `cash-flow-snapshot` |
 
 If the owner names a connector not in this table, add it as the second connector and use `business-pulse` as the recipe.
@@ -32,13 +33,10 @@ If the owner names a connector not in this table, add it as the second connector
 **Connector capability blurbs (one short sentence each, used when introducing a connector to the owner):**
 
 - **Paywhere** — Pull your cash position across accounts, see settled ACH/wire/stablecoin movement in real time, and make payments without leaving chat.
-- **QuickBooks** — Read your books: AR, AP, P&L, and the transaction register that month-end close reconciles against Paywhere.
-- **HubSpot** — Score leads, draft follow-ups, and keep the CRM current after every interaction.
-- **Gmail** — Draft replies, queue invoice reminders, and scan threads for anything urgent.
-- **Google Calendar** — Pull this week's commitments and prep for upcoming meetings.
-- **Slack** — Surface urgent internal signals and post weekly briefs.
-- **Canva** — Generate on-brand social and email assets from a campaign brief.
-- **DocuSign** — Pull pending envelopes into contract review.
+- **QuickBooks** — Read your books: AR, AP, P&L, customer payments, and the transaction register that month-end close reconciles against Paywhere.
+- **Gmail** — Draft invoice reminders and scan threads for anything urgent.
+- **Google Drive** — Host the commission register and save close packets and QBR exports.
+- **Microsoft 365** — Alternative home for close-packet and QBR exports.
 
 ---
 
@@ -47,10 +45,9 @@ If the owner names a connector not in this table, add it as the second connector
 Run the prove-value recipe immediately after the **first** connector is live — do not wait for the second. If connectors are already active at session start, run the matched recipe for the owner's primary headache before beginning the interview. Priority order:
 
 1. Paywhere or QuickBooks → `cash-flow-snapshot`
-2. HubSpot → `crm-maintenance` (log-a-note demo, read-only)
+2. QuickBooks + Paywhere → `business-pulse` (one-page financial snapshot)
 3. Gmail → search for unread invoice-related emails, surface top 3
-4. Google Calendar → `business-pulse`
-5. Desktop only → walk Desktop folder setup, create recommended structure
+4. Google Drive only → confirm the commission register can be created (`commission-setup` later)
 
 **QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first.
 

@@ -11,8 +11,6 @@ Parse arguments:
 
 ## Step 1 — Current margin baseline
 
-Using the `margin-analyzer` skill workflow:
-
 1. Pull QuickBooks revenue by product/service for the last 90 days.
 2. Pull COGS or direct costs per product from QuickBooks (if categorized).
 3. If Paywhere is connected, sum inflow lines tagged to those product invoices in the same window — a sanity check that QB's booked revenue matches cash actually received.

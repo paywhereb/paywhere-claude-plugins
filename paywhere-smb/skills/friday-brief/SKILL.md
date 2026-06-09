@@ -14,9 +14,8 @@ Parse arguments:
 Using the `business-pulse` skill workflow:
 
 1. Pull QuickBooks revenue and Paywhere inflows (`get_account_transactions`, positive `amount`) for the lookback period.
-2. Pull any HubSpot deal closes for the same window.
-3. Calculate week-over-week revenue delta.
-4. Surface top 3 revenue sources (product / customer / channel) ranked by contribution, using QuickBooks product/service line items.
+2. Calculate week-over-week revenue delta.
+3. Surface top 3 revenue sources (product / customer / channel) ranked by contribution, using QuickBooks product/service line items.
 
 ## Step 2 — Sales breakdown
 
@@ -45,7 +44,7 @@ Revenue this week: ${amount} ({+/-}X% vs last week)
 
 ## Connector failures
 
-Run with whatever is connected — this command degrades gracefully. If QuickBooks is missing, skip booked revenue and note "QuickBooks not connected — revenue data from Paywhere inflows only." If Paywhere is missing, skip cash inflows and note it. If HubSpot is missing, skip deal closes and note it. If none of those three are connected, stop and tell the owner: "No revenue sources connected. Connect QuickBooks, Paywhere, or HubSpot to run the Friday brief."
+Run with whatever is connected — this command degrades gracefully. If QuickBooks is missing, skip booked revenue and note "QuickBooks not connected — revenue data from Paywhere inflows only." If Paywhere is missing, skip cash inflows and note it. If neither is connected, stop and tell the owner: "No revenue sources connected. Connect QuickBooks or Paywhere to run the Friday brief."
 
 ## Approval gates
 
@@ -54,4 +53,4 @@ Run with whatever is connected — this command degrades gracefully. If QuickBoo
 
 ## Output
 
-End with the formatted brief and ask the owner: "Want me to post this to Slack, email it to yourself, or save it?"
+End with the formatted brief and ask the owner: "Want me to email this to yourself or save it to your drive?"

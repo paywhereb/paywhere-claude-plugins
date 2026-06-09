@@ -65,24 +65,24 @@ Show the block, wait for approval, then write.
 
 ## Gotcha: Pitching the platform instead of the capability
 
-**Why it matters:** Owners already know what HubSpot, QuickBooks, Gmail, and Calendar do. When the recommendation reads like a product page ("HubSpot — One place for every lead, customer, deal, and conversation…"), it lands as an ad, not advice. The owner tunes out exactly when we need their attention.
+**Why it matters:** Owners already know what QuickBooks, Paywhere, and Gmail do. When the recommendation reads like a product page ("QuickBooks — the all-in-one accounting platform for small business…"), it lands as an ad, not advice. The owner tunes out exactly when we need their attention.
 
 ### ✗ Bad
 
-> "1. HubSpot (CRM) — One place for every lead, customer, deal, and conversation. Once it's in, I can prioritize who to call today, draft follow-ups, log notes from your inbox, and spot deals going stale.
+> "1. QuickBooks — the all-in-one accounting platform that tracks income and expenses, manages invoices and bills, runs payroll, and produces every financial report your accountant needs.
 >
-> 2. Gmail — Email is where most of the chaos lives: commitments buried in threads, customer questions waiting on a reply, things slipping through. Connecting your inbox lets me surface what actually needs an answer…"
+> 2. Paywhere — a modern business bank with multiple accounts, real-time balances, and ACH, wire, and stablecoin payments built in…"
 
-Reads like marketing for HubSpot and Gmail. The owner is being sold to.
+Reads like marketing for QuickBooks and Paywhere. The owner is being sold to.
 
 ### ✓ Good
 
-> "For customer follow-up, the two pieces I'd want are a CRM and your inbox.
+> "For month-end close, the two pieces I'd want are your books and your bank.
 >
-> Are you on HubSpot today, or something else?"
+> Are you on QuickBooks today, or something else?"
 >
-> *(Owner: "Pipedrive.")*
+> *(Owner: "Xero.")*
 >
-> "Got it — we don't have a Pipedrive connector yet. If you stayed on Pipedrive, you'd still get cash-flow and calendar work, but I wouldn't be able to score leads or draft follow-ups from inside Claude. If you'd be open to trying HubSpot's free tier, here's what'd unlock: top-5 call list every morning, drafted follow-ups after every meeting, stale-deal alerts. Up to you — want to try it, or skip CRM for now?"
+> "Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get cash-flow and payment work from your bank, but I couldn't reconcile your books against the bank or run month-end close from inside Claude. If you'd be open to QuickBooks, here's what'd unlock: a one-pass reconciliation, a P&L narrative, and an exported close packet. Up to you — want to try it, or skip the books for now?"
 
-States the function, checks what the owner uses, gives a clear gain/loss in plain English, leaves the decision with the owner. If the owner asks "what does HubSpot actually do?" — that's an explicit invitation; answer it directly.
+States the function, checks what the owner uses, gives a clear gain/loss in plain English, leaves the decision with the owner. If the owner asks "what does QuickBooks actually do?" — that's an explicit invitation; answer it directly.

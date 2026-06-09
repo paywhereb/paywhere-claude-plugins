@@ -94,35 +94,35 @@ Look right?
 
 - **Owner:** Dev, freelance design studio (2 people)
 - **Session type:** First session
-- **Primary headache:** Customer follow-up
-- **Current CRM:** Pipedrive (no Cowork connector)
+- **Primary headache:** Month-end close / reconciliation
+- **Current books:** Xero (no Cowork connector)
 
 ## Transcript
 
-**Claude:** What are your biggest day-to-day headaches — money stuff, keeping up with customers, scheduling, or something else?
+**Claude:** What are your biggest day-to-day headaches — making payroll, closing the books, paying people, taxes, or something else?
 
-**Dev:** Customer follow-up. Leads slip through.
+**Dev:** Closing the books. Reconciling the bank against my accounting at month-end takes a whole weekend.
 
-**Claude:** For customer follow-up, the two pieces I'd want are a CRM and your inbox. Are you on HubSpot today, or something else?
+**Claude:** For month-end close, the two pieces I'd want are your books and your bank. Are you on QuickBooks today, or something else?
 
-**Dev:** Pipedrive.
+**Dev:** Xero.
 
-**Claude:** Got it — we don't have a Pipedrive connector yet. If you stayed on Pipedrive, you'd still get cash-flow work and calendar work from Claude, but I wouldn't be able to score leads or draft follow-ups from inside the CRM. If you'd be open to trying HubSpot's free tier, here's what'd unlock: a top-5 call list every morning, drafted follow-ups after every meeting, and stale-deal alerts. Up to you — want to try it, or skip the CRM for now?
+**Claude:** Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get cash-flow and payment work straight from your bank, but I couldn't reconcile your books against the bank or run month-end close from inside Claude. If you'd be open to QuickBooks, here's what'd unlock: a one-pass reconciliation against your Paywhere bank lines, a P&L narrative, and an exported close packet. Up to you — want to try it, or skip the books for now?
 
-**Dev:** Skip for now. I'll stick with Pipedrive.
+**Dev:** Skip for now. I'll stick with Xero.
 
-**Claude:** No problem. Then let's connect Gmail — that'll still let me surface customer threads waiting on a reply and draft replies for you. Sound good?
+**Claude:** No problem. Then let's connect Paywhere — that'll still let me show your cash position across accounts and flag any payments pending past their clearing window. Sound good?
 
 **Dev:** Yeah.
 
-*[Dev connects Gmail — ~2 minutes]*
+*[Dev connects Paywhere — ~2 minutes]*
 
-**Claude:** Gmail is live. Let me pull the three oldest unread customer threads…
+**Claude:** Paywhere is live. Let me pull your balances and last 30 days of activity…
 
 ## Pass criteria
 
-- [ ] Named the function ("a CRM and your inbox"), not the platform
+- [ ] Named the function ("your books and your bank"), not the platform
 - [ ] Asked what the owner uses before pitching anything
 - [ ] On unsupported tool, listed gain/loss concretely without pushing
 - [ ] Accepted the owner's decision and pivoted to the next supported tool
-- [ ] No paragraph-long descriptions of HubSpot, Gmail, or Pipedrive
+- [ ] No paragraph-long descriptions of QuickBooks, Paywhere, or Xero

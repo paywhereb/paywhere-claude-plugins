@@ -13,29 +13,31 @@ the demo environment and what data to seed.
 
 ## Sandboxes you'll need
 
-### 1. QuickBooks Online sandbox company
+### 1. QuickBooks (hosted Paywhere fork)
 
-1. Create a free Intuit Developer account at <https://developer.intuit.com>.
-2. From the dashboard, provision a **sandbox company**. Every developer
-   account gets two pre-seeded sandbox companies free of charge.
-3. Note the QBO OAuth credentials and the sandbox company id; you'll need
-   them when authorizing the QuickBooks MCP in the demo session.
-4. The official QBO MCP endpoint is:
+The plugin points QuickBooks at the **hosted Paywhere QBO fork**, not the
+official Intuit MCP:
 
-   ```
-   https://ai-inc.quickbooks.intuit.com/v1/mcp
-   ```
+```
+https://qbo-demo.paywhere.com/mcp
+```
 
-   (Already wired into `paywhere-smb/.mcp.json` — no changes needed.)
+(Already wired into `paywhere-smb/.mcp.json` — no changes needed.) The
+fork wraps a QBO sandbox company and adds the tools the commission flow
+relies on (`search_payments`, `search_bills` with DocNumber/PrivateNote
+`LIKE`, `create_bill`/`create_bill_payment`, `create_vendor`). It arrives
+pre-seeded with sample customers, vendors, and a simulated month of
+transactions — use that as the baseline.
 
-The sandbox arrives pre-seeded with sample customers, vendors, and a
-simulated month of transactions. Use that as the baseline.
+### 2. Paywhere hosted demo environment
 
-### 2. Paywhere mock-dev environment
+The plugin points Paywhere at the **hosted demo MCP**:
 
-A dedicated Paywhere mock-dev instance pointing at
-`http://mock-dev-api.paywhere.com/paywhere-api/v1` (per the `CLAUDE.md`
-in the API repo).
+```
+https://demo.paywhere.com/mcp
+```
+
+(Already wired into `paywhere-smb/.mcp.json`.)
 
 Seed it with **one calendar month of transactions** designed to mirror
 the QBO sandbox company's deposits and expenses:
@@ -63,17 +65,31 @@ something to flag:
 These are the two seeded discrepancies that the demo script highlights
 when running `/close-month`.
 
-### 3. Optional: HubSpot demo portal
+### 3. Google Drive (commission register)
 
-A free HubSpot developer portal seeded with ~20 contacts and ~10 deals
-in mixed pipeline stages. This unlocks `/monday-brief`, `/run-campaign`,
-and `/customer-pulse-check`.
+`/pay-commissions` reads a **commission register** Google Sheet as its
+source of truth, and `/commission-setup` creates it. Connect a Google
+Drive account so the Sheet can be created and read. No manual seeding
+needed — run `/commission-setup`, which builds the
+`Paywhere Commission Register` Sheet (tabs `Customers` / `ACH` / `Wire` /
+`Stablecoin` / `PaidLog`), creates the matching QBO payee vendors and
+historical payments, and registers + verifies the Paywhere stablecoin
+recipient. It is idempotent (search-before-create), so re-running is safe.
 
-### 4. Optional: Gmail / Slack workspaces
+> **Commission incoming-credit dependency (ENG-332).** `/pay-commissions`
+> matches Paywhere bank *credits* to QBO customer payments. Seeding mock
+> incoming credits in the hosted Paywhere demo env requires the ENG-332
+> seeding MCP, which does not exist yet. Until it ships, `/commission-setup`
+> seeds the QBO Payments to mirror whatever credits already exist in the
+> demo bank account; if the window has no credits, the match step lists the
+> QBO payments as unmatched. The confirmation gate, dedupe, and stablecoin
+> preview all still demo regardless.
 
-A throwaway Gmail account and Slack workspace for `/monday-brief`
-delivery and the watch-list section. Not required for the core demo
-flows; nice-to-have polish.
+### 4. Optional: Gmail account
+
+A throwaway Gmail account for invoice-reminder and payroll mail drafts
+(`/plan-payroll`, `invoice-chase`) and the `/monday-brief` watch-list.
+Not required for the core demo flows; nice-to-have polish.
 
 ---
 
@@ -122,8 +138,8 @@ chat do not.
 See [`paywhere-smb/README.md`](../paywhere-smb/README.md#installation)
 for full instructions.
 
-Authorize Paywhere (mock-dev OAuth) and QuickBooks (sandbox company)
-through the connector flow. Then run the three demo flows in order:
+Authorize Paywhere (hosted demo OAuth) and QuickBooks (hosted fork)
+through the connector flow. Then run the demo flows in order:
 
 1. `/plan-payroll` — should flag the April 15 payroll crunch and stage
    reminders for the open invoices (Acme, BlueSky, Crestwood).
@@ -132,17 +148,24 @@ through the connector flow. Then run the three demo flows in order:
    $43.17 interest credit (MISSING_IN_QB) and the $1.20 wire-fee delta.
 3. `/monday-brief` — should surface the $2,400 wire from Greenfield
    Ventures as still pending past its same-day clearing window.
+4. `/commission-setup` then `/pay-commissions "last week"` — seeds the
+   register + QBO vendors/history + verified stablecoin recipient, then
+   matches payments, shows the commission table, gates on approval,
+   disburses across ACH / Wire / Stablecoin (stablecoin in preview to
+   surface the 1% fee), and books a marker Bill + Bill Payment. A second
+   `/pay-commissions` run reports everything "already paid" (dedupe proof
+   from both the QBO DocNumber and the register's PaidLog).
 
-These are the three flows recorded for the demo screencast in the
-plugin's `README.md`.
+These are the flows recorded for the demo screencast in the plugin's
+`README.md`.
 
 ---
 
 ## Credentials boundaries
 
-- The QBO sandbox is a real QBO company. It holds no real customer data,
-  but treat its credentials like any other sandbox: don't commit them.
-- The Paywhere mock-dev environment lives behind the same authentication
+- The QBO fork wraps a real QBO sandbox company. It holds no real customer
+  data, but treat its credentials like any other sandbox: don't commit them.
+- The Paywhere hosted demo environment lives behind the same authentication
   boundary as the production Paywhere API but processes no real money
   movement. Never point the demo plugin at production Paywhere.
-- HubSpot, Gmail, and Slack should be throwaway sandbox accounts.
+- Gmail and Google Drive should be throwaway sandbox accounts.

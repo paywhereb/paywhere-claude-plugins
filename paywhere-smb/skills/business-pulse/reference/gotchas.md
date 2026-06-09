@@ -65,7 +65,7 @@ The pulse still delivers value. The owner is informed, not alarmed.
 
 ```
 Owner: "catch me up on the business"
-Claude: "Should I check QuickBooks for your cash balance? And is it okay to look at your HubSpot pipeline?"
+Claude: "Should I check QuickBooks for your cash balance? And is it okay to look at your Paywhere accounts?"
 ```
 
 Three more round trips before anything useful is delivered.
@@ -77,27 +77,3 @@ Owner: "catch me up on the business"
 Claude: [immediately dispatches all parallel tool calls]
         → presents pulse in one response
 ```
-
----
-
-## Gotcha: Slack write requires explicit confirmation
-
-**Why it matters:** Slack write is not tested in the standard validation path and posts to channels other people can see. Auto-posting without confirmation could embarrass the owner or spam a team.
-
-### ✗ Bad
-
-```
-Claude: [at end of pulse]
-        "I've posted this to #general."
-```
-
-Owner never asked for a Slack post; now the whole team has the financial data.
-
-### ✓ Good
-
-```
-Claude: [at end of pulse]
-        "Want me to post this to Slack? If so, which channel?"
-```
-
-Slack write only happens with a specific "yes + channel name" from the owner. Never assume.

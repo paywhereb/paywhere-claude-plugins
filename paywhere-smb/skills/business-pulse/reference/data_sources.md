@@ -33,23 +33,6 @@ still produces a useful number from Paywhere alone.
 call errors, mark Cash as "n/a — Paywhere unavailable" and fall back to
 the QB cash account if available. Do not retry.
 
-## Pipeline (HubSpot)
-
-| Metric | Tool | Notes |
-|---|---|---|
-| Pipeline by stage | `get_crm_objects` type=deals | Group by deal stage; sum amount |
-| Deals closed this week | `search_crm_objects` | Filter closedate in window, stage = closed-won |
-| Deals gone cold | `search_crm_objects` | Filter hs_last_activity_date > 7 days ago, open stage |
-| New leads this week | `search_crm_objects` | Filter createdate in window |
-| Stalled/slipped deals | `search_crm_objects` | Open deals where closedate < today |
-
-## Commitments (Google Calendar)
-
-| Metric | Tool | Notes |
-|---|---|---|
-| This week's key items | `list_events` | Filter to current week; surface meetings with customers, deadlines, important holds |
-| Next 7 days | `list_events` | Forward-looking view; highlight anything with external parties |
-
 ## Watch List (Gmail)
 
 | Metric | Tool | Notes |
@@ -60,22 +43,6 @@ the QB cash account if available. Do not retry.
 
 **Gmail fallback**: if the Gmail call errors (auth flaky — this is a known issue), skip Watch List silently and add "Gmail unavailable" to the appendix. Do not surface the error in the pulse body.
 
-## Internal Signals (Slack / Teams)
-
-| Metric | Tool | Notes |
-|---|---|---|
-| Urgent threads | Slack search (if connected) | Threads with @mentions or urgency signals in owner-relevant channels |
-| Action items | Slack search | Messages directed at the owner or tagged for follow-up |
-
-## Customer Support (Intercom / Zendesk)
-
-| Metric | Tool | Notes |
-|---|---|---|
-| Open tickets | Intercom `search_conversations` / Zendesk | Count open; flag any > 48h unresolved |
-| Escalations | Intercom `search_conversations` | Filter to priority or tagged escalation |
-
-Include only if connector is available; omit section entirely if not.
-
 ## Risks scan
 
 Run these alongside the metric pulls — don't wait for metrics to finish first.
@@ -83,11 +50,9 @@ Run these alongside the metric pulls — don't wait for metrics to finish first.
 | Risk | Source | Trigger condition |
 |---|---|---|
 | Overdue AR | QuickBooks invoices | due_date > 30 days past, unpaid |
-| Stalled deals | HubSpot | Open deal, no activity 7+ days |
-| Slipped deals | HubSpot | Open deal, closedate in past |
 | Urgent Gmail threads | Gmail | `is:important` or escalation keywords |
 | Pending money movement | Paywhere | Wire pending past same-day window or ACH pending past 3 business days, > $500 |
 
 ## Parallelization
 
-All of the above should fire in a single tool-call batch. A complete pulse is typically 8–15 parallel calls. If one errors, the rest proceed normally and the failed source appears in "Sources unavailable" at the bottom of the pulse.
+All of the above should fire in a single tool-call batch. A complete pulse is typically 6–10 parallel calls across Paywhere, QuickBooks, and Gmail. If one errors, the rest proceed normally and the failed source appears in "Sources unavailable" at the bottom of the pulse.

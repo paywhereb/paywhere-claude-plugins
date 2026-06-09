@@ -40,21 +40,9 @@ Any threshold marked `# TODO: confirm with owner` should produce a note at the t
 
 ---
 
-## Pipeline
-
-**Pipeline coverage** (weighted pipeline ÷ monthly revenue target)  # TODO: confirm target with owner
-- 🟢 ≥ 2x monthly target
-- 🟡 1–2x
-- 🔴 < 1x
-
-**Stale deal**: no activity in 7+ days → flag  # TODO: owner may prefer 14 days
-**Slipped deal**: open deal with close date in past → always flag
-
----
-
 ## Watch List
 
-No numeric thresholds — any escalation or complaint in Gmail/Slack gets surfaced. Severity is contextual; surface and let the owner decide.
+No numeric thresholds — any escalation or complaint in Gmail gets surfaced. Severity is contextual; surface and let the owner decide.
 
 ---
 

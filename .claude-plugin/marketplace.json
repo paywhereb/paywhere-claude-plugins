@@ -8,10 +8,10 @@
     {
       "name": "paywhere-smb",
       "source": "./paywhere-smb",
-      "description": "Small-business workflows (payroll planning, month-end close, weekly briefs, growth campaigns) running against Paywhere + QuickBooks + your connected tools.",
-      "version": "0.1.0",
+      "description": "Small-business finance workflows (cash-flow forecasting, month-end close, payroll planning, invoice chasing, commission payouts across ACH/Wire/Stablecoin) running against Paywhere + QuickBooks.",
+      "version": "0.2.0",
       "category": "finance",
-      "tags": ["smb", "finance", "banking", "paywhere", "quickbooks"]
+      "tags": ["smb", "finance", "payments", "commissions", "banking", "paywhere", "quickbooks"]
     },
     {
       "name": "paywhere-eng-workflow",
