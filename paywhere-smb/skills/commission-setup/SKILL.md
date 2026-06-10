@@ -55,9 +55,22 @@ Stands up everything `pay-commissions` needs so its first run is a clean demo an
 
 | Payee | WalletAddress | Chain | Currency |
 |---|---|---|---|
-| CryptoConsult DAO | 0x000000000000000000000000000000000000dEaD | BASE | USD |
+| CryptoConsult DAO | 0xc838058cc6c71db99c9ac001e6f003e65ffbcca4 | POLY | USD |
 
-> The ABAs/routing numbers and wallet above are **test values** for the demo sandbox. Replace with real details before paying anyone real.
+**Real Polygon (POLY) test addresses** — draw from these when creating example
+stablecoin recipients (real wallets on the test chain, safe for demos). Seed
+the first by default; if you stand up more than one stablecoin payee, pick the
+next unused one rather than reusing an address:
+
+- `0xc838058cc6c71db99c9ac001e6f003e65ffbcca4`
+- `0xf9b6e65ea4e02122295253cdeaa51082e46b7613`
+- `0xaacb9205d4087ae89af823d008bbc392689dffe4`
+- `0x495ebc4aa079b959a0e9a301ad9331b98ac18219`
+- `0x18500a1c9a8864587cb751ed286e3cd23a279ef3`
+
+> The bank ABAs/routing numbers above are placeholder test values — replace
+> with real details before paying anyone real. The Polygon addresses are real
+> wallets on the test chain, intended for demo stablecoin recipients.
 
 **`PaidLog`** — header row only (append-only thereafter):
 `Date | Customer | QBOPaymentId | GrossAmount | Rate | Commission | Payee | Rail | PaywherePaymentId | QBOBillId`
@@ -74,7 +87,7 @@ Then **pre-create one marker Bill + Bill Payment** for one of those payments (`D
 
 ### 4. Paywhere side — verify the stablecoin recipient
 
-`get_stablecoin_recipient` for the `Stablecoin` tab's wallet; if not present/verified, `create_stablecoin_recipient` with that `wallet` (`address`, `chain`, `currency: "USD"`) and a `walletOwner`. Confirm it reaches **verified** before finishing — `pay-commissions` refuses to pay an unverified recipient.
+`get_stablecoin_recipient` for the `Stablecoin` tab's wallet (a real Polygon test address from the list above); if not present/verified, `create_stablecoin_recipient` with that `wallet` (`address`, `chain: "POLY"`, `currency: "USD"`) and a `walletOwner`. Confirm it reaches **verified** before finishing — `pay-commissions` refuses to pay an unverified recipient.
 
 > **Dependency — incoming bank credits (ENG-332).** `pay-commissions` matches Paywhere bank *credits* to QBO payments. Seeding mock incoming credits in the Paywhere demo env requires the **ENG-332** seeding MCP, which does not exist yet. Until it ships, this skill cannot fabricate Paywhere credits. Work around it by seeding the QBO Payments (Step 3) to **mirror whatever credits already exist** in the demo bank account (`list_accounts` → `get_account_transactions`), so amount+date matching still finds pairs. If the demo account has no credits in the window, note the gap explicitly: the matching step will list QBO payments as "unmatched" until ENG-332 lands.
 
