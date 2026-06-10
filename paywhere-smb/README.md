@@ -175,31 +175,32 @@ commands above compose them.
 | **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
 
-## Demo
+## Trying it out
 
-The flows below run end-to-end against a seeded QuickBooks sandbox company
-(hosted Paywhere fork at `qbo-demo.paywhere.com`) paired with the hosted
-Paywhere demo MCP at `demo.paywhere.com`. See [`demo/seed.md`](../demo/seed.md)
-in the marketplace root for setup notes.
+The skills read **live data** from your connected accounts and never assume
+specific records — point them at your real books or at a sandbox. To explore
+end-to-end before going live, [`demo/seed.md`](../demo/seed.md) walks through
+standing up an example scenario (a QuickBooks sandbox via the hosted fork at
+`qbo-demo.paywhere.com` paired with the hosted Paywhere demo MCP at
+`demo.paywhere.com`). What each flow surfaces depends entirely on the data
+present — the figures vary, the behavior is the same:
 
-- **`/close-month`** — reconciles a month of Paywhere bank lines against
-  the QBO register, flags two seeded discrepancies (one missing-in-QB
-  interest credit, one $1.20 wire fee delta), produces a P&L narrative,
-  and exports the close packet.
+- **`/close-month`** — reconciles the month's Paywhere bank lines against the
+  QBO register, flags any gaps (e.g. bank-side credits not in QB, or fee
+  deltas), writes a P&L narrative, and exports the close packet.
 - **`/plan-payroll`** — pulls QBO AR/AP and Paywhere balances, runs the
-  30/60/90 forecast, surfaces an April-15 payroll crunch, and stages a
+  30/60/90 forecast, flags any upcoming payroll or cash crunch, and stages a
   ranked invoice-chase batch as Gmail drafts.
-- **`/commission-setup` → `/pay-commissions "last week"`** — seeds the
-  commission register Sheet in Google Drive, the QBO payee vendors +
-  history, and a verified Paywhere stablecoin recipient; then matches
-  Paywhere credits to QBO payments, shows the commission table, gates on
-  your approval, disburses across ACH / Wire / Stablecoin (stablecoin in
-  preview to surface the 1% fee), and books a marker Bill + Bill Payment.
-  A second run reports everything "already paid" — dedupe proof from both
-  the QBO DocNumber and the register's PaidLog.
+- **`/commission-setup` → `/pay-commissions "last week"`** — (setup seeds an
+  example register + QBO history + verified stablecoin recipient) then matches
+  Paywhere credits to QBO payments, shows the commission table, gates on your
+  approval, disburses across ACH / Wire / Stablecoin (stablecoin in preview to
+  surface the 1% fee), and books a marker Bill + Bill Payment. A second run
+  reports everything "already paid" — dedupe from both the QBO DocNumber and
+  the register's PaidLog.
 - **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector
-  synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and a
-  $2,000+ wire pending past its same-day clearing window.
+  synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and any
+  payment pending past its expected clearing window.
 
 ## Customizing
 
