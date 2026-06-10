@@ -39,7 +39,9 @@ Listen to the owner's request. Match it against this routing table — pick the 
 **Money & cash flow:**
 | Owner says something like... | Route to |
 |---|---|
-| "Can I make payroll?" / "cash is tight" / "who owes me money?" | `/plan-payroll` |
+| "Can I make payroll?" / "am I good for payroll?" / "will payroll clear Friday?" / "cash is tight" / "who owes me money?" | `/plan-payroll` |
+| "Pay my bills" / "what's overdue?" / "AP aging" / "catch up on payables" | `/pay-bills` |
+| "Bill clients for hours" / "invoice the hours" / "pay my contractors" / "pay the workers" | `/pay-and-bill` |
 | "What does next month look like?" / "cash forecast" / "runway" | `/month-heads-up` |
 | "Close the books" / "month-end" / "reconcile" | `/close-month` |
 | "What are my margins?" / "should I raise prices?" / "cost per unit" | `/price-check` |
@@ -49,7 +51,20 @@ Listen to the owner's request. Match it against this routing table — pick the 
 | Owner says something like... | Route to |
 |---|---|
 | "Pay commissions" / "pay my reps" / "run commissions for last week" / "who's owed commission?" | `/pay-commissions` |
-| "Set up commissions" / "seed the commission demo" / "reset commission data" | `/commission-setup` |
+
+**Demo setup (sales/sandbox only):**
+| Owner says something like... | Route to |
+|---|---|
+| "Set up the demo" / "reset the demo" / "rebuild the sandbox" | `/demo-setup-base` |
+| "Set up the commission demo" / "reset commission data" | `/demo-setup-commissions` |
+| "Set up the bill-pay demo" / "seed overdue bills" | `/demo-setup-bill-pay` |
+| "Set up the pay-and-bill demo" / "seed worker hours" | `/demo-setup-pay-and-bill` |
+| "Set up the payroll-crunch demo" / "seed the cash crunch" | `/demo-setup-payroll-crunch` |
+
+The scenario setups (`/demo-setup-commissions`, `/demo-setup-bill-pay`,
+`/demo-setup-pay-and-bill`, `/demo-setup-payroll-crunch`) layer on top of
+`/demo-setup-base` — if the base world hasn't been seeded this session,
+recommend running it first (each setup skill checks and offers this itself).
 
 **Business intelligence:**
 | Owner says something like... | Route to |
@@ -81,9 +96,12 @@ When the owner asks for a general overview, organize by what matters to them —
 
 Group into three buckets and lead with the one most relevant to their stored headaches:
 
-**Your money:** `/plan-payroll` · `/month-heads-up` · `/close-month` · `/price-check` · `/tax-prep`
-**Your commissions:** `/pay-commissions` · `/commission-setup`
+**Your money:** `/plan-payroll` · `/pay-bills` · `/pay-and-bill` · `/month-heads-up` · `/close-month` · `/price-check` · `/tax-prep`
+**Your commissions:** `/pay-commissions`
 **Your week:** `business-pulse` (Monday / weekly check-in) · `/friday-brief` · `/quarterly-review`
+
+(The `/demo-setup-*` commands are for standing up the sales sandbox — mention
+them only when the owner is clearly running a demo environment.)
 
 Keep it to 2-3 sentences per bucket. End with: "What's on your mind? I'll get you to the right place."
 
@@ -106,13 +124,19 @@ Before recommending a command, check which connectors are active. If the best-ma
 **Connector requirements by command:**
 | Command | Required | Optional |
 |---|---|---|
-| `/plan-payroll` | QuickBooks, Paywhere | Gmail |
+| `/plan-payroll` | QuickBooks | Paywhere (real-time balance + settlement detection), Gmail (reminder drafts) |
+| `/pay-bills` | QuickBooks | Paywhere (without it: AP analysis + drafted payment list only — nothing executes) |
+| `/pay-and-bill` | QuickBooks, Paywhere | Gmail (real hour-report mail), Google Drive (demo hour notes) |
 | `/close-month` | QuickBooks, Paywhere | Google Drive |
 | `/month-heads-up` | QuickBooks | Paywhere |
 | `/price-check` | QuickBooks | — |
 | `/tax-prep` | QuickBooks | Paywhere |
-| `/pay-commissions` | QuickBooks, Paywhere, Google Drive | — |
-| `/commission-setup` | QuickBooks, Paywhere, Google Drive | — |
+| `/pay-commissions` | QuickBooks, Paywhere | — (register is a local Excel file) |
+| `/demo-setup-base` | paywhere-mock, Paywhere, QuickBooks | — |
+| `/demo-setup-commissions` | paywhere-mock, Paywhere, QuickBooks | — |
+| `/demo-setup-bill-pay` | paywhere-mock, Paywhere, QuickBooks | — |
+| `/demo-setup-pay-and-bill` | paywhere-mock, Paywhere, QuickBooks, Google Drive | — |
+| `/demo-setup-payroll-crunch` | paywhere-mock, Paywhere, QuickBooks | — |
 | `business-pulse` (incl. Monday / weekly check-in) | — (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | `/friday-brief` | QuickBooks or Paywhere | — |
 | `/quarterly-review` | QuickBooks | Paywhere |
