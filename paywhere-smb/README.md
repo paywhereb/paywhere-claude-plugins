@@ -82,9 +82,8 @@ server URL:
 https://demo.paywhere.com/mcp
 ```
 
-For QuickBooks, Gmail, Google Drive, and Microsoft 365, add each one
-separately as its own custom connector. The full URL list lives in
-[`.mcp.json`](.mcp.json).
+For QuickBooks, Gmail, and Google Drive, add each one separately as its
+own custom connector. The full URL list lives in [`.mcp.json`](.mcp.json).
 
 ## What you'll need to connect
 
@@ -103,7 +102,6 @@ Run `/smb-onboard` or ask Claude to "set me up."
 - **Gmail / Outlook** — invoice-reminder and payroll mail drafts.
 - **Google Drive** — hosts the commission register Sheet; stores close
   packets and QBR exports.
-- **Microsoft 365** — alternative home for close-packet and QBR exports.
 
 You don't need all of these to start. Connect Paywhere + QuickBooks and
 you'll immediately see value — the plugin tells you when connecting another

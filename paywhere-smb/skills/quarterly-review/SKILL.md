@@ -8,7 +8,7 @@ Run the quarterly business review. Pull financial, sales, and customer data for 
 
 Parse arguments:
 - `--quarter` (default: previous calendar quarter) — format `YYYY-QN` (e.g., `2026-Q1`)
-- `--save-to` (default: `files`) — `files` (Google Drive / OneDrive), `desktop`, or `both`
+- `--save-to` (default: `files`) — `files` (Google Drive), `desktop`, or `both`
 
 ## Step 1 — Financial performance
 

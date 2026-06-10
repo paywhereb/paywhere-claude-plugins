@@ -36,7 +36,6 @@ If the owner names a connector not in this table, add it as the second connector
 - **QuickBooks** — Read your books: AR, AP, P&L, customer payments, and the transaction register that month-end close reconciles against Paywhere.
 - **Gmail** — Draft invoice reminders and scan threads for anything urgent.
 - **Google Drive** — Host the commission register and save close packets and QBR exports.
-- **Microsoft 365** — Alternative home for close-packet and QBR exports.
 
 ---
 

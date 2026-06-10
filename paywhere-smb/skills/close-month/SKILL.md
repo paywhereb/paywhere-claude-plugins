@@ -8,7 +8,7 @@ Run the month-end close workflow. Reconcile, flag gaps, narrate the P&L, and exp
 
 Parse arguments:
 - `--month` (default: previous calendar month) — `YYYY-MM` format
-- `--save-to` (default `files`) — `files` (Google Drive / OneDrive), `desktop` (local), or `both`
+- `--save-to` (default `files`) — `files` (Google Drive), `desktop` (local), or `both`
 
 ## Step 1 — Reconcile
 
