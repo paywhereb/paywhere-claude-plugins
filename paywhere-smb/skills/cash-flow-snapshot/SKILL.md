@@ -108,12 +108,14 @@ data is too thin to model; flag it instead (see Step 5).
 ### Step 5 — Flag named risks
 
 Scan for conditions that push the low-band estimate negative or create a
-liquidity crunch. For each risk found, produce a one-line flag:
+liquidity crunch. For each risk found, produce a one-line flag. The phrasings
+below are **style examples** — fill them from the actual forecast, don't copy
+the numbers:
 
 - **Late-payer risk:** "Customer X historically pays 18 days late; that shifts
-  their $8,400 invoice out of the 30-day window into day 48."
-- **Payroll crunch:** "Payroll ($22,000) hits April 15. Low-band cash on hand
-  April 14: $19,200. Shortfall risk: $2,800."
+  their {$invoice} out of the 30-day window into day 48."
+- **Payroll crunch:** "Payroll ({$amount}) hits {date}. Low-band cash on hand
+  the day before: {$balance}. Shortfall risk: {$gap}."
 - **Thin data warning:** "Only 2 payments on record for Customer Y — confidence
   band set to default ±30%."
 - **No-connector warning:** "Running on CSV data only — no real-time AP or

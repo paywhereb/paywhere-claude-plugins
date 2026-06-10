@@ -16,7 +16,7 @@ Skips the recipe entirely. Owner leaves not knowing what they just enabled.
 > *[runs cash-flow-snapshot, shows results]*
 > "That's what we can do anytime you want a number check. Now, a few questions about your business…"
 
-The demo runs before the interview, every time, without exception.
+The prove-value recipe runs before the interview, every time, without exception.
 
 ---
 

@@ -8,10 +8,6 @@
       "type": "http",
       "url": "https://demo.paywhere.com/mcp"
     },
-    "ms365": {
-      "type": "http",
-      "url": "https://microsoft365.mcp.claude.com/mcp"
-    },
     "gmail": {
       "type": "http",
       "url": "https://gmailmcp.googleapis.com/mcp/v1"

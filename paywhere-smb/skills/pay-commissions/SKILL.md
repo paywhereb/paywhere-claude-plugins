@@ -40,13 +40,13 @@ Commission config is **never** stored as JSON in QBO notes. The register Sheet i
 
 ## Setup (first run only)
 
-If the commission register Sheet doesn't exist yet, do not improvise one — stop and point the owner at the `commission-setup` skill, which seeds the register, the QBO vendors/history, and the verified Paywhere stablecoin recipient. Resume `pay-commissions` once setup has run.
+If the commission register Sheet doesn't exist yet, don't improvise its contents — the register is the owner's source of truth. Either help the owner create it with the documented tabs and their real payees/rates (see [DATA-MODEL.md](DATA-MODEL.md)), or, to stand up an example for evaluation, run the `commission-setup` skill (which scaffolds an example register + sample QBO history). Resume `pay-commissions` once the register exists.
 
 ## Workflow
 
 ### 1. Open the register
 
-- `search_files` (Google Drive) for the commission register by name (default `Paywhere Commission Register`). If more than one matches, list them and ask which to use. If none, stop and recommend `commission-setup`.
+- `search_files` (Google Drive) for the commission register by name (default `Paywhere Commission Register`). If more than one matches, list them and ask which to use. If none, stop — see Setup above (create the register, or run `commission-setup` to scaffold an example).
 - Read the tabs with `read_file_content`: `Customers`, `ACH`, `Wire`, `Stablecoin`, `PaidLog`. See [DATA-MODEL.md](DATA-MODEL.md) for the exact columns.
 - Build in-memory lookups: `Customers` keyed by Customer DisplayName; each rail tab keyed by `Payee`; `PaidLog` as a set of `QBOPaymentId` already paid.
 
@@ -89,13 +89,13 @@ Resolve the source account: use `list_accounts` and pay from the operating accou
 
 ### 7. Confirm — the gate
 
-Present a single table and **wait for explicit owner approval**. Nothing moves money before this.
+Present a single table and **wait for explicit owner approval**. Nothing moves money before this. Example layout (values come from live data, not these placeholders):
 
 | Customer | QBO Payment | Gross | Rate | Commission | Payee | Rail | Status |
 |---|---|---|---|---|---|---|---|
-| Acme Corp | 1042 | $4,000 | 5% | $200.00 | Jane Doe Referrals | ACH | ready |
-| Globex | 1043 | $9,000 | 10% | $900.00 (+$9.00 fee) | CryptoConsult DAO | Stablecoin | ready (verified) |
-| Initech | 1044 | $2,500 | 5% | $125.00 | Acme Sales Partners LLC | Wire | ready |
+| _customer_ | _paymentId_ | $4,000 | 5% | $200.00 | _ACH payee_ | ACH | ready |
+| _customer_ | _paymentId_ | $9,000 | 10% | $900.00 (+$9.00 fee) | _stablecoin payee_ | Stablecoin | ready (verified) |
+| _customer_ | _paymentId_ | $2,500 | 5% | $125.00 | _wire payee_ | Wire | ready |
 
 Also show: skipped (customer not in register), already-paid (with the prior reference), and flagged (missing/unverified payee). Get a clear "yes, pay these" — partial approval is fine, but adding or changing a row after approval starts a new round.
 

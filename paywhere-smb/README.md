@@ -82,9 +82,8 @@ server URL:
 https://demo.paywhere.com/mcp
 ```
 
-For QuickBooks, Gmail, Google Drive, and Microsoft 365, add each one
-separately as its own custom connector. The full URL list lives in
-[`.mcp.json`](.mcp.json).
+For QuickBooks, Gmail, and Google Drive, add each one separately as its
+own custom connector. The full URL list lives in [`.mcp.json`](.mcp.json).
 
 ## What you'll need to connect
 
@@ -103,7 +102,6 @@ Run `/smb-onboard` or ask Claude to "set me up."
 - **Gmail / Outlook** — invoice-reminder and payroll mail drafts.
 - **Google Drive** — hosts the commission register Sheet; stores close
   packets and QBR exports.
-- **Microsoft 365** — alternative home for close-packet and QBR exports.
 
 You don't need all of these to start. Connect Paywhere + QuickBooks and
 you'll immediately see value — the plugin tells you when connecting another
@@ -151,9 +149,13 @@ checkpoints for your approval before taking action.
 
 | Command | What it does | Just say... | Skills used | Required | Optional |
 |---|---|---|---|---|---|
-| `/monday-brief` | Monday morning briefing: cash, revenue trend, watch-list, top 3 to-dos. | "Monday brief", "what's on my plate", "start of week" | business-pulse | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | `/friday-brief` | Friday end-of-week pulse: revenue vs last week, top sellers, wins and watches. | "end of week", "how'd we do", "Friday recap" | business-pulse | QuickBooks or Paywhere | -- |
 | `/quarterly-review` | Full QBR narrative: revenue, margin, customer concentration, opportunities, risks. | "quarterly review", "board deck", "QBR" | business-pulse | QuickBooks | Paywhere |
+
+> The **Monday / weekly check-in** brief is handled directly by the
+> `business-pulse` skill (below) — just say "Monday brief", "weekly
+> check-in", or "what's on my plate". It produces the one-page snapshot and
+> can save a dated file to your drive.
 
 ## Building-block skills
 
@@ -168,34 +170,35 @@ commands above compose them.
 | **tax-season-organizer** | Quarterly estimated tax calc or year-end 1099-NEC prep with accountant handoff packet. | "quarterly taxes", "estimated tax payment", "1099s", "1099-NEC", "year-end tax prep" | QuickBooks | Paywhere |
 | **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from a Google Sheet "commission register," matching Paywhere credits to QBO customer payments, deduping, and booking a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere, Google Drive | — |
 | **commission-setup** | Seeds/resets the commission demo: register Sheet, QBO payee vendors + history, verified Paywhere stablecoin recipient. Idempotent. | "set up commissions", "seed the commission demo" | QuickBooks, Paywhere, Google Drive | — |
-| **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. | "how's the business doing", "snapshot", "weekly summary", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
+| **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
 
-## Demo
+## Trying it out
 
-The flows below run end-to-end against a seeded QuickBooks sandbox company
-(hosted Paywhere fork at `qbo-demo.paywhere.com`) paired with the hosted
-Paywhere demo MCP at `demo.paywhere.com`. See [`demo/seed.md`](../demo/seed.md)
-in the marketplace root for setup notes.
+The skills read **live data** from your connected accounts and never assume
+specific records — point them at your real books or at a sandbox. To explore
+end-to-end before going live, [`demo/seed.md`](../demo/seed.md) walks through
+standing up an example scenario (a QuickBooks sandbox via the hosted fork at
+`qbo-demo.paywhere.com` paired with the hosted Paywhere demo MCP at
+`demo.paywhere.com`). What each flow surfaces depends entirely on the data
+present — the figures vary, the behavior is the same:
 
-- **`/close-month`** — reconciles a month of Paywhere bank lines against
-  the QBO register, flags two seeded discrepancies (one missing-in-QB
-  interest credit, one $1.20 wire fee delta), produces a P&L narrative,
-  and exports the close packet.
+- **`/close-month`** — reconciles the month's Paywhere bank lines against the
+  QBO register, flags any gaps (e.g. bank-side credits not in QB, or fee
+  deltas), writes a P&L narrative, and exports the close packet.
 - **`/plan-payroll`** — pulls QBO AR/AP and Paywhere balances, runs the
-  30/60/90 forecast, surfaces an April-15 payroll crunch, and stages a
+  30/60/90 forecast, flags any upcoming payroll or cash crunch, and stages a
   ranked invoice-chase batch as Gmail drafts.
-- **`/commission-setup` → `/pay-commissions "last week"`** — seeds the
-  commission register Sheet in Google Drive, the QBO payee vendors +
-  history, and a verified Paywhere stablecoin recipient; then matches
-  Paywhere credits to QBO payments, shows the commission table, gates on
-  your approval, disburses across ACH / Wire / Stablecoin (stablecoin in
-  preview to surface the 1% fee), and books a marker Bill + Bill Payment.
-  A second run reports everything "already paid" — dedupe proof from both
-  the QBO DocNumber and the register's PaidLog.
-- **`/monday-brief`** — cross-connector synthesis: QBO revenue trend,
-  Paywhere balances + 7-day inflow, and a $2,000+ wire pending past its
-  same-day clearing window.
+- **`/commission-setup` → `/pay-commissions "last week"`** — (setup seeds an
+  example register + QBO history + verified stablecoin recipient) then matches
+  Paywhere credits to QBO payments, shows the commission table, gates on your
+  approval, disburses across ACH / Wire / Stablecoin (stablecoin in preview to
+  surface the 1% fee), and books a marker Bill + Bill Payment. A second run
+  reports everything "already paid" — dedupe from both the QBO DocNumber and
+  the register's PaidLog.
+- **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector
+  synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and any
+  payment pending past its expected clearing window.
 
 ## Customizing
 

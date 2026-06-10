@@ -8,7 +8,7 @@ Run the month-end close workflow. Reconcile, flag gaps, narrate the P&L, and exp
 
 Parse arguments:
 - `--month` (default: previous calendar month) — `YYYY-MM` format
-- `--save-to` (default `files`) — `files` (Google Drive / OneDrive), `desktop` (local), or `both`
+- `--save-to` (default `files`) — `files` (Google Drive), `desktop` (local), or `both`
 
 ## Step 1 — Reconcile
 
@@ -63,7 +63,7 @@ Generate two files:
    - `Trial Balance` — accounts + ending balances
 2. **`close-packet-{YYYY-MM}.pdf`** — one-page summary: P&L narrative + top-line numbers + gap count
 
-Save both to the chosen `--save-to` location. Filename format: `close-packet-2026-04.xlsx` etc.
+Save both to the chosen `--save-to` location. Filename format: `close-packet-YYYY-MM.xlsx` (e.g. for the month being closed).
 
 ## Connector failures
 

@@ -50,12 +50,12 @@ Do not ask again on subsequent runs.
 
 4. **Draft reminder emails.** One email per customer — consolidate multiple overdue invoices into one email. Match tone to score. See [reference/examples/gentle-reminder.md](reference/examples/gentle-reminder.md) and [reference/examples/firm-reminder.md](reference/examples/firm-reminder.md).
 
-5. **Present drafts to owner.** Show a summary table first:
+5. **Present drafts to owner.** Show a summary table first (example layout — rows come from live AR data):
 
    | Customer | Amount Due | Days Late | Tone | Send via |
    |---|---|---|---|---|
-   | Acme Corp | $1,200 | 18 days | Gentle | Gmail draft |
-   | Smith LLC | $450 | 47 days | Firm | Gmail draft |
+   | _customer_ | $1,200 | 18 days | Gentle | Gmail draft |
+   | _customer_ | $450 | 47 days | Firm | Gmail draft |
 
    Then show each draft email in full. Wait for owner to say "send these" or approve individually.
 
