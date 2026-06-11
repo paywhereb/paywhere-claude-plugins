@@ -69,9 +69,9 @@ only in this scenario (persona.md remains untouched):
 
 | Token | Account | Direction | Amount | Type | Description | StatementDescription | achRecipient |
 |---|---|---|---|---|---|---|---|
-| `W-1:Tue` | Operating | withdraw | 13,471.97 | ACH | United States Treasury — quarterly federal estimated tax (EFTPS) | ACH DEBIT IRS USATAXPYMT | name `United States Treasury`, aba `061036000`, accountNumber `23401009`, accountType `Checking` |
-| `W-1:Wed` | Operating | withdraw | 5,400.00 | ACH | Pacific Shield Insurance Co — annual premium renewal | ACH DEBIT PACIFIC SHIELD INS | name `Pacific Shield Insurance Co`, aba `026009593`, accountNumber `884422110099`, accountType `Checking` |
-| `W-1:Fri` | Operating | withdraw | 1,700.00 | ACH | Corelink Office Systems — workstation refresh | ACH DEBIT CORELINK OFFICE SYS | name `Corelink Office Systems`, aba `121000248`, accountNumber `778811223344`, accountType `Checking` |
+| `W-1:Tue` | Operating | withdraw | 13,471.97 | ACH | United States Treasury - quarterly federal estimated tax (EFTPS) | ACH DEBIT IRS USATAXPYMT | name `United States Treasury`, aba `061036000`, accountNumber `23401009`, accountType `Checking` |
+| `W-1:Wed` | Operating | withdraw | 5,400.00 | ACH | Pacific Shield Insurance Co - annual premium renewal | ACH DEBIT PACIFIC SHIELD INS | name `Pacific Shield Insurance Co`, aba `026009593`, accountNumber `884422110099`, accountType `Checking` |
+| `W-1:Fri` | Operating | withdraw | 1,700.00 | ACH | Corelink Office Systems - workstation refresh | ACH DEBIT CORELINK OFFICE SYS | name `Corelink Office Systems`, aba `121000248`, accountNumber `778811223344`, accountType `Checking` |
 
 All rows: `status: "posted"`, `postDate` = the resolved token date. All three
 tokens are `W-1:*` — **never dropped** at any horizon (date-tokens.md), so the
@@ -195,7 +195,7 @@ payment as a live deposit (Alderbrook pays by ACH-style credit per persona.md
 deposit_to_mock_account {
   accountNumber: "<Operating, from get_demo_world>",
   amount: 15600.00,
-  description: "Alderbrook Ventures LLC — staffing hours",
+  description: "Alderbrook Ventures LLC - staffing hours",
   statementDescription: "ACH CR ALDERBROOK VENTURES",
   status: "posted",
   transactionType: "Transfer"
