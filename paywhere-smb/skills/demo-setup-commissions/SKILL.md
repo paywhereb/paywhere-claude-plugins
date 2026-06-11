@@ -249,7 +249,7 @@ Both dedupe signals (QBO marker + PaidLog) now agree, exactly as a real
    `wallet: {address: <that wallet>, chain: "POLY", currency: "USD"}`,
    `walletOwner: {type: "Business", name: "CryptoConsult DAO", address:
    <any plausible mock US business address — e.g. 548 Market St, San
-   Francisco, CA 94104; mock-only>}`, `description: "Commission payee —
+   Francisco, CA 94104; mock-only>}`, `description: "Commission payee -
    CryptoConsult DAO (demo)"`.
 3. Re-check with `get_stablecoin_recipient` and confirm **VERIFIED**. An
    already-existing recipient is normal — the wallet is shared with Devon
