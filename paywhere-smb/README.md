@@ -99,13 +99,21 @@ Run `/smb-onboard` or ask Claude to "set me up."
   the Bill / Bill-Payment records that commission payouts write back.
 
 **Supporting tools:**
-- **Gmail / Outlook** — invoice-reminder and payroll mail drafts.
-- **Google Drive** — hosts the commission register Sheet; stores close
-  packets and QBR exports.
+- **Gmail / Outlook** — invoice-reminder and payroll mail drafts; the real-data
+  read path for worker hour reports in `/pay-and-bill`.
+- **Google Drive** — worker hour-report notes (demo path for
+  `/pay-and-bill`); stores close packets and QBR exports.
+
+**Demo environments only:**
+- **paywhere-mock** — the Paywhere Demo Seeder at
+  <https://demo.paywhere.com/mock-mcp>. Powers the `/demo-setup-*` commands
+  (reset + seed the sandbox). Same sign-in as the Paywhere connector but
+  authorized separately. Only exists on demo deployments — skip it when
+  running against real accounts.
 
 You don't need all of these to start. Connect Paywhere + QuickBooks and
 you'll immediately see value — the plugin tells you when connecting another
-tool would unlock more (e.g. Google Drive for `pay-commissions`).
+tool would unlock more.
 
 ## How it works
 
@@ -132,7 +140,9 @@ checkpoints for your approval before taking action.
 
 | Command | What it does | Just say... | Skills used | Required | Optional |
 |---|---|---|---|---|---|
-| `/plan-payroll` | Cash forecast + overdue invoice chase so you know payroll is covered. | "can I make payroll", "cash is tight", "who owes me money" | cash-flow-snapshot, invoice-chase | QuickBooks, Paywhere | Gmail |
+| `/plan-payroll` | Payroll readiness: with Paywhere connected, real-time balance + settlement detection (never chases a customer who paid this morning), shortfall projection, reminder drafts; without it, a QuickBooks-only forecast. | "can I make payroll", "am I good for payroll", "cash is tight", "who owes me money" | plan-payroll, cash-flow-snapshot, invoice-chase | QuickBooks | Paywhere, Gmail |
+| `/pay-bills` | AP catch-up: pulls QuickBooks AP aging, selects overdue bills, one approval, pays the whole batch across mixed rails, books the bill payments back, verifies settlement. | "pay my bills", "what's overdue", "AP aging" | pay-bills | QuickBooks | Paywhere (without it: analysis + drafted list only) |
+| `/pay-and-bill` | Hours-to-cash: aggregates worker hour reports, invoices each client, pays the workers in one batch, books the bills, reconciles. | "bill clients for hours", "pay my contractors" | pay-and-bill | QuickBooks, Paywhere | Gmail, Google Drive |
 | `/month-heads-up` | 30-day cash outlook with early risk flags. | "what does next month look like", "cash forecast", "runway" | cash-flow-snapshot | QuickBooks | Paywhere |
 | `/close-month` | Month-end close: reconcile Paywhere bank lines vs QuickBooks, flag gaps, write P&L, export close packet. | "close the books", "month-end", "reconcile" | month-end-prep | QuickBooks, Paywhere | Google Drive |
 | `/price-check` | Margin-by-product table and three pricing scenarios. | "what are my margins", "should I raise prices", "cost per unit" | (self-contained) | QuickBooks | — |
@@ -142,8 +152,21 @@ checkpoints for your approval before taking action.
 
 | Command | What it does | Just say... | Skills used | Required | Optional |
 |---|---|---|---|---|---|
-| `/pay-commissions` | Pays commissions on payments you actually received, across ACH/Wire/Stablecoin: reads the commission register, matches Paywhere credits to QBO payments, dedupes, and — after you approve — disburses and books a Bill + Bill Payment. | "pay commissions", "pay my reps", "run commissions for last week" | pay-commissions | QuickBooks, Paywhere, Google Drive | — |
-| `/commission-setup` | Seeds (or resets) the commission demo: builds the register Sheet, creates QBO payee vendors + history, registers + verifies the stablecoin recipient. Idempotent. | "set up commissions", "seed the commission demo", "reset commission data" | commission-setup | QuickBooks, Paywhere, Google Drive | — |
+| `/pay-commissions` | Pays commissions on payments you actually received, across ACH/Wire/Stablecoin: reads the local commission register (`commission-register.xlsx`), matches Paywhere credits to QBO payments, dedupes, and — after you approve — disburses the whole batch (`make_batch_payment`) and books a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions for last week" | pay-commissions | QuickBooks, Paywhere | — |
+
+### Demo setup (sales/sandbox only)
+
+These stand up the repeatable demo environment against the hosted sandbox
+connectors. They need the **paywhere-mock** seeder connector and are not
+meant for real accounts. See [`../demo/seed.md`](../demo/seed.md).
+
+| Command | What it does | Skills used | Required |
+|---|---|---|---|
+| `/demo-setup-base` | Resets the mock bank to a fresh world and seeds 3 months of consistent bank + QBO history for the demo persona (Meridian Staffing & Advisory LLC). Run this first. | demo-setup-base | paywhere-mock, Paywhere, QuickBooks |
+| `/demo-setup-bill-pay` | Seeds the overdue-AP scenario for the flagship `/pay-bills` demo. | demo-setup-bill-pay | paywhere-mock, Paywhere, QuickBooks |
+| `/demo-setup-pay-and-bill` | Seeds the workers register + hour-report notes for `/pay-and-bill`. | demo-setup-pay-and-bill | paywhere-mock, Paywhere, QuickBooks, Google Drive |
+| `/demo-setup-commissions` | Builds the local commission register + qualifying inbound credits + QBO payees/history; verifies the stablecoin recipient. | demo-setup-commissions | paywhere-mock, Paywhere, QuickBooks |
+| `/demo-setup-payroll-crunch` | Seeds the cash-crunch scenario (balance + Friday payroll + open invoices that arithmetic to a shortfall) for `/plan-payroll`. | demo-setup-payroll-crunch | paywhere-mock, Paywhere, QuickBooks |
 
 ### Weekly & quarterly briefs
 
@@ -168,8 +191,11 @@ commands above compose them.
 | **invoice-chase** | Drafts overdue-invoice reminders matched to each customer's payment history and tone. Cross-references Paywhere credits so customers who already paid don't get chased. | "who owes me money", "overdue invoices", "follow up on unpaid" | QuickBooks, Paywhere | Gmail |
 | **month-end-prep** | Month-end close: reconciles the QB transaction register against Paywhere bank lines, flags gaps, writes a P&L narrative, exports a close packet. | "close the month", "reconcile", "P&L", "why revenue changed" | QuickBooks, Paywhere | Google Drive |
 | **tax-season-organizer** | Quarterly estimated tax calc or year-end 1099-NEC prep with accountant handoff packet. | "quarterly taxes", "estimated tax payment", "1099s", "1099-NEC", "year-end tax prep" | QuickBooks | Paywhere |
-| **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from a Google Sheet "commission register," matching Paywhere credits to QBO customer payments, deduping, and booking a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere, Google Drive | — |
-| **commission-setup** | Seeds/resets the commission demo: register Sheet, QBO payee vendors + history, verified Paywhere stablecoin recipient. Idempotent. | "set up commissions", "seed the commission demo" | QuickBooks, Paywhere, Google Drive | — |
+| **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from the local `commission-register.xlsx`, matching Paywhere credits to QBO customer payments, deduping, batch-disbursing after one approval, and booking a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere | — |
+| **pay-bills** | AP batch bill-pay: QBO AP aging → overdue-bill selection → one approval → mixed-rail batch payment → bill payments written back → settlement verified against the bank. | "pay my bills", "AP aging", "what's overdue" | QuickBooks | Paywhere |
+| **pay-and-bill** | Hours-to-cash loop: aggregate worker hours (Gmail or Drive notes) → invoice each client → pay workers in one batch → book worker bills → reconcile. | "bill clients for hours", "pay my contractors" | QuickBooks, Paywhere | Gmail, Google Drive |
+| **plan-payroll** | Payroll readiness with real-time bank data when Paywhere is connected (settlement detection, shortfall projection, reminder drafts); QBO-only forecast otherwise. | "can I make payroll", "am I good for payroll" | QuickBooks | Paywhere, Gmail |
+| **demo-setup-base** (+ `-bill-pay`, `-pay-and-bill`, `-commissions`, `-payroll-crunch`) | Repeatable sandbox setup: resets the mock bank world and seeds deterministic, date-relative demo data (identical Monday or Friday). Sales/demo use only. | "set up the demo", "reset the demo" | paywhere-mock, Paywhere, QuickBooks | Google Drive |
 | **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
 
@@ -189,13 +215,17 @@ present — the figures vary, the behavior is the same:
 - **`/plan-payroll`** — pulls QBO AR/AP and Paywhere balances, runs the
   30/60/90 forecast, flags any upcoming payroll or cash crunch, and stages a
   ranked invoice-chase batch as Gmail drafts.
-- **`/commission-setup` → `/pay-commissions "last week"`** — (setup seeds an
-  example register + QBO history + verified stablecoin recipient) then matches
-  Paywhere credits to QBO payments, shows the commission table, gates on your
-  approval, disburses across ACH / Wire / Stablecoin (stablecoin in preview to
-  surface the 1% fee), and books a marker Bill + Bill Payment. A second run
-  reports everything "already paid" — dedupe from both the QBO DocNumber and
-  the register's PaidLog.
+- **`/demo-setup-commissions` → `/pay-commissions "last week"`** — (setup
+  seeds the local register, qualifying inbound bank credits, QBO history, and
+  the verified stablecoin recipient) then matches Paywhere credits to QBO
+  payments, shows the commission table, gates on your approval, disburses the
+  batch across ACH / Wire / Stablecoin (stablecoin previewed to surface the 1%
+  fee), and books a marker Bill + Bill Payment. A second run reports
+  everything "already paid" — dedupe from both the QBO DocNumber and the
+  register's PaidLog.
+- **`/demo-setup-bill-pay` → `/pay-bills`** — overdue AP scenario: aging
+  table, one approval, mixed-rail batch payment, bill payments booked back,
+  settlement verified against the bank.
 - **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector
   synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and any
   payment pending past its expected clearing window.
@@ -209,6 +239,6 @@ when you customize them for how your business actually works:
   processes into skill files so Claude understands your world.
 - **Adjust thresholds** — Tune the alert thresholds in `business-pulse`
   and `cash-flow-snapshot` to match your scale.
-- **Edit the commission register** — The `Paywhere Commission Register`
-  Google Sheet is the source of truth for who gets commission, at what
-  rate, and how they're paid. Update it directly.
+- **Edit the commission register** — The local `commission-register.xlsx`
+  file is the source of truth for who gets commission, at what rate, and
+  how they're paid. Update it directly.

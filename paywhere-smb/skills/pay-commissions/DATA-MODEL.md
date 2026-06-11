@@ -4,30 +4,36 @@ Three concerns, three homes:
 
 | Concern | Home | Why |
 |---|---|---|
-| (a) Who gets commission + at what rate | **Register Sheet** `Customers` tab | Business policy — changes often, owner-editable, not a QBO concept |
-| (b) How to pay each payee (rail + account details) | **Register Sheet** rail tabs | Payment instructions map 1:1 onto Paywhere's three rail APIs |
+| (a) Who gets commission + at what rate | **Register workbook** `Customers` sheet | Business policy — changes often, owner-editable, not a QBO concept |
+| (b) How to pay each payee (rail + account details) | **Register workbook** rail sheets | Payment instructions map 1:1 onto Paywhere's three rail item shapes |
 | (c) Pay once and only once | **QBO marker Bill** + Register `PaidLog` | Two independent dedupe signals; QBO is the system of record for the expense |
 
-Commission config is **not** stored as JSON in QBO notes — that was rejected. The Google Sheet is the source of truth for (a) and (b). QBO records *payments received* (what we commission on) and the *commission expense* (Bill + Bill Payment).
+Commission config is **not** stored as JSON in QBO notes — that was rejected. The local workbook is the source of truth for (a) and (b). QBO records *payments received* (what we commission on) and the *commission expense* (Bill + Bill Payment).
 
-## The commission register Google Sheet
+## Local register file
 
-Default name: `Paywhere Commission Register`. Discovered by name via Google Drive `search_files`. Read tabs with `read_file_content`. Five normalized tabs:
+- **What**: one Excel workbook, `commission-register.xlsx`, with five sheets: `Customers`, `ACH`, `Wire`, `Stablecoin`, `PaidLog`.
+- **Location**: the session working folder. Not Google Sheets, not Drive — no Drive tools are involved.
+- **Discovery**: by filename. Multiple matches → list and ask the owner; none → stop (Setup in [SKILL.md](SKILL.md), or [/demo-setup-commissions](../demo-setup-commissions/SKILL.md) for the demo scaffold).
+- **Read/write**: locally with Bash + Python (openpyxl or an equivalent xlsx library). Rates and amounts are numbers, not strings.
+- **Concurrency**: single-writer. Append `PaidLog` rows atomically — load the workbook, append, save as one operation (a sheet rewrite); never interleave manual edits with a run in flight.
 
-### Tab `Customers` — (a) who gets commission, at what rate
+### Sheet `Customers` — (a) who gets commission, at what rate
 
-One row per commission-eligible customer. A customer **not** in this tab earns no commission (skip).
+One row per commission-eligible customer. A customer **not** in this sheet earns no commission (skip).
 
 | Column | Meaning |
 |---|---|
 | `Customer` | Matches the QBO Payment's `CustomerRef` DisplayName exactly |
 | `CommissionRate` | Decimal, e.g. `0.05` for 5% |
-| `Payee` | Join key into the matching rail tab |
-| `Rail` | One of `ACH` / `Wire` / `Stablecoin` — which tab holds this payee's details |
+| `Payee` | Join key into the matching rail sheet |
+| `Rail` | One of `ACH` / `Wire` / `Stablecoin` — which sheet holds this payee's details |
 
-### Tab `ACH` — (b) ACH payment details
+### Sheet `ACH` — (b) ACH payment details
 
-| Column | → `make_ach_payment` field |
+Maps onto the batch `ach` item's `recipient` block (identical to `make_ach_payment`'s). Always `recipientIdType: "Inline"` — never DisplayName (mock recipients are global and permanent, so DisplayName is ambiguous).
+
+| Column | → ach item field |
 |---|---|
 | `Payee` | join key (not sent) |
 | `RecipientName` | `recipient.name` |
@@ -36,9 +42,11 @@ One row per commission-eligible customer. A customer **not** in this tab earns n
 | `AccountType` | `recipient.accountType` (`Checking` / `Savings`) |
 | `Email` | `recipient.emailAddress` |
 
-### Tab `Wire` — (b) wire payment details
+### Sheet `Wire` — (b) wire payment details
 
-| Column | → `make_wire_payment` field |
+Maps onto the batch `wire` item (identical to `make_wire_payment`'s blocks). **The wire API's `recipientBank` takes `aba`, not `routingNumber`** — hence the `BankABA` column. (Legacy registers may still carry the old header `RoutingNumber`; it maps to the same `recipientBank.aba` field.)
+
+| Column | → wire item field |
 |---|---|
 | `Payee` | join key (not sent) |
 | `RecipientName` | `recipient.name` |
@@ -48,24 +56,26 @@ One row per commission-eligible customer. A customer **not** in this tab earns n
 | `State` | `recipient.state` |
 | `PostalCode` | `recipient.postalCode` |
 | `BankName` | `recipientBank.name` |
-| `RoutingNumber` | `recipientBank.routingNumber` |
+| `BankABA` | `recipientBank.aba` |
 
-### Tab `Stablecoin` — (b) stablecoin payment details
+### Sheet `Stablecoin` — (b) stablecoin payment details
 
-| Column | → `make_stablecoin_payment` / recipient |
+| Column | → stablecoin item / recipient |
 |---|---|
 | `Payee` | join key (not sent) |
 | `WalletAddress` | `walletAddress` — also the join key for `get_stablecoin_recipient` |
-| `Chain` | `ETH` / `POLY` / `ARB` / `BASE` / `SOL` (used at recipient-creation time) |
+| `Chain` | e.g. `POLY` (used at recipient-creation time) — discover the live list via `list_supported_chains` |
 | `Currency` | `USD` (the only supported stablecoin currency) |
 
-Stablecoin payees must additionally be pre-registered **and verified** in Paywhere via `create_stablecoin_recipient`; check status with `get_stablecoin_recipient` before paying. The wallet address is the join key between the tab and Paywhere.
+Stablecoin payees must additionally be pre-registered **and VERIFIED** in Paywhere via `create_stablecoin_recipient`; check status with `get_stablecoin_recipient` before paying. The wallet address is the join key between the sheet and Paywhere.
 
-### Tab `PaidLog` — (c) append-only audit + dedupe
+### Sheet `PaidLog` — (c) append-only audit + dedupe
 
 Append one row per commission paid. Never edit or delete prior rows.
 
 `Date | Customer | QBOPaymentId | GrossAmount | Rate | Commission | Payee | Rail | PaywherePaymentId | QBOBillId`
+
+Demo pre-seeded rows (written by /demo-setup-commissions) carry the sentinel `PaywherePaymentId = DEMO-SEED` — a marker created without a bank disbursement; it dedupes exactly like a real row.
 
 ## Dedupe — pay once and only once
 
@@ -84,25 +94,34 @@ Because `search_bills` filters DocNumber and PrivateNote with `LIKE`, both the e
 
 Match these exactly — the register columns above map onto them.
 
-**`make_ach_payment`** — required: `fromAccountNumber`, `recipientIdType` (`"Inline"`), `paymentAmount`, `paymentDate` (YYYY-MM-DD), `paymentName`; `recipient`: `{ name, aba, accountNumber, accountType: "Checking"|"Savings", emailAddress }`. Returns `paymentId`. Status: `get_ach_payment_status`.
+**`make_batch_payment`** — the execution call: **one call per run**, mixed rails. `payments: []` of 1–50 items, each discriminated by `rail`:
 
-**`make_wire_payment`** — required: `fromAccountNumber`, `amount`, `processDate` (YYYY-MM-DD), `recipient` `{ name, accountNumber, address1, city, state, postalCode }`, `recipientBank` `{ name, routingNumber, address1, city, state, postalCode }`. `autoApprove` defaults true. Returns `paymentId`. Status: `get_wire_payment_status`.
+- `{rail: "ach", fromAccountNumber, recipientIdType: "Inline", recipient: {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentDate (YYYY-MM-DD), paymentName}` — batch ACH items are made **and authorized** automatically (no separate `authorize_ach_payment`).
+- `{rail: "wire", fromAccountNumber, amount, processDate (YYYY-MM-DD), recipient: {name, accountNumber, address1, city, state, postalCode}, recipientBank: {name, **aba**}, purposeOfWire?, autoApprove? (default true)}`.
+- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber (the funding account), amount}`.
 
-**`make_stablecoin_payment`** — required: `walletAddress`, `currency` (`"USD"`), `accountNumber`, `amount`. `preview: true` returns the 1% fee estimate without executing. Recipient must be verified. Returns `paymentId`, `fee`, `status`. Status: `get_stablecoin_payment_status`.
+Options and results:
+- `dryRun: true` — validates every item **without moving money**; stablecoin items return the **real 1% fee** preview, other rails report status `validated_not_executed`. Run the dry-run before the confirmation table, the live call after approval.
+- `stopOnError?: bool` (default false — continues and reports per item).
+- Returns `{summary: {requested, attempted, succeeded, failed, validatedOnly, byRail, totalSucceededAmount}, results: [{index, rail, ok, paymentId?, fee?, status?, error?}], warning}`. `results[index]` maps back to the commission row at the same position in the `payments` array.
+- **NOT idempotent**: on partial failure re-submit **only** the failed items in a new call — never the whole array.
 
-**`create_stablecoin_recipient`** — `wallet` `{ address, chain, currency: "USD" }`, `walletOwner` `{ type: "Self"|"Individual"|"Business", name, address }`, `description`. Returns verification statuses. **`get_stablecoin_recipient`** `{ walletAddress }` fetches current verification status.
+**`query_transactions`** — the collection call: `{accountNumbers? (default all accounts), dateFrom?, dateTo? (YYYY-MM-DD, inclusive), direction: "credit", status?: ["posted"], amountMin?/amountMax?, descriptionContains?, sort?, limit? (1–500), includeTransactions: true}` → `{accountsQueried, scanned, matched, returned, truncated, transactions}`. Credits = money in. `truncated: true` ⇒ the scan hit caps — narrow the date range and re-query.
 
-**`get_account_transactions`** — `{ accountNumber, fromDate, toDate, pageNumber?, pageSize? }`. Credits are positive `amount`. Enumerate accounts with `list_accounts`.
+**Single-payment fallbacks** — for one-off corrections (e.g. re-paying a single failed item by hand); the run itself uses the batch call:
+
+- **`make_ach_payment`** — required: `fromAccountNumber`, `recipientIdType` (`"Inline"`), `paymentAmount`, `paymentDate` (YYYY-MM-DD), `paymentName`; `recipient`: `{name, aba, accountNumber, accountType: "Checking"|"Savings", emailAddress}`. Returns `paymentId` **drafted** — unlike batch ACH it needs `authorize_ach_payment` to move. Status: `get_ach_payment_status`.
+- **`make_wire_payment`** — required: `fromAccountNumber`, `amount`, `processDate` (YYYY-MM-DD), `recipient` `{name, accountNumber, address1, city, state, postalCode}`, `recipientBank` `{name, **aba** (NOT routingNumber), address1?, city?, state?, postalCode?}`. `autoApprove` defaults true. Call `get_wire_config` before wires. Returns `paymentId`. Status: `get_wire_payment_status`.
+- **`make_stablecoin_payment`** — required: `walletAddress`, `currency` (`"USD"`), `accountNumber`, `amount`. `preview: true` returns the 1% fee estimate without executing (the batch dry-run covers this in the normal flow). Recipient must be VERIFIED. Returns `paymentId`, `fee`, `status`. Status: `get_stablecoin_payment_status`.
+- **`create_stablecoin_recipient`** — `wallet` `{address, chain, currency: "USD"}`, `walletOwner` `{type: "Self"|"Individual"|"Business", name, address}`, `description`. Returns verification statuses. **`get_stablecoin_recipient`** `{walletAddress}` fetches current verification status.
+- **`get_account_transactions`** — `{accountNumber, fromDate, toDate, pageNumber?, pageSize?}`; credits are positive `amount`. Legacy paging fallback for collection — prefer `query_transactions`.
+- **`list_accounts`** — enumerate accounts; resolve the funding account at run time, never hardcode it.
 
 ## Real MCP tool signatures (QuickBooks fork)
 
+Note the fork's naming anomaly: **bill and vendor CRUD use hyphens** (`create-bill`, `get-bill`, `update-bill`, `delete-bill`, `create-vendor`, `get-vendor`, `update-vendor`, `delete-vendor`); everything else uses underscores.
+
 - `search_payments` — filter by customer / date; each Payment carries `CustomerRef` DisplayName and amount. The unit we commission on.
 - `search_bills` — filters `DocNumber` and `PrivateNote` with `LIKE` (the dedupe mechanism).
-- `create_bill` + `create_bill_payment` — accept `DocNumber` and `PrivateNote`; book the commission expense against the payee vendor.
-- `create_vendor` — creates the payee vendor (done in `commission-setup`).
-
-## Google Drive tool signatures
-
-- `search_files` — find the register by name.
-- `read_file_content` / `download_file_content` — read the tabs.
-- `create_file` — used by `commission-setup` to build the register; `pay-commissions` appends `PaidLog` rows.
+- **`create-bill`** + `create_bill_payment` — accept `DocNumber` and `PrivateNote`; book the commission expense against the payee vendor.
+- **`create-vendor`** — creates the payee vendor (done in [/demo-setup-commissions](../demo-setup-commissions/SKILL.md)). The vendor record carries **no** payment details — ABA/account/wallet live only in the register.
