@@ -63,22 +63,34 @@ The map then describes the wrong repository, every local branch falls
 into SKIP-noPR, and the skill quietly does nothing. Derive the slug
 from `origin`'s URL and pass it explicitly:
 
+**Write the map to a unique temp path**, not a fixed `/tmp/merged-prs.tsv`.
+A hardcoded shared filename can be clobbered mid-run by a concurrent
+invocation (another Claude session, a parallel checkout) — and the
+silent failure is dangerous: the map gets overwritten with *another
+repo's* merged PRs, so your local branches either all fall into
+SKIP-noPR or, worse, a same-named branch matches an unrelated SHA. Use
+`mktemp` so every run gets its own file:
+
 ```bash
 ORIGIN_SLUG=$(git remote get-url origin \
   | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
 
+MAP=$(mktemp "${TMPDIR:-/tmp}/merged-prs.XXXXXX")
+
 gh pr list --repo "$ORIGIN_SLUG" --state merged --limit 200 \
   --json headRefName,headRefOid \
   --jq '.[] | [.headRefName, .headRefOid] | @tsv' \
-  > /tmp/merged-prs.tsv
+  > "$MAP"
 ```
 
 Each line: `<branch-name>\t<head-SHA-at-merge>`.
 
-Sanity-check the map before trusting it: if `/tmp/merged-prs.tsv` is
-empty or none of its branch names resemble your local branches, you are
-probably pointed at the wrong repo — re-derive `ORIGIN_SLUG` and
-confirm it matches `git remote get-url origin`.
+Sanity-check the map before trusting it: if `"$MAP"` is empty or none
+of its branch names resemble your local branches, you are probably
+pointed at the wrong repo (or the file was clobbered) — re-derive
+`ORIGIN_SLUG`, confirm it matches `git remote get-url origin`, and
+rebuild the map at a fresh `mktemp` path. Remove `"$MAP"` when the
+skill finishes.
 
 200 is a sensible upper bound for normal repos; bump it (`--limit
 1000`) if the repo has a long tail of stale merged PRs that still
@@ -112,7 +124,7 @@ classifications:
 The check:
 
 ```bash
-PR_HEAD=$(awk -v b="$BRANCH" -F'\t' '$1==b {print $2; exit}' /tmp/merged-prs.tsv)
+PR_HEAD=$(awk -v b="$BRANCH" -F'\t' '$1==b {print $2; exit}' "$MAP")
 
 if [[ -z "$PR_HEAD" ]]; then
     classify "$BRANCH" "SKIP-noPR" ""
