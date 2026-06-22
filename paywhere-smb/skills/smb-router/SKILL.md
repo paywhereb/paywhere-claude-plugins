@@ -122,7 +122,7 @@ Before recommending a command, check which connectors are active. If the best-ma
 |---|---|---|
 | `/plan-payroll` | QuickBooks | Paywhere (real-time balance + settlement detection), Gmail (reminder drafts) |
 | `/pay-bills` | QuickBooks | Paywhere (without it: AP analysis + drafted payment list only — nothing executes) |
-| `/pay-and-bill` | QuickBooks, Paywhere | Gmail (hour-report mail) |
+| `/pay-and-bill` | QuickBooks, Paywhere | — |
 | `/close-month` | QuickBooks, Paywhere | Google Drive |
 | `/month-heads-up` | QuickBooks | Paywhere |
 | `/price-check` | QuickBooks | — |
