@@ -2,14 +2,14 @@
 name: pay-and-bill
 version: 0.1.0
 description: >
-  Runs the hours-to-cash cycle for a staffing firm: collects worker hour
-  reports for a period (Gmail for real data, Drive notes in the demo),
-  aggregates per worker and per client, invoices each client for the hours in
-  QuickBooks, pays each worker over their Paywhere rail (ACH / Wire /
-  Stablecoin) in one batch, books a Bill + Bill Payment per worker, and
-  reconciles against the bank. Reads a local workers-register.xlsx (who works
-  where, rates, rails) as the source of truth and dedupes with PWD-PB markers
-  so re-runs are safe. Use when the owner says "bill clients for hours,"
+  Runs the hours-to-cash cycle for a staffing firm: reads last period's worker
+  hours from QuickBooks time-activities, aggregates per worker and per client,
+  invoices each client for the hours in QuickBooks, pays each worker over their
+  Paywhere rail (ACH / Wire / Stablecoin) in one batch, books a Bill + Bill
+  Payment per worker, and reconciles against the bank. Worker rates and rails
+  come from the QuickBooks vendor records; recipients are pre-configured at
+  setup so a pay step passes a recipientRef + amount. Dedupes with PWD-PB
+  markers so re-runs are safe. Use when the owner says "bill clients for hours,"
   "invoice the hours," "pay my contractors," "pay the workers," or "run the
   pay-and-bill cycle."
 ---
@@ -20,52 +20,48 @@ description: >
 
 ```
 User: "run the pay-and-bill cycle"
-→ Open workers-register.xlsx (Workers + PaidLog sheets, local Excel)
 → Determine the period (default: the last complete Mon–Sun week)
-→ Collect hour reports: Gmail first (real path), Drive notes as the demo fallback
+→ Read last week's hours from QBO time-activities (search_time_activities)
+→ Read worker rates + rails from the QBO worker vendors
 → Aggregate: per-worker hours; per-client hours × BillRate — show the math
 → Dedupe: search_invoices / search_bills for PWD-PB-…-{period}-% markers
 → GATE 1: invoice table → approval → create_invoice per client
 → GATE 2: pay table (incl. stablecoin fee from dryRun) → approval
-→ ONE make_batch_payment (mixed rails) → per-item results
-→ Record: create-bill + create_bill_payment per worker; append PaidLog rows
+→ ONE make_batch_payment (mixed rails, recipientRef per worker) → per-item results
+→ Record: create-bill + create_bill_payment per worker
 → Reconcile: query_transactions (debits) + margin summary (≈ 1.3×)
 ```
 
-Money moves on three rails and is recorded in two systems plus a local
-workbook. Get the data model right before running — read
-[DATA-MODEL.md](DATA-MODEL.md).
+Money moves on three rails and is recorded in two systems. Get the data model
+right before running — read [DATA-MODEL.md](DATA-MODEL.md).
 
 ## What is the source of truth
 
-- **`workers-register.xlsx`** (a LOCAL Excel file in the working folder — not
-  a Google Sheet) decides *who* works at *which client*, the *BillRate*
-  invoiced, the *PayRate* paid, and the *rail + payment details*. A worker
-  not in the `Workers` sheet cannot be invoiced or paid — flag and exclude.
-- **Hour reports** (Gmail threads, or Drive notes in the demo) are the only
-  evidence of hours. Hours are never invented and never assumed.
-- **QuickBooks** is the system of record: the client invoice is the revenue,
-  the worker Bill + Bill Payment is the cost.
-- **Paywhere** is the bank: it disburses worker pay and proves it posted.
+- **QuickBooks** is the system of record:
+  - **Worker vendors** carry *who* the workers are, the *PayRate* paid and the
+    *BillRate* invoiced, the client each is placed at, and the *rail* (ACH /
+    Wire / Stablecoin). A worker with no vendor record cannot be invoiced or
+    paid — flag and exclude.
+  - **Time-activities** carry *how many hours* each worker actually worked the
+    period. Hours are read from the books, never invented and never assumed.
+  - The client invoice is the revenue; the worker Bill + Bill Payment is the
+    cost.
+- **Paywhere** is the bank: it disburses worker pay and proves it posted. Each
+  worker is **pre-configured as a recipient** at setup, so a pay step passes a
+  `recipientRef` + amount — the server fills in the bank/wire details.
 
 ## Setup (first run only)
 
-If `workers-register.xlsx` doesn't exist, don't improvise it — either help
-the owner create one with their real workers/rates/rails (schema in
-[DATA-MODEL.md](DATA-MODEL.md)), or run `/demo-setup-pay-and-bill` to
-scaffold the demo register and seed last week's hour notes. Resume
-`pay-and-bill` once the register exists.
+This skill reads what is already in QuickBooks and Paywhere — it does not stand
+up its own data. If the QBO worker vendors or last period's time-activities are
+missing, help the owner enter them (or, for the demo world, the persona,
+vendors, time-activities, and pre-configured recipients are seeded by
+`/demo-setup` — see [../../DATASET.md](../../DATASET.md)). Resume `pay-and-bill`
+once the vendors and time-activities exist.
 
 ## Workflow
 
-### 1. Open the register
-
-Locate `workers-register.xlsx` in the session working folder; read both
-sheets with Python (`openpyxl`). Missing → Setup above. Multiple candidates →
-list them and ask. Build lookups: `Workers` keyed by Worker name; `PaidLog`
-as a set of `(PeriodStart, Worker)` already paid.
-
-### 2. Determine the period
+### 1. Determine the period
 
 Default: **the last complete week** — the Mon–Sun block ending on the most
 recent Sunday on or before today (compute from today's actual date; never
@@ -73,41 +69,40 @@ reuse a date from a prior session). Accept an explicit period argument ("week
 of June 1", "May 18–24") and normalize it to a Monday-start week. The
 **period key** is the ISO date of the Monday — it appears in every marker.
 
-### 3. Collect hour reports
+### 2. Read the worker roster from QBO
 
-- **Gmail first — the real path.** `search_threads` for the subject
-  convention `Hours - {Worker} - Week of {period}` (per
-  [DATA-MODEL.md](DATA-MODEL.md)); `get_thread` to read each report.
-- **Drive fallback — the demo path.** If Gmail has no reports (or no Gmail
-  connector), `search_files` for notes named with the same convention
-  (seeded per
-  [../demo-setup-pay-and-bill/seed/workers.md](../demo-setup-pay-and-bill/seed/workers.md));
-  `read_file_content` to read them.
+`search_vendors` for the worker vendors. Each carries the worker's name (the
+hour-report join key and the bill vendor), the placed client, the `BillRate`
+and `PayRate`, and the `rail` + `recipientRef` (per [DATA-MODEL.md](DATA-MODEL.md)).
+A worker missing a rate or a recipientRef → flag and exclude; never guess.
 
-Parse day lines and the `Total:` line; if they disagree, ask the owner.
-**State explicitly which path supplied each worker's hours.** A register
-worker with no report → flag, exclude from both invoicing and pay, and say
-so. Never invent hours.
+### 3. Read the hours from QBO time-activities
+
+`search_time_activities` for the period (filter by the time-activity date
+falling in the Mon–Sun window). Each time-activity ties a worker (vendor) to a
+client (customer), an hours figure, and the hourly rate. Sum hours per worker
+for the period. A roster worker with **no** time-activity for the period →
+flag, exclude from both invoicing and pay, and say so. Never invent hours.
 
 ### 4. Aggregate — show the math
 
-- Per worker: total hours for the period.
-- Per client (via the register's `Client` assignment): one invoice line per
+- Per worker: total hours for the period (from the time-activities).
+- Per client (via the worker's placed-client assignment): one invoice line per
   worker — hours × BillRate — and the invoice total.
 - Per worker pay: hours × PayRate.
 
-Show the arithmetic line by line (e.g. `40h × $130 = $5,200`), plus the
-grand totals and the expected ≈1.3 invoiced-to-pay ratio
-([DATA-MODEL.md](DATA-MODEL.md), "The math").
+Show the arithmetic line by line (e.g. `40h × $52 = $2,080`, **example
+only — use the live rates**), plus the grand totals and the expected ≈1.3
+invoiced-to-pay ratio ([DATA-MODEL.md](DATA-MODEL.md), "The math").
 
 ### 5. Dedupe — before anything is written
 
 `search_invoices` for DocNumber `PWD-PB-INV-{period}-%` and `search_bills`
 for `PWD-PB-BILL-{period}-%` (both filter DocNumber and PrivateNote with
-`LIKE`). Cross-check `PaidLog` for `(PeriodStart, Worker)` rows. Anything
-already marked → an "already processed" row, excluded from its gate. A
-partial prior run (say, invoices created but workers unpaid) leaves only the
-missing halves in play — that is the point of two marker families.
+`LIKE`). Anything already marked → an "already processed" row, excluded from
+its gate. A partial prior run (say, invoices created but workers unpaid)
+leaves only the missing halves in play — that is the point of two marker
+families.
 
 ### 6. GATE 1 — invoice the clients
 
@@ -142,18 +137,24 @@ batch *and* the step-8 QBO bookkeeping for those payments):
 |---|---|---|---|---|---|---|
 
 On approval, **ONE** `make_batch_payment` (`dryRun: false`, `stopOnError:
-false`), items built from the register per [DATA-MODEL.md](DATA-MODEL.md):
-ACH with `recipientIdType: "Inline"` and the full recipient block; wire with
-`recipient` + `recipientBank {name, aba}`; stablecoin with `{walletAddress,
-currency: "USD", accountNumber, amount}`. ACH `paymentName` / wire
-`description` = the worker's bill marker (reconcile trace);
-`paymentDate`/`processDate` = today.
+false`), items built per [DATA-MODEL.md](DATA-MODEL.md). **Prefer
+`recipientRef`** for ACH and wire workers — pass `{rail, fromAccountNumber,
+recipientRef, amount, …}` and the server fills the bank/wire details (workers
+are pre-configured as recipients at setup). **Degrade gracefully:** if a
+worker has no pre-configured recipient (a real worker not yet onboarded), fall
+back to the inline recipient block from their vendor record — ACH with the full
+`recipient` block, wire with `recipient` + `recipientBank {name, aba}` — rather
+than erroring. Stablecoin always uses the stablecoin flow `{walletAddress,
+currency: "USD", accountNumber, amount}` (recipientRef is ACH/Wire only). ACH
+`paymentName` / wire `description` = the worker's bill marker (reconcile trace);
+`paymentDate`/`processDate` is **optional and defaults to the next business
+day** server-side — set it only to override that default.
 
 Report per-item results from `results[]`. **The tool is not idempotent**: on
 partial failure, fix and re-submit **only the failed items** — never the
 whole batch.
 
-### 8. Record — QBO markers and PaidLog
+### 8. Record — QBO markers
 
 For every worker whose payment succeeded, **write the markers immediately**:
 
@@ -162,15 +163,12 @@ For every worker whose payment succeeded, **write the markers immediately**:
    `PrivateNote` = the marker + worker, period, hours, and the Paywhere
    `paymentId` (format in [DATA-MODEL.md](DATA-MODEL.md)).
 2. `create_bill_payment` for the bill, same amount.
-3. Append the `PaidLog` row to the xlsx: `PeriodStart | PeriodEnd | Worker |
-   Hours | PayRate | GrossPay | Rail | PaywherePaymentId | QBOBillId |
-   QBOInvoiceIds`.
 
 **Marker-first discipline:** if the bank payment succeeded but a QBO write
-fails, the money already moved — append the `PaidLog` row immediately, retry
-the QBO marker, and report the partial state explicitly so next run's dedupe
-still catches it. Never call the run clean until each paid worker has a
-marker in at least one system (PaidLog at minimum).
+fails, the money already moved — retry the QBO marker and report the partial
+state explicitly (worker, gross, Paywhere `paymentId`) so next run's dedupe
+still catches it. Never call the run clean until each paid worker has its bill
+marker in QBO.
 
 ### 9. Reconcile and summarize
 
@@ -186,27 +184,30 @@ marker in at least one system (PaidLog at minimum).
   in the close-out.
 
 End with: invoices created (DocNumber + id), payments (rail + Paywhere id),
-bills + bill payments (ids), PaidLog rows appended, and the margin line.
+bills + bill payments (ids), and the margin line.
 
 ## Graceful degradation — say what's skipped, never half-work silently
 
 - **No Paywhere**: run steps 1–6 only — invoices still go out — then produce
-  the **drafted payment list** (worker, gross, rail, full payment fields)
-  without executing anything. No bank batch, no bills, no PaidLog rows; tell
-  the owner exactly that.
-- **No Gmail AND no Drive**: ask the owner to paste each worker's hours
-  inline, **echo the parsed hours back and get an explicit confirmation**
-  before using them.
-- **No QuickBooks**: **stop** — QBO is the system of record; invoicing and
-  cost booking cannot be skipped or faked.
+  the **drafted payment list** (worker, gross, rail, recipientRef or payment
+  fields) without executing anything. No bank batch, no bills; tell the owner
+  exactly that.
+- **No QuickBooks**: **stop** — QBO is the system of record for both the
+  worker roster/rates and the time-activities (the hours). Without it there is
+  no source of truth; invoicing and cost booking cannot be skipped or faked.
+- **A worker with no pre-configured recipient**: don't error — fall back to the
+  inline recipient details on their vendor record (step 7). If those are also
+  missing, flag and exclude that worker.
 
 ## Edge cases — spell these out, don't guess
 
-- **Gmail and Drive disagree for the same worker**: prefer Gmail (the real
-  path), but surface both numbers and the delta to the owner before the gate.
-- **Hours but no register row**: flag and exclude — there is no rate or rail
-  to price either side with. Offer to add the worker to the register first.
-- **Register worker with no report**: flag and exclude; never invent hours.
+- **Time-activity total looks off** (e.g. duplicate entries for the same
+  worker/day, or hours far outside the normal range): surface the rows and the
+  delta to the owner before the gate; never silently pick one.
+- **Hours but no vendor record**: flag and exclude — there is no rate or rail
+  to price either side with. Offer to add the worker vendor first.
+- **Worker vendor with no time-activity for the period**: flag and exclude;
+  never invent hours.
 - **Partial-week hours** (e.g. a day off): perfectly normal — invoice and pay
   the actual hours; note it in the tables.
 - **A client invoice for the period already exists *without* our marker**:
@@ -214,13 +215,13 @@ bills + bill payments (ids), PaidLog rows appended, and the margin line.
   it covers (or doesn't cover) these hours.
 - **Report total ≠ sum of day lines**: ask the owner which is right.
 - **Unverified stablecoin recipient**: exclude that worker from the batch and
-  point at `/demo-setup-pay-and-bill` (demo) or
-  `create_stablecoin_recipient` + verification (real); never pay an
+  fix it with `create_stablecoin_recipient` + verification (the demo world
+  seeds this — see [../../DATASET.md](../../DATASET.md)); never pay an
   unverified wallet.
 - **Batch partial failure**: re-submit only the failed `results[]` items —
   `make_batch_payment` is not idempotent.
-- **Bank success, QBO failure**: marker-first discipline (step 8) — PaidLog
-  now, retry the marker, report partial state.
+- **Bank success, QBO failure**: marker-first discipline (step 8) — retry the
+  marker, report partial state.
 - **DocNumber not persisted** (sandbox without custom transaction numbers):
   detected on the first invoice read-back; dedupe rides the PrivateNote
   marker instead.
@@ -228,8 +229,8 @@ bills + bill payments (ids), PaidLog rows appended, and the margin line.
 ## Approval gates
 
 - **Gate 1 (step 6)** covers QBO invoice creation; **Gate 2 (step 7)** covers
-  the bank batch and its matching bills/bill payments/PaidLog rows. Nothing
-  is written or paid before its gate.
+  the bank batch and its matching bills/bill payments. Nothing is written or
+  paid before its gate.
 - One approval covers one batch; adding or changing a row after approval
   restarts that gate.
 - Anything that fails dedupe is shown as "already processed", never re-done.
@@ -238,9 +239,8 @@ bills + bill payments (ids), PaidLog rows appended, and the margin line.
 
 ## Reference
 
-- [DATA-MODEL.md](DATA-MODEL.md) — register schema, hour-report conventions,
-  the invoice/pay/margin math, PWD-PB marker formats, and the verbatim MCP
-  tool signatures.
-- [../demo-setup-pay-and-bill/seed/workers.md](../demo-setup-pay-and-bill/seed/workers.md)
-  — the demo register rows and hour-note templates this skill consumes in
-  demo mode.
+- [DATA-MODEL.md](DATA-MODEL.md) — the QBO worker-vendor and time-activity
+  shapes, the invoice/pay/margin math, PWD-PB marker formats, and the verbatim
+  MCP tool signatures.
+- [../../DATASET.md](../../DATASET.md) — the demo world's persona, worker
+  roster, weekly hours, and pre-configured recipients (seeded by `/demo-setup`).
