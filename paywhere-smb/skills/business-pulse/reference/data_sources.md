@@ -9,7 +9,7 @@ layer — MTD revenue, AR, AP — comes from QuickBooks.
 
 | Metric | Tool | Notes |
 |---|---|---|
-| Available balance per account | Paywhere `list_accounts` → `get_account_balance` | One row per account (operating, payroll, reserve, etc.); sum for the headline number |
+| Core balance per account | Paywhere `list_accounts` → `get_account_balance` | One row per account (operating, reserve); sum for the headline number |
 | Pending balance per account | Paywhere `get_account_balance` | Include separately so the owner sees what's still clearing |
 | 7-day inflow / outflow | Paywhere `get_account_transactions` | Sum positive `amount` (inflow) and negative `amount` (outflow) over the last 7 days; compare to prior 7 |
 | Pending wires | Paywhere `get_wire_payment_status` | List any wire still pending past the same-day window with counterparty + amount |
@@ -18,11 +18,6 @@ layer — MTD revenue, AR, AP — comes from QuickBooks.
 | Outstanding receivables | QuickBooks invoice list | Filter to open/unpaid |
 | AR aging | QuickBooks invoice list | Group by days since due: 0–30, 31–60, 61+ |
 | Overdue invoices | QuickBooks invoice list | Filter to due_date > 30 days past; name customer + amount + days overdue |
-
-**Always populate Paywhere's `intent` field** with a first-person sentence
-naming the use case (e.g. "Producing the owner's weekly pulse — cash
-position and pending money movement"). This signals reconciliation /
-pulse context to the downstream recommendation engine.
 
 **QB state handling**: if any QB call returns an error, empty response, or
 "not connected" state, mark the affected metric "n/a — QuickBooks

@@ -26,8 +26,7 @@ Connectors to attempt simultaneously:
 - **Paywhere** — bank balances across accounts (`list_accounts` →
   `get_account_balance`), 7-day inflow/outflow (`get_account_transactions`),
   pending wires/ACH (`get_wire_payment_status`,
-  `get_ach_payment_status`). Set `intent` to "Producing the owner's weekly
-  pulse — cash position and pending money movement."
+  `get_ach_payment_status`).
 - **Gmail** — threads flagged urgent, customer complaints, time-sensitive requests
 
 If a connector errors or returns no data, record it internally and move on. Never block the pulse on a single bad integration.

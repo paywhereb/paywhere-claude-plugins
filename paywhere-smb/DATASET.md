@@ -81,7 +81,7 @@ description (the mock bank can't post ACH *deposits*).
 | Devon Okafor | Mitsui | $3,230 | Stablecoin |
 
 Monthly contractor run total = **$17,380** (the recurring Friday obligation in
-beat #6). Seeded as historical monthly bank debits (the "old processor"
+beat #5). Seeded as historical monthly bank debits (the "old processor"
 baseline) and as paid QBO bills against worker-vendors.
 
 **Pay-and-bill weekly hours** (phase-2 B; last week, whole-dollar hours×rate,
@@ -144,9 +144,10 @@ All gross × rate are whole dollars by design.
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
    ≈ **$910** (AWS $760 + Google Workspace $150, both ACH due `W+0:Fri`).
-5. **Payroll shortfall** — Operating closes ≈ $23,000; Friday obligations ≈
-   Gusto $3,600 + contractor cycle $17,380 + overdue AP $1,840 + due-this-week AP
-   $910 = **$23,730** → a believable small shortfall. Collectible AR =
+5. **Payroll shortfall** — Operating closes ≈ $23,000 at seed; after the beat-4
+   bills clear (~$2,750) it sits at ≈ **$20,250**. Friday obligations ≈
+   Gusto $3,600 + contractor cycle $17,380 = **$20,980** → a believable ~$730
+   shortfall. Collectible AR =
    Alderbrook $4,800 + Mitsui half $2,100 = **$6,900** comfortably covers the gap
    → the natural move is "chase Alderbrook," **not raid the Reserve**. **Hallsten's
    $2,600 `W-1:Mon` bank credit is unrecorded in QBO (phantom) and must be excluded
@@ -162,14 +163,14 @@ All gross × rate are whole dollars by design.
 
 ## Reconciliation (standing discrepancies — keeps month-end-prep honest)
 
-- **NorthPeak amount mismatch (beat #4):** the bank auto-debited the **renewed
+- **NorthPeak amount mismatch (beat #3):** the bank auto-debited the **renewed
   $1,280** annual rate under a cryptic descriptor, but QBO bill `PWD-BILL-0601`
   is still the **old $1,200** and **open/unpaid** (the payment never matched).
   This is the *fixable* reconciliation the agent demonstrates: update the bill to
   $1,280 and record the payment. Because it's an open bill, it adds **$1,200 to
   open AP** — so QBO **open AP seeds at $3,950** ($2,750 due-this-week + the
-  $1,200 NorthPeak item). It is dated out of the beat-5 window and is resolved in
-  beat 4, so the pay-bills ($2,750) and payroll beats are unaffected.
+  $1,200 NorthPeak item). It is dated out of the beat-4 window and is resolved in
+  beat 3, so the pay-bills ($2,750) and payroll beats are unaffected.
 - **Interest credit (a):** a small current-week Reserve interest credit
   ($13.40) in the bank with **no QBO counterpart**.
 - **Wire fee (b):** a tiny promo wire fee ($1.20) in the bank that QBO books as

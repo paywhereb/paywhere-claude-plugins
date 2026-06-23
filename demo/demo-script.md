@@ -22,7 +22,7 @@ finance agent. The one exception is setup, which the presenter runs once.
 Approve the gate. **Record the returned bank username/password** (also posted to
 the demo Slack channel). Confirm the report shows Operating ≈ $23,000, Reserve
 ≈ $20,138, open AR $9,500, **open AP $3,950** (= $2,750 due-this-week bills + the
-$1,200 NorthPeak reconciliation item, which beat 4 resolves — see DATASET.md),
+$1,200 NorthPeak reconciliation item, which beat 3 resolves — see DATASET.md),
 recipients configured, enrichment written, and `beatsReady`. If the books seed
 reports `errorCount > 0`, re-check the QBO sandbox chart of accounts.
 
@@ -76,7 +76,7 @@ proposes the correction — **update the bill to $1,280 and record the bill paym
 against this charge** — and, on approval, writes it back to QuickBooks
 (`update_bill` + `create_bill_payment`). The $80 gap is the silent auto-renew
 price increase; the invoice (bank detail or Gmail) is the evidence. The bill is
-dated out of the beat-5 window, so it never shows up in "pay bills due this week"
+dated out of the beat-4 window, so it never shows up in "pay bills due this week"
 — it's resolved here. (Frame it: *"Your books still think this is $1,200 and
 unpaid; your bank shows $1,280 actually went out. Want me to correct the bill and
 match the payment?"*)
@@ -95,8 +95,9 @@ not, prompt it)
 ```
 Am I good for payroll this Friday?
 ```
-→ Operating ≈ $23,000 vs Friday obligations ≈ $23,730 (Gusto $3,600 + contractor
-cycle $17,380 + the AP just queued) → a small shortfall (~$730). Collectible AR
+→ Operating ≈ $20,250 (the beat-4 bills have cleared) vs Friday obligations ≈
+$20,980 (Gusto $3,600 + contractor cycle $17,380) → a small shortfall (~$730).
+Collectible AR
 = Alderbrook $4,800 + Mitsui's open half $2,100 = **$6,900** comfortably covers
 it → the agent's move is **"chase Alderbrook," not raid the Reserve** (the Reserve
 is runway, not a payroll backstop). (Hallsten's $2,600 bank credit is already
@@ -139,12 +140,12 @@ clients who pay that way, then draft the emails
 → Invoices in QBO + `initiate_stablecoin_receipt` for the stablecoin clients +
 **Gmail drafts** (drafts only — nothing is sent).
 
-**B. Pay-and-bill** (hours from QBO time-activities; pre-seeded recipients)
+**B. Pay-and-bill** (hours from QBO time-activities; saved payees)
 ```
 Run the pay-and-bill cycle for last week
 ```
 → Pulls last week's hours from QBO time-activities, bills clients, pays
-contractors on their rails (ACH/Wire via `recipientRef`, Devon via stablecoin).
+contractors on their rails (ACH/Wire by the worker's name, Devon via stablecoin).
 Whole-dollar: Priya 40h@$40, Marcus 36h@$30, Elena 40h@$60 (wire), Devon
 32h@$50 (stablecoin); bill = pay × 1.3.
 

@@ -26,50 +26,61 @@ For each account on the user's profile:
    balance. Use this to anchor your reconciliation: end-of-month book
    balance in QuickBooks should equal Paywhere available balance ± timing
    differences (outstanding checks, deposits in transit).
-3. `get_account_transactions` for each account, scoped to the target month.
-   **Always populate the `intent` field** with a first-person sentence
-   ("I'm reconciling March for month-end close, matching bank lines to the
-   QB register"). This signals to the MCP that you're in a reconciliation
-   flow and influences which product recommendations are surfaced
-   downstream.
+3. `get_account_transactions` for each account, scoped to the target month
+   (`fromDate`/`toDate`), paging through with `pageNumber`/`pageSize` until
+   you have the full month. (For filtered or aggregated pulls, prefer
+   `query_transactions`.)
 
 ## Transaction shape
 
-Each row in `get_account_transactions` carries roughly:
+Each row in `get_account_transactions` carries:
 
 | Field | Notes |
 |---|---|
-| `postDate` | Calendar date the line posted to the account (ISO date). Use this for date matching. |
+| `id` | Stable identifier for the line. Use it as the reconciliation key when writing back to QB memos, and to look up enriched detail via `get_transaction_detail`. |
+| `postDate` | Date-time the line posted (e.g. `2026-06-02 14:05:16-05:00`). Compare on the date part for matching. |
 | `amount` | Signed decimal. Positive = credit (money in), negative = debit (money out). |
-| `description` | Free-text description from the upstream rail (ACH/wire memo, stablecoin tx note, internal transfer label, etc.). |
-| `type` | Enum: `ach`, `wire`, `stablecoin`, `transfer`, `fee`, `interest`, etc. Indicates which clearing window applies. |
-| `runningBalance` | Account balance after this line posted, if upstream provided it. Useful for sanity-checking the order of operations. |
-| `id` | Stable identifier for the line. Use it as the reconciliation key when writing back to QB memos. |
+| `description` | Human-readable line description (e.g. `Amazon Web Services Inc`, `Thames Fintech Ltd - consulting hours`). |
+| `statementDescription` | The raw bank statement descriptor (e.g. `ACH DEBIT AMAZON WEB SERVICES INC`, `WIRE IN THAMES FINTECH LTD`, `ACH CR ALDERBROOK VENTURES`). Cryptic processor descriptors land here — match and fingerprint on this field. |
+| `status` | Settlement status of the line. |
+| `type` | Rail/category of the line: `ACH`, `DomesticWire`, `Transfer`, `Cash`. (`query_transactions` matches `types` case-insensitively, but use these exact values.) |
 
-There is **no fee field**. Paywhere posts fees as their own debit lines
-with `type: "fee"` and a distinct `description`. Do not subtract a fee from
-the parent transaction's amount.
+There is **no fee field**. Fees post as their own separate lines (e.g. a
+`WIRE TRANSFER FEE` debit), so don't subtract a fee from the parent
+transaction's amount.
 
 ## Counterparty extraction
 
-Today the upstream Paywhere API returns counterparty inside the free-text
-`description`. Until a structured `counterpartyName` field lands (tracked
-upstream), extract it heuristically:
+Prefer the structured source first:
 
-- **ACH credits/debits** — counterparty is usually the substring after
-  `ACH ` and before the next ` / ` separator (e.g. `ACH Acme Corp /
-  INV-112` → counterparty `Acme Corp`).
-- **Wire credits/debits** — counterparty is everything between `WIRE FROM`
-  / `WIRE TO` and the first dollar amount or memo separator.
-- **Stablecoin receipts** — `description` includes the sender wallet
-  address and (if the user named the recipient) the recipient nickname.
-  Extract the recipient nickname when present; fall back to a truncated
-  wallet address.
-- **Internal transfers** — `description` follows `Transfer to <account>` /
-  `Transfer from <account>`. Use the named account verbatim.
+- **`get_transaction_detail`** (by `accountNumber` + `id`, or `accountNumber`
+  + `postDate` + `amount`) returns an enriched `detail` for a line:
+  counterparty name/address/bank, memo, category, payment rail, and any
+  invoice/doc reference. Use this whenever you need to answer "who is this to
+  / what was it for / I don't recognize this charge." When the line has no
+  enrichment on file, `detail` is `null` — fall back to parsing the text
+  fields below.
 
-When the regex misses, fall back to the full `description` string. Never
-silently drop the row — the owner needs to be able to identify it.
+When you have to parse text, the counterparty lives in `description` /
+`statementDescription`:
+
+- **ACH debits** — `statementDescription` is `ACH DEBIT <PAYEE>` (e.g.
+  `ACH DEBIT AMAZON WEB SERVICES INC`); `description` usually carries the
+  cleaner name. Some lines are deliberately cryptic processor passthroughs
+  (e.g. `ACH DEBIT NPA*ENRICH 8002231`) that don't name the vendor — those
+  are exactly the rows to resolve with `get_transaction_detail`.
+- **ACH credits** — `statementDescription` is `ACH CR <PAYER>` (e.g.
+  `ACH CR ALDERBROOK VENTURES`).
+- **Wires** — `statementDescription` is `WIRE IN <SENDER>` /
+  `WIRE OUT <PAYEE>`; `description` carries the human label.
+- **Stablecoin payouts** — `statementDescription` is
+  `STABLECOIN PAYOUT <NAME>`.
+- **Transfers / fees / interest** — descriptive labels like
+  `INTEREST PAYMENT`, `WIRE TRANSFER FEE`, or an internal transfer label.
+
+When neither a structured detail nor a recognizable descriptor is available,
+fall back to the full `description` string. Never silently drop the row — the
+owner needs to be able to identify it.
 
 ## Pending vs settled
 
