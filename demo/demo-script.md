@@ -43,18 +43,18 @@ Categorize my spending over the last few months
 → Reads the bank (6 months). Biggest categories: contractor labor, payroll
 (Gusto), rent, cloud/SaaS — plus a one-off that stands out (NorthPeak).
 
-**3. Investigate + reconcile a charge** (the `get_transaction_detail` + write-back beat)
+**3. Investigate + reconcile a charge** (the `get_transaction_detail` → Gmail → write-back beat)
 ```
 There's an ACH debit for $1,280 I don't recognize — the statement just says
 "NPA*ENRICH 8002231". What is it?
 ```
 → The plain bank row shows only `ACH DEBIT NPA*ENRICH 8002231 — $1,280` (a
-payment-processor passthrough, not a vendor name). `get_transaction_detail` — or,
-as a fallback, the NorthPeak invoice in Gmail — resolves it: **NorthPeak
-Analytics LLC**, 220 Kearny St Ste 600, San Francisco CA; "Data enrichment
-subscription — annual, billed in arrears (contract #NP-2231)"; ref NP-INV-4471;
-auto-renewed (signed by M. Webb ~11 months ago) **at a higher rate, $1,200 →
-$1,280**.
+payment-processor passthrough, not a vendor name). `get_transaction_detail` adds
+**one breadcrumb and nothing more** — an invoice reference, `NP-INV-4471`. That's
+the thread to pull: the agent **searches Gmail for that invoice** and finds it —
+**NorthPeak Analytics LLC**, "Data enrichment subscription — annual, billed in
+arrears (contract #NP-2231)"; auto-renewed (signed by M. Webb ~11 months ago)
+**at a higher rate, $1,200 → $1,280**.
 
 **Why it's not recognized (say this out loud — it's the "aha"):** the bank feed
 hands you a cryptic descriptor and an amount, never *who* or *why*:
@@ -75,7 +75,7 @@ old $1,200**, while the bank actually paid **$1,280** — the payment never matc
 proposes the correction — **update the bill to $1,280 and record the bill payment
 against this charge** — and, on approval, writes it back to QuickBooks
 (`update_bill` + `create_bill_payment`). The $80 gap is the silent auto-renew
-price increase; the invoice (bank detail or Gmail) is the evidence. The bill is
+price increase; the invoice (found in Gmail) is the evidence. The bill is
 dated out of the beat-4 window, so it never shows up in "pay bills due this week"
 — it's resolved here. (Frame it: *"Your books still think this is $1,200 and
 unpaid; your bank shows $1,280 actually went out. Want me to correct the bill and
