@@ -57,6 +57,24 @@ Francisco CA), memo ("Data enrichment subscription — annual, billed in arrears
 contract #NP-2231"), category, ref NP-INV-4471, and the note that it auto-renewed
 (signed by M. Webb 11 months ago).
 
+**Why it's not recognized (say this out loud — it's the "aha"):** the bank feed
+only gives you *who* and *how much*, never *why*. The payee name is right there,
+so this isn't about a hidden vendor — it's that the charge has no context:
+
+- **It's annual, not monthly.** Unlike the SaaS lines you see every month, this
+  one only hits once a year, so it doesn't register as familiar.
+- **Someone else set it up.** It was authorized by M. Webb ~11 months ago, not
+  the owner looking at the statement today.
+- **It auto-renewed silently.** No fresh decision, no heads-up — it just billed
+  in arrears and ACH-debited Operating.
+
+Frame the contrast explicitly, e.g.: *"Your bank line is just a payee and an
+amount — no purpose or terms. Pulling the detail: it's an annual data-enrichment
+subscription (contract NP-2231) that auto-renewed, authorized by M. Webb about a
+year ago. That's why it didn't look familiar — it bills once a year and renewed
+on its own."* (If the agent falls back to email instead of `get_transaction_detail`,
+the invoice tells the identical story — same beat either way.)
+
 **5. Pay the bills due this week** (ACH + Wire, pre-configured recipients)
 ```
 Pay the bills due this week
