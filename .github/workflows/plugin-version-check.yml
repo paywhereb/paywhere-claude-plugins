@@ -1,0 +1,68 @@
+name: Plugin version check
+
+# Fails a PR when a plugin's files change without bumping that plugin's version,
+# and keeps each plugin.json version in sync with its marketplace.json entry.
+# Plugins are auto-discovered from */.claude-plugin/plugin.json.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure changed plugins bump their version (and stay in marketplace sync)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          MARKET=".claude-plugin/marketplace.json"
+          changed_files="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          echo "Changed files in this PR:"
+          echo "$changed_files" | sed 's/^/  /'
+          echo
+
+          fail=0
+          # Discover plugins: each */.claude-plugin/plugin.json is one plugin.
+          for manifest in */.claude-plugin/plugin.json; do
+            [ -e "$manifest" ] || continue
+            plugin_dir="${manifest%%/*}"
+            name="$(jq -r '.name' "$manifest")"
+            cur="$(jq -r '.version' "$manifest")"
+
+            # marketplace.json must list the same version (always checked).
+            mkt="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .version' "$MARKET")"
+            if [ "$mkt" != "$cur" ]; then
+              echo "::error file=$MARKET::marketplace.json version for '$name' ($mkt) != $manifest ($cur). Keep them in sync."
+              fail=1
+            fi
+
+            # Did anything under this plugin's directory change in the PR?
+            if echo "$changed_files" | grep -q "^${plugin_dir}/"; then
+              base="$(git show "${BASE_SHA}:${manifest}" 2>/dev/null | jq -r '.version' 2>/dev/null || echo "")"
+              if [ -n "$base" ] && [ "$cur" = "$base" ]; then
+                echo "::error file=$manifest::Plugin '$name' changed but its version was not bumped (still $cur). Bump $manifest and the matching entry in $MARKET."
+                fail=1
+              else
+                echo "OK: '$name' changed and version moved ${base:-<new>} -> $cur"
+              fi
+            else
+              echo "skip: '$name' unchanged in this PR"
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo
+            echo "Plugin version check failed. See the errors above."
+            exit 1
+          fi
+          echo
+          echo "Plugin version check passed."
