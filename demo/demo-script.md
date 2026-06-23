@@ -43,13 +43,7 @@ Categorize my spending over the last few months
 → Reads the bank (6 months). Biggest categories: contractor labor, payroll
 (Gusto), rent, cloud/SaaS — plus a one-off that stands out (NorthPeak).
 
-**3. Move money**
-```
-Transfer $10,000 from savings to checking
-```
-→ A normal internal transfer (approval-gated).
-
-**4. Investigate + reconcile a charge** (the `get_transaction_detail` + write-back beat)
+**3. Investigate + reconcile a charge** (the `get_transaction_detail` + write-back beat)
 ```
 There's an ACH debit for $1,280 I don't recognize — the statement just says
 "NPA*ENRICH 8002231". What is it?
@@ -87,16 +81,16 @@ dated out of the beat-5 window, so it never shows up in "pay bills due this week
 unpaid; your bank shows $1,280 actually went out. Want me to correct the bill and
 match the payment?"*)
 
-**5. Pay the bills due this week** (ACH + Wire, pre-configured recipients)
+**4. Pay the bills due this week** (ACH + Wire, paid by name)
 ```
 Pay the bills due this week
 ```
 → Overdue ≈ $1,840 (DigitalOcean $300 ACH, Sutter Hill $560 **wire**, Grant
 Henderson $980 ACH) + due-this-week ≈ $910 (AWS $760 + Google Workspace $150,
-ACH). One mixed-rail batch via `recipientRef` (no raw bank details), one
+ACH). One mixed-rail batch paid by payee name (no raw bank details), one
 approval, Bill Payments booked back to QBO.
 
-**6. Payroll check** (the agent should flag this proactively after beat 5; if
+**5. Payroll check** (the agent should flag this proactively after beat 4; if
 not, prompt it)
 ```
 Am I good for payroll this Friday?
@@ -104,8 +98,9 @@ Am I good for payroll this Friday?
 → Operating ≈ $23,000 vs Friday obligations ≈ $23,730 (Gusto $3,600 + contractor
 cycle $17,380 + the AP just queued) → a small shortfall (~$730). Collectible AR
 = Alderbrook $4,800 + Mitsui's open half $2,100 = **$6,900** comfortably covers
-it → the agent's move is "chase Alderbrook." (Hallsten's $2,600 bank credit is
-already received but unrecorded in QBO — it must NOT be counted as collectible.)
+it → the agent's move is **"chase Alderbrook," not raid the Reserve** (the Reserve
+is runway, not a payroll backstop). (Hallsten's $2,600 bank credit is already
+received but unrecorded in QBO — it must NOT be counted as collectible.)
 
 **Mid-demo "money just landed"** — the presenter posts Alderbrook's live deposit.
 This is **triggered from the chat via MCP, not a script**: paste the prompt below
@@ -120,6 +115,17 @@ Alderbrook just paid — check again
 ```
 → Operating now clears Friday comfortably. (The agent resolves the Operating
 account number itself; both connectors must be on the same bank user — see Notes.)
+
+**6. Move money** (the closer — now that payroll is secured)
+```
+Now that payroll's covered, move $3,000 into savings to set some of the cushion aside
+```
+→ A normal internal transfer (approval-gated), **checking → savings**. After
+Alderbrook, Operating is ≈ $25,050; moving $3,000 to the Reserve leaves ≈ $22,050
+— still clearing Friday's ≈ $20,980 payroll run. This is deliberately AFTER the
+payroll beat: a savings→checking transfer earlier would erase the beat-5 shortfall.
+Moving money INTO the Reserve here lands the lesson — the Reserve is where surplus
+goes once you're covered, not a backstop you raid for an operating gap.
 
 ---
 

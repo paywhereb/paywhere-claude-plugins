@@ -125,8 +125,7 @@ All gross × rate are whole dollars by design.
 1. **Show balances** — Operating ≈ $23,000, Reserve ≈ $20,138.
 2. **Categorize spending (6 months)** — reads the bank; contractor labor, payroll
    (Gusto), rent, cloud/SaaS, the NorthPeak charge.
-3. **Transfer $10,000 savings→checking** — a normal action.
-4. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
+3. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
    **$1,280**, dated `W-1:Tue`, with a deliberately cryptic statement line
    `ACH DEBIT NPA*ENRICH 8002231` (a processor passthrough — neither the vendor
    name nor anything that auto-matches the books; `8002231` echoes contract
@@ -139,20 +138,27 @@ All gross × rate are whole dollars by design.
    **$1,200** rate and is **OPEN/unpaid** — the bank payment never matched
    (wrong amount + unrecognizable descriptor). The agent's fix: update the bill to
    $1,280 and record the bill payment against this charge. (The bill's due date is
-   `W+0:Fri+7`, out of the beat-5 window, so it never appears in "pay bills due
-   this week"; the agent resolves it here in beat 4.)
-5. **Pay bills due this week (ACH + Wire, saved payees)** —
+   `W+0:Fri+7`, out of the beat-4 window, so it never appears in "pay bills due
+   this week"; the agent resolves it here in beat 3.)
+4. **Pay bills due this week (ACH + Wire, saved payees)** —
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
    ≈ **$910** (AWS $760 + Google Workspace $150, both ACH due `W+0:Fri`).
-6. **Payroll shortfall** — Operating closes ≈ $23,000; Friday obligations ≈
+5. **Payroll shortfall** — Operating closes ≈ $23,000; Friday obligations ≈
    Gusto $3,600 + contractor cycle $17,380 + overdue AP $1,840 + due-this-week AP
    $910 = **$23,730** → a believable small shortfall. Collectible AR =
    Alderbrook $4,800 + Mitsui half $2,100 = **$6,900** comfortably covers the gap
-   → the natural move is "chase Alderbrook." **Hallsten's $2,600 `W-1:Mon` bank
-   credit is unrecorded in QBO (phantom) and must be excluded from collectible AR.**
+   → the natural move is "chase Alderbrook," **not raid the Reserve**. **Hallsten's
+   $2,600 `W-1:Mon` bank credit is unrecorded in QBO (phantom) and must be excluded
+   from collectible AR.**
    - **Mid-demo:** the presenter posts Alderbrook's live $4,800 deposit via
      `deposit_to_mock_account`, then "check again."
+6. **Move money (closer)** — once payroll is secured, a modest **checking →
+   savings** sweep (~$3,000): after Alderbrook, Operating ≈ $25,050 → ≈ $22,050,
+   still clearing the ≈ $20,980 Friday payroll run. Placed AFTER the payroll beat
+   on purpose — an earlier savings→checking transfer would erase the shortfall;
+   moving surplus INTO the Reserve reinforces "the Reserve is for saving, not a
+   payroll backstop."
 
 ## Reconciliation (standing discrepancies — keeps month-end-prep honest)
 
