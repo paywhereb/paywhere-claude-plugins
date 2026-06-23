@@ -81,7 +81,7 @@ description (the mock bank can't post ACH *deposits*).
 | Devon Okafor | Mitsui | $3,230 | Stablecoin |
 
 Monthly contractor run total = **$17,380** (the recurring Friday obligation in
-beat #6). Seeded as historical monthly bank debits (the "old processor"
+beat #5). Seeded as historical monthly bank debits (the "old processor"
 baseline) and as paid QBO bills against worker-vendors.
 
 **Pay-and-bill weekly hours** (phase-2 B; last week, whole-dollar hours×rate,
@@ -101,9 +101,10 @@ Slack $120 · HubSpot $360 · Grant Henderson CPAs $470 · DigitalOcean $200.
 Wire: **Sutter Hill Properties** rent $2,100 + $45 wire fee.
 
 All vendors + the ACH/Wire workers + the ACH/Wire commission payees are
-**pre-configured as recipients at seed time** (recipient store), so a pay step
-passes only a `recipientRef` + amount. recipientRefs are `ach:<slug>` /
-`wire:<slug>` (e.g. `ach:digitalocean`, `wire:sutter-hill`).
+**seeded as saved payees at seed time**, so a pay step passes only the payee's
+**name** (`recipientId`) + amount and the bank resolves the bank details. The
+match is forgiving on minor name variations (suffix/spacing/case); the payee
+name is the same name that appears on the QuickBooks vendor/worker record.
 
 ## Commission map (server-side; phase-2 C)
 
@@ -124,8 +125,7 @@ All gross × rate are whole dollars by design.
 1. **Show balances** — Operating ≈ $23,000, Reserve ≈ $20,138.
 2. **Categorize spending (6 months)** — reads the bank; contractor labor, payroll
    (Gusto), rent, cloud/SaaS, the NorthPeak charge.
-3. **Transfer $10,000 savings→checking** — a normal action.
-4. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
+3. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
    **$1,280**, dated `W-1:Tue`, with a deliberately cryptic statement line
    `ACH DEBIT NPA*ENRICH 8002231` (a processor passthrough — neither the vendor
    name nor anything that auto-matches the books; `8002231` echoes contract
@@ -138,31 +138,39 @@ All gross × rate are whole dollars by design.
    **$1,200** rate and is **OPEN/unpaid** — the bank payment never matched
    (wrong amount + unrecognizable descriptor). The agent's fix: update the bill to
    $1,280 and record the bill payment against this charge. (The bill's due date is
-   `W+0:Fri+7`, out of the beat-5 window, so it never appears in "pay bills due
-   this week"; the agent resolves it here in beat 4.)
-5. **Pay bills due this week (ACH + Wire, pre-configured recipients)** —
+   `W+0:Fri+7`, out of the beat-4 window, so it never appears in "pay bills due
+   this week"; the agent resolves it here in beat 3.)
+4. **Pay bills due this week (ACH + Wire, saved payees)** —
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
    ≈ **$910** (AWS $760 + Google Workspace $150, both ACH due `W+0:Fri`).
-6. **Payroll shortfall** — Operating closes ≈ $23,000; Friday obligations ≈
-   Gusto $3,600 + contractor cycle $17,380 + overdue AP $1,840 + due-this-week AP
-   $910 = **$23,730** → a believable small shortfall. Collectible AR =
+5. **Payroll shortfall** — Operating closes ≈ $23,000 at seed; after the beat-4
+   bills clear (~$2,750) it sits at ≈ **$20,250**. Friday obligations ≈
+   Gusto $3,600 + contractor cycle $17,380 = **$20,980** → a believable ~$730
+   shortfall. Collectible AR =
    Alderbrook $4,800 + Mitsui half $2,100 = **$6,900** comfortably covers the gap
-   → the natural move is "chase Alderbrook." **Hallsten's $2,600 `W-1:Mon` bank
-   credit is unrecorded in QBO (phantom) and must be excluded from collectible AR.**
+   → the natural move is "chase Alderbrook," **not raid the Reserve**. **Hallsten's
+   $2,600 `W-1:Mon` bank credit is unrecorded in QBO (phantom) and must be excluded
+   from collectible AR.**
    - **Mid-demo:** the presenter posts Alderbrook's live $4,800 deposit via
      `deposit_to_mock_account`, then "check again."
+6. **Move money (closer)** — once payroll is secured, a modest **checking →
+   savings** sweep (~$3,000): after Alderbrook, Operating ≈ $25,050 → ≈ $22,050,
+   still clearing the ≈ $20,980 Friday payroll run. Placed AFTER the payroll beat
+   on purpose — an earlier savings→checking transfer would erase the shortfall;
+   moving surplus INTO the Reserve reinforces "the Reserve is for saving, not a
+   payroll backstop."
 
 ## Reconciliation (standing discrepancies — keeps month-end-prep honest)
 
-- **NorthPeak amount mismatch (beat #4):** the bank auto-debited the **renewed
+- **NorthPeak amount mismatch (beat #3):** the bank auto-debited the **renewed
   $1,280** annual rate under a cryptic descriptor, but QBO bill `PWD-BILL-0601`
   is still the **old $1,200** and **open/unpaid** (the payment never matched).
   This is the *fixable* reconciliation the agent demonstrates: update the bill to
   $1,280 and record the payment. Because it's an open bill, it adds **$1,200 to
   open AP** — so QBO **open AP seeds at $3,950** ($2,750 due-this-week + the
-  $1,200 NorthPeak item). It is dated out of the beat-5 window and is resolved in
-  beat 4, so the pay-bills ($2,750) and payroll beats are unaffected.
+  $1,200 NorthPeak item). It is dated out of the beat-4 window and is resolved in
+  beat 3, so the pay-bills ($2,750) and payroll beats are unaffected.
 - **Interest credit (a):** a small current-week Reserve interest credit
   ($13.40) in the bank with **no QBO counterpart**.
 - **Wire fee (b):** a tiny promo wire fee ($1.20) in the bank that QBO books as

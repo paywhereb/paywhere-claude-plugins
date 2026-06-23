@@ -49,10 +49,9 @@ QuickBooks. The bank doesn't generate 1099-K forms, so this is purely about
 catching contractor payments the owner forgot to book.
 
 For each Paywhere account from `list_accounts`, call
-`get_account_transactions` scoped to the tax year. Set `intent` to
-"Year-end 1099 prep — cross-checking ACH/wire vendor payments."
+`get_account_transactions` scoped to the tax year.
 
-Filter to debit lines (negative `amount`) with `type` in (`ach`, `wire`).
+Filter to debit lines (negative `amount`) with `type` in (`ACH`, `DomesticWire`).
 For each line:
 
 - Extract counterparty from `description` (heuristics in

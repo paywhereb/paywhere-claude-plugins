@@ -28,9 +28,9 @@ When two invoices from different customers both equal a Paywhere credit you foun
 
 ---
 
-**Counterparty in Paywhere description is free-text.**
+**Identifying the counterparty on a Paywhere credit.**
 
-Until a structured `counterpartyName` field is exposed by the upstream Paywhere API, the customer name lives inside the `description` string. Match by amount first, then confirm via the heuristics documented in `month-end-prep/reference/paywhere-bank-lines.md`. When the heuristic misses, fall back to showing the full `description` to the owner — don't silently drop the row.
+Use `get_transaction_detail` for the line first — it returns a structured counterparty (name, address, bank) when enriched detail is on file. When `detail` is `null`, the customer name lives in the free-text `description` / `statementDescription`: match by amount first, then confirm via the parsing notes in `month-end-prep/reference/paywhere-bank-lines.md`. When that misses too, fall back to showing the full `description` to the owner — don't silently drop the row.
 
 ---
 

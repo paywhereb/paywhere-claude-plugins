@@ -84,7 +84,7 @@ connector reports the *same thing*:
    accounts look like `9<userId×5><gen×2><seq×2>`, e.g. `9000250101`). A `7…` /
    different number or a wildly different balance (e.g. an inflated Reserve) means
    Paywhere is on a **different bank user** than the seeder.
-2. Call **`get_transaction_detail` on the NorthPeak ACH debit** (the beat-4 row,
+2. Call **`get_transaction_detail` on the NorthPeak ACH debit** (the beat-3 row,
    ~ -$1,280, `ACH DEBIT NPA*ENRICH 8002231`). Assert `detail` is **non-null**.
    The bank row can be `found:true` while `detail` is `null` — that specifically
    means the connector's userId differs from the seeder's (enrichment is keyed by
@@ -102,7 +102,7 @@ From the two responses, report:
 - Closing **balances** (Operating ≈ $23k / Reserve ≈ $20k) **and the bank account
   numbers**, confirmed via the step-5 readback (not just the seeder's claim).
 - QBO **created-vs-existing** counts, **open AR / AP**, and the DocNumber-persistence note.
-- That the NorthPeak `get_transaction_detail` readback returned enrichment (beat 4 ready).
+- That the NorthPeak `get_transaction_detail` readback returned enrichment (beat 3 ready).
 - Which beats are ready (the `beatsReady` list) and the live demo prompts live in
   [`../../../demo/demo-script.md`](../../../demo/demo-script.md).
 

@@ -136,7 +136,7 @@ Query each connected source for **all payments made to individuals or businesses
 
 For field names and query approach, see [reference/connector-queries.md](reference/connector-queries.md).
 
-**Paywhere (optional cross-check):** Pull ACH and wire outflows for the tax year via `get_account_transactions` filtered to debit (negative `amount`) lines. Set `intent` to "Year-end 1099 prep — cross-checking ACH/wire vendor payments." For each line, extract counterparty from `description` (see `month-end-prep/reference/paywhere-bank-lines.md`). Cross-reference against the QuickBooks vendor list:
+**Paywhere (optional cross-check):** Pull ACH and wire outflows for the tax year via `get_account_transactions` filtered to debit (negative `amount`) lines. For each line, identify the counterparty with `get_transaction_detail` (free-text `description`/`statementDescription` as fallback — see `month-end-prep/reference/paywhere-bank-lines.md`). Cross-reference against the QuickBooks vendor list:
 
 - **Paywhere line matches a QB vendor** → confirms the QB record; useful for spot-checking amounts.
 - **Paywhere line has no matching QB vendor** → flag as "possible contractor payment not in QB" — the accountant should review. Common cause: an owner paid a contractor by wire, never booked it.

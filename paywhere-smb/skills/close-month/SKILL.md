@@ -15,7 +15,7 @@ Parse arguments:
 Trigger the `month-end-prep` skill workflow:
 
 1. Pull all QuickBooks transactions for the target month.
-2. Pull every Paywhere account (`list_accounts`) and call `get_account_transactions` per account for the same month, with `intent` set to "Closing the month — matching bank lines to the QB register."
+2. Pull every Paywhere account (`list_accounts`) and call `get_account_transactions` per account for the same month.
 3. Match QB entries to Paywhere bank lines by amount + date (±2 days) + sign.
 4. Surface three gap categories:
    - **Missing in QuickBooks** — Paywhere shows a bank line with no corresponding QB entry (interest credit, bank fee, deposit not yet posted)

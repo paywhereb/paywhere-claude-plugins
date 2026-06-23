@@ -5,7 +5,7 @@ Three concerns, three homes — all server-known or in QuickBooks, no local file
 | Concern | Home | Why |
 |---|---|---|
 | (a) Who gets commission + at what rate | **The commission map** (server-side, surfaced with the seeded QBO payments) | Business policy — configured at setup, not entered per run |
-| (b) How to pay each payee (rail + recipient) | **Pre-configured Paywhere recipients** (ACH/Wire) + a **verified stablecoin recipient** | Payment details live in the recipient store; a pay step passes only a `recipientRef` |
+| (b) How to pay each payee (rail + recipient) | **Saved payees** (ACH/Wire, paid by name) + a **verified stablecoin recipient** | The pay step passes the payee's name (`recipientId`) and the bank resolves the bank details |
 | (c) Pay once and only once | **QBO marker Bill** (`COMM-{qboPaymentId}`) | The system-of-record dedupe signal |
 
 Commission config is **not** stored as JSON in QBO notes and **not** on the QBO vendor record. The commission map is the source of truth for (a); the Paywhere recipient store holds (b). QBO records *payments received* (what we commission on) and the *commission expense* (Bill + Bill Payment).
@@ -33,10 +33,10 @@ The demo world's concrete map (client → rate → payee → rail) is documented
 
 ## How each payee is paid
 
-- **ACH / Wire** — the payee is **pre-configured as a Paywhere recipient** at setup. The pay step passes a `recipientRef` (`ach:<slug>` / `wire:<slug>`) + amount; the server fills the bank/wire details. No raw ABA/account/routing handling in this skill.
-- **Stablecoin** — the payee's wallet is **pre-registered and VERIFIED** in Paywhere via `create_stablecoin_recipient`; check status with `get_stablecoin_recipient` before paying. The pay step uses `{walletAddress, currency: "USD", accountNumber, amount}` — stablecoin has no `recipientRef` form.
+- **ACH / Wire** — the payee is a **saved payee** at the bank. The pay step passes the payee's **name** (`recipientId`) + amount; the bank resolves it to the saved payee's bank/wire details. No raw ABA/account/routing handling in this skill.
+- **Stablecoin** — the payee's wallet is **pre-registered and VERIFIED** in Paywhere via `create_stablecoin_recipient`; check status with `get_stablecoin_recipient` before paying. The pay step uses `{walletAddress, currency: "USD", accountNumber, amount}` — stablecoin has no pay-by-name form.
 
-**Graceful fallback:** if a real payee has no pre-configured recipient (not yet onboarded), fall back to an inline recipient block on the payment item rather than erroring (see "Tool signatures"). The demo payees are all pre-configured.
+**Graceful fallback:** if a real payee has no saved payee (not yet onboarded), fall back to an inline recipient block on the payment item rather than erroring (see "Tool signatures"). The demo payees are all saved at setup.
 
 ## Dedupe — pay once and only once
 
@@ -54,11 +54,11 @@ Because `search_bills` filters DocNumber and PrivateNote with `LIKE`, both the e
 
 Match these exactly — the register columns above map onto them.
 
-**`make_batch_payment`** — the execution call: **one call per run**, mixed rails. `payments: []` of 1–50 items, each discriminated by `rail`. **Prefer `recipientRef`** for ACH/Wire; the inline forms are the graceful fallback when a payee has no pre-configured recipient:
+**`make_batch_payment`** — the execution call: **one call per run**, mixed rails. `payments: []` of 1–50 items, each discriminated by `rail`. **Pay by the payee's name** (`recipientId`) for ACH/Wire; the inline forms are the graceful fallback when a payee has no saved payee:
 
-- `{rail: "ach", fromAccountNumber, recipientRef, paymentAmount, paymentName}` — **preferred**; the server fills the recipient. Batch ACH items are made **and authorized** automatically (no separate `authorize_ach_payment`). **Fallback**: `{rail: "ach", fromAccountNumber, recipientIdType: "Inline", recipient: {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentName}`.
-- `{rail: "wire", fromAccountNumber, recipientRef, amount, purposeOfWire?, autoApprove? (default true)}` — **preferred**. **Fallback**: `{rail: "wire", fromAccountNumber, amount, recipient: {name, accountNumber, address1, city, state, postalCode}, recipientBank: {name, **aba**}, purposeOfWire?}`. `processDate` is **optional** and defaults to the next business day server-side; set it only to override.
-- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber (the funding account), amount}` — no `recipientRef` form.
+- `{rail: "ach", fromAccountNumber, recipientId: <payee name>, paymentAmount, paymentName}` — **preferred**; the bank resolves the name to the saved payee. Batch ACH items are made **and authorized** automatically (no separate `authorize_ach_payment`). **Fallback**: `{rail: "ach", fromAccountNumber, recipient: {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentName}`.
+- `{rail: "wire", fromAccountNumber, recipientId: <payee name>, amount, purposeOfWire?, autoApprove? (default true)}` — **preferred**. **Fallback**: `{rail: "wire", fromAccountNumber, amount, recipient: {name, accountNumber, address1, city, state, postalCode}, recipientBank: {name, **aba**}, purposeOfWire?}`. `processDate` is **optional** and defaults to the next business day; set it only to override.
+- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber (the funding account), amount}` — no pay-by-name form.
 
 Options and results:
 - `dryRun: true` — validates every item **without moving money**; stablecoin items return the **real 1% fee** preview, other rails report status `validated_not_executed`. Run the dry-run before the confirmation table, the live call after approval.
@@ -70,8 +70,8 @@ Options and results:
 
 **Single-payment fallbacks** — for one-off corrections (e.g. re-paying a single failed item by hand); the run itself uses the batch call:
 
-- **`make_ach_payment`** — required: `fromAccountNumber`, `paymentAmount`, `paymentName`, and either `recipientRef` **or** the inline `recipientIdType: "Inline"` + `recipient` `{name, aba, accountNumber, accountType: "Checking"|"Savings", emailAddress}`. `paymentDate` (YYYY-MM-DD) is optional. Returns `paymentId` **drafted** — unlike batch ACH it needs `authorize_ach_payment` to move. Status: `get_ach_payment_status`.
-- **`make_wire_payment`** — required: `fromAccountNumber`, `amount`, and either `recipientRef` **or** the inline `recipient` `{name, accountNumber, address1, city, state, postalCode}` + `recipientBank` `{name, **aba** (NOT routingNumber), address1?, city?, state?, postalCode?}`. `processDate` (YYYY-MM-DD) is **optional** and defaults to the next business day. `autoApprove` defaults true. Returns `paymentId`. Status: `get_wire_payment_status`.
+- **`make_ach_payment`** — required: `fromAccountNumber`, `paymentAmount`, `paymentName`, and either `recipientId` (the payee's name) **or** the inline `recipient` `{name, aba, accountNumber, accountType: "Checking"|"Savings", emailAddress}`. `paymentDate` (YYYY-MM-DD) is optional. Returns `paymentId` **drafted** — unlike batch ACH it needs `authorize_ach_payment` to move. Status: `get_ach_payment_status`.
+- **`make_wire_payment`** — required: `fromAccountNumber`, `amount`, and either `recipientId` (the payee's name) **or** the inline `recipient` `{name, accountNumber, address1, city, state, postalCode}` + `recipientBank` `{name, **aba** (NOT routingNumber), address1?, city?, state?, postalCode?}`. `processDate` (YYYY-MM-DD) is **optional** and defaults to the next business day. `autoApprove` defaults true. Returns `paymentId`. Status: `get_wire_payment_status`.
 - **`make_stablecoin_payment`** — required: `walletAddress`, `currency` (`"USD"`), `accountNumber`, `amount`. `preview: true` returns the 1% fee estimate without executing (the batch dry-run covers this in the normal flow). Recipient must be VERIFIED. Returns `paymentId`, `fee`, `status`. Status: `get_stablecoin_payment_status`.
 - **`create_stablecoin_recipient`** — `wallet` `{address, chain, currency: "USD"}`, `walletOwner` `{type: "Self"|"Individual"|"Business", name, address}`, `description`. Returns verification statuses. **`get_stablecoin_recipient`** `{walletAddress}` fetches current verification status.
 - **`get_account_transactions`** — `{accountNumber, fromDate, toDate, pageNumber?, pageSize?}`; credits are positive `amount`. Legacy paging fallback for collection — prefer `query_transactions`.

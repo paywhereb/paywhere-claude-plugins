@@ -1,6 +1,6 @@
 ---
 name: pay-commissions
-version: 0.2.0
+version: 0.3.0
 description: >
   Pays sales commissions on payments your business actually received, across
   all three Paywhere rails (ACH, Wire, Stablecoin). Uses the business's
@@ -34,11 +34,11 @@ Money moves on three rails in one batch call and is recorded in QuickBooks. Get 
 
 - **The commission map** — the business's policy of *who* gets commission, at *what rate*, to *which payee*, on *which rail*. It is server-known (configured at setup, not entered per run) and surfaced alongside the seeded QBO customer payments; for the demo world it is documented in [../../DATASET.md](../../DATASET.md). A customer not in the map earns no commission — skip them.
 - **QuickBooks** is the system of record for the *payments received* (the unit we commission on) and for the *commission expense* (a Bill + Bill Payment per commission paid).
-- **Paywhere** is the bank — it shows the credits that prove a customer actually paid, and it is the rail that disburses each commission. ACH and Wire payees are **pre-configured as recipients** at setup, so a pay step passes a `recipientRef` + amount.
+- **Paywhere** is the bank — it shows the credits that prove a customer actually paid, and it is the rail that disburses each commission. A pay step passes the payee's **name** (`recipientId`) + amount, and the bank resolves it to the saved payee.
 
 ## Setup (first run only)
 
-This skill reads the business's existing commission map and QBO payments — it does not stand up its own data. If no commission map is configured, help the owner define it (client → rate → payee → rail, plus pre-configured ACH/Wire recipients and a verified stablecoin recipient). For the demo world this is all seeded by `/demo-setup` — the commission map and payees are documented in [../../DATASET.md](../../DATASET.md). Resume `pay-commissions` once the map exists.
+This skill reads the business's existing commission map and QBO payments — it does not stand up its own data. If no commission map is configured, help the owner define it (client → rate → payee → rail, plus saved ACH/Wire payees and a verified stablecoin recipient). For the demo world this is all seeded by `/demo-setup` — the commission map and payees are documented in [../../DATASET.md](../../DATASET.md). Resume `pay-commissions` once the map exists.
 
 ## Workflow
 
@@ -67,19 +67,19 @@ For each candidate, check the QBO marker: `search_bills` for `DocNumber = COMM-{
 ### 5. Resolve the payee for each candidate
 
 For each surviving candidate, take the `payee` + `rail` from the commission map:
-- **ACH / Wire** → the payee is pre-configured as a recipient; carry its `recipientRef` (per [DATA-MODEL.md](DATA-MODEL.md)). No raw ABA/account handling.
+- **ACH / Wire** → carry the payee's **name** (passed as `recipientId`; per [DATA-MODEL.md](DATA-MODEL.md)). The bank resolves it to the saved payee — no raw ABA/account handling.
 - **Stablecoin** → carry the payee's wallet address; call `get_stablecoin_recipient` and confirm it is **VERIFIED** — refuse the row otherwise (see Edge cases). The fee comes from the batch dry-run in step 6, not from a separate preview call.
 
-If a payee has no configured recipient and no inline details, **flag it and exclude it — never guess** a payment detail.
+If a payee has no saved payee and no inline details, **flag it and exclude it — never guess** a payment detail.
 
 Resolve the source account via `list_accounts` and pay from the operating account (confirm which one in the table if there is more than one).
 
 ### 6. Assemble the batch and dry-run it
 
-Build **one** `make_batch_payment` `payments` array covering every surviving candidate (≤50 items, mixed rails in a single call — see exact shapes in [DATA-MODEL.md](DATA-MODEL.md)). **Prefer `recipientRef`** for ACH and wire payees; **degrade gracefully** to an inline recipient block only if a payee has no pre-configured recipient:
-- **ACH** item → `{rail: "ach", fromAccountNumber, recipientRef, paymentAmount, paymentName: "Commission COMM-{qboPaymentId}"}` (the server fills the recipient). Batch ACH items are made **and authorized** automatically — no separate `authorize_ach_payment`.
-- **Wire** item → `{rail: "wire", fromAccountNumber, recipientRef, amount, purposeOfWire: "Sales commission"}`. `processDate` is **optional** and defaults to the next business day server-side — set it only to override.
-- **Stablecoin** item → `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber: <the funding account>, amount}` (recipientRef is ACH/Wire only).
+Build **one** `make_batch_payment` `payments` array covering every surviving candidate (≤50 items, mixed rails in a single call — see exact shapes in [DATA-MODEL.md](DATA-MODEL.md)). **Pay by the payee's name** for ACH and wire payees; **degrade gracefully** to an inline recipient block only if a payee has no saved payee:
+- **ACH** item → `{rail: "ach", fromAccountNumber, recipientId: <payee name>, paymentAmount, paymentName: "Commission COMM-{qboPaymentId}"}` (the bank resolves the name to the saved payee). Batch ACH items are made **and authorized** automatically — no separate `authorize_ach_payment`.
+- **Wire** item → `{rail: "wire", fromAccountNumber, recipientId: <payee name>, amount, purposeOfWire: "Sales commission"}`. `processDate` is **optional** and defaults to the next business day — set it only to override.
+- **Stablecoin** item → `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber: <the funding account>, amount}` (pay-by-name is ACH/Wire only).
 
 Call `make_batch_payment` with **`dryRun: true`** first: it validates every item without moving money and returns the **real 1% fee** for each stablecoin item (other rails report `validated_not_executed`). Fix any per-item validation errors (or move the item to the flagged list) before showing the confirmation table.
 
@@ -136,5 +136,5 @@ End with a summary listing each commission with both its **QBO** (Bill id) and *
 
 ## Reference
 
-- [DATA-MODEL.md](DATA-MODEL.md) — the commission map shape, the payee → recipientRef mapping, the dedupe marker, and the real MCP tool signatures (batch + single-payment fallbacks).
+- [DATA-MODEL.md](DATA-MODEL.md) — the commission map shape, the payee names, the dedupe marker, and the real MCP tool signatures (batch + single-payment fallbacks).
 - [../../DATASET.md](../../DATASET.md) — the demo world's commission map, payees, rails, and verified stablecoin recipient (seeded by `/demo-setup`).

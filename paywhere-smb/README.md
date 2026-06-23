@@ -189,7 +189,7 @@ commands above compose them.
 | **month-end-prep** | Month-end close: reconciles the QB transaction register against Paywhere bank lines, flags gaps, writes a P&L narrative, exports a close packet. | "close the month", "reconcile", "P&L", "why revenue changed" | QuickBooks, Paywhere | Google Drive |
 | **tax-season-organizer** | Quarterly estimated tax calc or year-end 1099-NEC prep with accountant handoff packet. | "quarterly taxes", "estimated tax payment", "1099s", "1099-NEC", "year-end tax prep" | QuickBooks | Paywhere |
 | **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from the commission policy (client → rate → payee → rail), matching Paywhere credits to QBO customer payments, deduping against booked markers, batch-disbursing after one approval, and booking a Bill + Bill Payment per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere | — |
-| **pay-bills** | AP batch bill-pay: QBO AP aging → overdue-bill selection → one approval → mixed-rail batch payment (pre-configured recipients) → bill payments written back → settlement verified against the bank. | "pay my bills", "AP aging", "what's overdue" | QuickBooks | Paywhere |
+| **pay-bills** | AP batch bill-pay: QBO AP aging → overdue-bill selection → one approval → mixed-rail batch payment (saved payees) → bill payments written back → settlement verified against the bank. | "pay my bills", "AP aging", "what's overdue" | QuickBooks | Paywhere |
 | **pay-and-bill** | Hours-to-cash loop: read last week's hours from QBO time-activities → invoice each client → pay workers in one batch → book worker bills → reconcile. | "bill clients for hours", "pay my contractors" | QuickBooks, Paywhere | — |
 | **plan-payroll** | Payroll readiness with real-time bank data when Paywhere is connected (settlement detection, shortfall projection, reminder drafts); QBO-only forecast otherwise. | "can I make payroll", "am I good for payroll" | QuickBooks | Paywhere, Gmail |
 | **demo-setup** | Repeatable sandbox setup in two server-side calls: builds the whole mock-bank world + mirrored QBO books with deterministic, date-relative demo data (identical Monday through Friday). Sales/demo use only. | "set up the demo", "reset the demo" | paywhere-mock, Paywhere, QuickBooks | — |
@@ -220,7 +220,7 @@ present — the figures vary, the behavior is the same:
   previewed to surface the 1% fee), and books a marker Bill + Bill Payment. A
   second run reports everything "already paid" — dedupe from the QBO marker.
 - **`/demo-setup` → `/pay-bills`** — overdue AP scenario (overdue + due-this-week
-  open bills with pre-configured recipients): aging table, one approval,
+  open bills with saved payees): aging table, one approval,
   mixed-rail batch payment, bill payments booked back, settlement verified
   against the bank.
 - **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector

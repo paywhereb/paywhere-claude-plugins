@@ -38,7 +38,7 @@ Do not ask again on subsequent runs.
 
 1. **Pull overdue receivables.** Query QuickBooks AR aging for all invoices more than 1 day past due.
 
-2. **Cross-reference Paywhere credits.** For each Paywhere account returned by `list_accounts`, call `get_account_transactions` for the last 14 days. Set the `intent` field to something like "Chasing overdue invoices — checking which customers already paid." Filter to credits (positive `amount`).
+2. **Cross-reference Paywhere credits.** For each Paywhere account returned by `list_accounts`, call `get_account_transactions` for the last 14 days. Filter to credits (positive `amount`).
 
    For each overdue invoice, look for a Paywhere credit whose `amount` matches the invoice within $0.50. If found:
    - Flag the customer as "possibly paid — verify" and exclude from the draft queue.

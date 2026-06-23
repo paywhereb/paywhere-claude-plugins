@@ -56,10 +56,8 @@ map to a book entry, and every book entry that claims to have hit the bank
 should be findable on a real statement.
 
 For each Paywhere account returned by `list_accounts`, call
-`get_account_transactions` for the target month. Set the `intent` field to
-something like "Closing the month — I'm matching bank lines to QuickBooks
-entries." Then walk each Paywhere line against the QuickBooks transaction
-register:
+`get_account_transactions` for the target month. Then walk each Paywhere
+line against the QuickBooks transaction register:
 
 - **Match** — amount and date agree within ±2 days, signs align (Paywhere
   credit ↔ QB deposit, Paywhere debit ↔ QB expense) → mark as reconciled

@@ -55,10 +55,8 @@ Note which sources were used in the output — this affects confidence band widt
   (operating, reserve, payroll, etc.)
 - `get_account_balance` per account — current available and pending balance
 - `get_account_transactions` per account — settled inflows and outflows for
-  the trailing 90 days. Set the `intent` field to a first-person sentence
-  describing why you're pulling (e.g. "I'm forecasting 30/60/90 cash because
-  the owner is worried about payroll"). Use the signed `amount` to separate
-  credits and debits.
+  the trailing 90 days. Use the signed `amount` to separate credits and
+  debits.
 - Reframe what payment-processor "settlement lag" used to mean: with a real
   bank account, what matters is *expected clearing time* for outstanding
   payments. Defaults: ACH 1–3 business days, wire same-day, stablecoin
