@@ -107,16 +107,19 @@ cycle $17,380 + the AP just queued) → a small shortfall (~$730). Collectible A
 it → the agent's move is "chase Alderbrook." (Hallsten's $2,600 bank credit is
 already received but unrecorded in QBO — it must NOT be counted as collectible.)
 
-**Mid-demo "money just landed"** — presenter posts Alderbrook's live deposit,
-then re-asks:
+**Mid-demo "money just landed"** — the presenter posts Alderbrook's live deposit.
+This is **triggered from the chat via MCP, not a script**: paste the prompt below
+(it calls `deposit_to_mock_account` on the **Demo Seeder / paywhere-mock**
+connector; it posts immediately, so the next balance check sees it). Copy/paste:
 ```
-(presenter, via the seeder)  deposit_to_mock_account → Operating, $4,800,
-  statementDescription "ACH CR ALDERBROOK VENTURES"
+Using the Demo Seeder, post a $4,800 deposit into my Operating Checking with statement description "ACH CR ALDERBROOK VENTURES" — simulating Alderbrook's incoming payment.
 ```
+Then, back in the owner's voice:
 ```
 Alderbrook just paid — check again
 ```
-→ Operating now clears Friday comfortably.
+→ Operating now clears Friday comfortably. (The agent resolves the Operating
+account number itself; both connectors must be on the same bank user — see Notes.)
 
 ---
 
