@@ -11,9 +11,9 @@ active customers, monthly payroll, office rent.
 
 | Customer       | Invoice | Amount   | Due Date   | Days Outstanding |
 |----------------|---------|----------|------------|------------------|
-| Acme Corp      | INV-112 | $8,400   | Apr 10     | 12               |
-| BlueSky LLC    | INV-108 | $14,200  | Apr 22     | 0                |
-| Crestwood Inc  | INV-115 | $6,000   | May 5      | —                |
+| Acme Corp      | INV-112 | $2,520   | Apr 10     | 12               |
+| BlueSky LLC    | INV-108 | $4,260   | Apr 22     | 0                |
+| Crestwood Inc  | INV-115 | $1,800   | May 5      | —                |
 
 **Historical payment lag (computed from prior Paywhere credits matched to QB invoices):**
 
@@ -24,9 +24,9 @@ active customers, monthly payroll, office rent.
 | Crestwood Inc  | 12 days  | 5 days  | 6                  |
 
 **Fixed costs (QuickBooks recurring AP):**
-- Payroll: $22,000 — hits April 15
-- Rent: $3,200 — hits May 1
-- Software subscriptions: $480 — hits May 1
+- Payroll: $6,600 — hits April 15
+- Rent: $960 — hits May 1
+- Software subscriptions: $144 — hits May 1
 
 ---
 
@@ -34,9 +34,9 @@ active customers, monthly payroll, office rent.
 
 | Customer       | Invoice Amount | Adj. Receipt Date | Notes                             |
 |----------------|---------------|-------------------|-----------------------------------|
-| Acme Corp      | $8,400        | Apr 28            | Due Apr 10 + 18-day mean lag      |
-| BlueSky LLC    | $14,200       | Apr 29            | Due Apr 22 + 7-day mean lag       |
-| Crestwood Inc  | $6,000        | May 17            | Due May 5 + 12-day mean lag       |
+| Acme Corp      | $2,520        | Apr 28            | Due Apr 10 + 18-day mean lag      |
+| BlueSky LLC    | $4,260        | Apr 29            | Due Apr 22 + 7-day mean lag       |
+| Crestwood Inc  | $1,800        | May 17            | Due May 5 + 12-day mean lag       |
 
 ---
 
@@ -49,19 +49,19 @@ Confidence band calculation:
 
 | Window  | Expected Inflows | Expected Outflows | Net      | Low (−28%) | High (+28%) |
 |---------|-----------------|-------------------|----------|------------|-------------|
-| 0–30d   | $22,600         | $22,000           | +$600    | −$5,928    | +$7,128     |
-| 31–60d  | $6,000          | $3,680            | +$2,320  | +$1,670    | +$2,970     |
+| 0–30d   | $6,780          | $6,600            | +$180    | −$1,718    | +$2,078     |
+| 31–60d  | $1,800          | $1,104            | +$696    | +$192      | +$1,200     |
 | 61–90d  | $0              | $0                | $0       | —          | —           |
 
 ---
 
 ## Step 5 output — risks flagged
 
-1. **Payroll crunch:** Payroll ($22,000) hits April 15. Low-band inflows through
-   April 14: $0 (both AR receipts fall April 28–29). Shortfall risk: up to $22,000.
+1. **Payroll crunch:** Payroll ($6,600) hits April 15. Low-band inflows through
+   April 14: $0 (both AR receipts fall April 28–29). Shortfall risk: up to $6,600.
    *Recommend: confirm receivables timing with Acme and BlueSky before April 14.*
 
-2. **Late-payer risk:** Acme Corp historically pays 18 days late. Their $8,400
+2. **Late-payer risk:** Acme Corp historically pays 18 days late. Their $2,520
    invoice (due Apr 10) shifts to April 28 — after payroll.
 
 ---
@@ -73,14 +73,14 @@ Cash Flow Snapshot — Apr 23 → Jul 21, 2026
 Sources: QuickBooks, Paywhere
 
               Expected    Low        High
-30-day net:   +$600      −$5,928    +$7,128
-60-day net:   +$2,320    +$1,670    +$2,970
+30-day net:   +$180      −$1,718    +$2,078
+60-day net:   +$696      +$192      +$1,200
 90-day net:   $0         —          —
 
 ⚠ 2 risks flagged:
-  • Payroll crunch: $22K payroll hits Apr 15; AR receipts don't clear until
-    Apr 28–29. Low-band shortfall risk: up to $22,000.
-  • Late-payer: Acme Corp (mean 18-day lag) shifts $8,400 past payroll date.
+  • Payroll crunch: $6.6K payroll hits Apr 15; AR receipts don't clear until
+    Apr 28–29. Low-band shortfall risk: up to $6,600.
+  • Late-payer: Acme Corp (mean 18-day lag) shifts $2,520 past payroll date.
 
 Confidence band: ±28% (based on historical payment variance across 3 customers).
 

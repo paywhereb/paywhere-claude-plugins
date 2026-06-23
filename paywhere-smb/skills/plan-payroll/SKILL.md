@@ -83,8 +83,10 @@ every assumption:
   fund the bills landing in the immediate post-payroll week, or the verdict
   flips the day after payroll clears. The owner can narrow the window to
   "through payroll date" — state the window edge explicitly either way and
-  keep it consistent through the run (the demo crunch scenario's −$6,200 is
-  calibrated to the default payroll+7 window).
+  keep it consistent through the run (the demo crunch scenario's small
+  shortfall is calibrated to the default payroll+7 window: Operating closes
+  ≈ $23,000 against Friday obligations of ≈ $23,730 — Gusto $3,600 + the
+  contractor cycle $17,380 + overdue AP $1,840 + due-this-week AP $910).
 - **Obligations not in QBO**: ask the owner — contractor payout cycles, owner
   draws, anything booked nowhere yet. Include confirmed amounts as
   owner-stated lines.
@@ -126,7 +128,9 @@ morning.**
    received-but-unrecorded. Cross it out of collectible AR **and do not add
    it to incoming cash** — it is already inside the balance from A1 (never
    double-count). Offer to record the QBO payment (`create_payment`) — gated,
-   only with explicit approval.
+   only with explicit approval. (In the demo world this is Hallsten & Berg's
+   $2,600 credit — landed in the bank, never recorded in QBO — so it must be
+   **excluded** from collectible AR even though its invoice still shows open.)
 
 Output of this step: open AR split into **already landed** (crossed out, with
 the bank transaction id + postDate as evidence) vs **genuinely outstanding**
@@ -149,8 +153,9 @@ path, not as cash.
 If short, present ranked recovery options:
 
 - **(a) Collect specific invoices** — name them with amounts, and show which
-  combination closes the gap (e.g. "collecting X ($15,600) alone flips you to
-  +$9,400; X + Y ($7,020) gives +$16,420"). Lead with this.
+  combination closes the gap (e.g. "collecting Alderbrook ($4,800) alone flips
+  you from −$730 to +$4,070; adding Mitsui's outstanding half ($2,100) gives
+  +$6,170"). Lead with this.
 - **(b) Transfer from reserve** — quote the reserve balance and the exact
   `transfer_funds {fromAccountNumber, toAccountNumber, amount}` that would
   close the gap. **Surface it; never execute without explicit approval.**
@@ -182,8 +187,8 @@ and `query_transactions {direction: "credit", dateFrom: <yesterday>, dateTo:
 <today>, status: ["posted"]}` — cheap and fast. Diff against the previous
 pass, recompute the A4 equation, and **say what changed**, e.g.:
 
-> "Alderbrook's $15,600 landed 2 minutes ago — gap closed: −$6,200 → +$9,400.
-> Mitsui's $7,020 is still outstanding."
+> "Alderbrook's $4,800 landed 2 minutes ago — gap closed: −$730 → +$4,070.
+> Mitsui's outstanding $2,100 half is still open."
 
 If nothing changed, say that too. Never make the owner re-confirm the A2
 obligations table on a re-check unless they say it changed.

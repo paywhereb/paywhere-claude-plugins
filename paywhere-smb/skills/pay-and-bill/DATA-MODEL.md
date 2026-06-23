@@ -1,104 +1,74 @@
 # Pay-and-bill data model
 
-Three concerns, three homes:
+Three concerns, three homes — all in QuickBooks + Paywhere, no local files:
 
 | Concern | Home | Why |
 |---|---|---|
-| (a) Who works where, at what rates, paid by which rail | **`workers-register.xlsx`** `Workers` sheet | Business policy — owner-editable, not a QBO concept |
-| (b) How many hours were actually worked | **Hour reports** — Gmail threads (real path) or Drive notes (demo path) | Evidence. Hours are read, never invented, and never cached in the register |
-| (c) Bill and pay once and only once | **QBO marker DocNumbers** + register `PaidLog` | Two independent dedupe signals; QBO is the system of record |
+| (a) Who works where, at what rates, paid by which rail | **QBO worker vendors** | The vendor record carries the worker's client, BillRate, PayRate, rail, and recipientRef |
+| (b) How many hours were actually worked | **QBO time-activities** | Evidence in the books. Hours are read, never invented |
+| (c) Bill and pay once and only once | **QBO marker DocNumbers** (`PWD-PB-…`) | The system-of-record dedupe signal |
 
 QuickBooks records the *client invoices* (revenue) and the *worker cost* (a
 Bill + Bill Payment per worker per period). Paywhere is the bank that actually
-pays the workers. The register holds policy and rail details only.
+pays the workers; each worker is **pre-configured as a recipient** at setup, so
+the pay step passes a `recipientRef` + amount.
 
-## The workers register — a LOCAL Excel workbook
+## The worker roster — QBO worker vendors
 
-`workers-register.xlsx` is a **local Excel file in the session working
-folder** — read and written with Bash + Python (`openpyxl`), **not** a Google
-Sheet. Locate it by filename in the working directory; if it is missing or
-more than one candidate exists, ask the owner (see SKILL.md Setup). Two
-sheets: `Workers` and `PaidLog`.
+Each placed contractor is a QBO **vendor**. Read them with `search_vendors`.
+The vendor record carries the policy fields the pay/bill math needs; a blank
+required field ⇒ flag the worker and exclude — never guess.
 
-### Sheet `Workers` — (a) one wide row per worker
+| Field | Meaning / use |
+|---|---|
+| `DisplayName` | The worker's name — the time-activity join key and the bill vendor |
+| Placed `Client` | The QBO customer DisplayName the hours are invoiced to |
+| `BillRate` | $/hour billed to the client |
+| `PayRate` | $/hour paid to the worker |
+| `Rail` | `ACH` / `Wire` / `Stablecoin` — the `make_batch_payment` item discriminator |
+| `recipientRef` | `ach:<slug>` / `wire:<slug>` — the pre-configured recipient the server pays (ACH/Wire workers) |
+| `WalletAddress` | Stablecoin workers only — the wallet to pay and the key for `get_stablecoin_recipient` |
 
-**Schema decision — wide columns, not separate rail sheets:** pay-commissions
-uses rail tabs because many customers share one payee; here each worker is
-exactly one payee on exactly one rail, so a join would add sheets without
-removing any duplication.
+**recipientRef vs inline:** for ACH/Wire workers the pay step passes only
+`recipientRef` + amount and the server fills the bank/wire details. If a worker
+has **no** pre-configured recipient (a real worker not yet onboarded), fall
+back to the inline recipient block from their vendor record rather than
+erroring (see "Tool signatures"). Stablecoin is never a recipientRef rail — it
+always uses the stablecoin payment flow.
 
-One row per worker. Only the columns for the row's `Rail` are filled; a blank
-required cell for that rail ⇒ flag the worker and exclude — never guess.
+The demo world's concrete worker roster, rates, rails, and recipientRefs are
+documented in [../../DATASET.md](../../DATASET.md) (seeded by `/demo-setup`).
 
-| Column | Rail | → Paywhere field (`make_batch_payment` item) |
-|---|---|---|
-| `Worker` | all | `recipient.name` (ach/wire); also the QBO vendor DisplayName and the hour-report join key |
-| `Client` | all | — (the QBO customer DisplayName the hours are invoiced to) |
-| `BillRate` | all | — ($/hour billed to Client) |
-| `PayRate` | all | — ($/hour paid to Worker) |
-| `Rail` | all | the item's `rail` discriminator: `ACH` / `Wire` / `Stablecoin` |
-| `AchABA` | ACH | `recipient.aba` (9 digits) |
-| `AchAccountNumber` | ACH | `recipient.accountNumber` |
-| `AchAccountType` | ACH | `recipient.accountType` (`Checking` / `Savings`) |
-| `Email` | ACH | `recipient.emailAddress` |
-| `WireAccountNumber` | Wire | `recipient.accountNumber` |
-| `WireAddr1` / `WireCity` / `WireState` / `WirePostalCode` | Wire | `recipient.address1` / `.city` / `.state` / `.postalCode` |
-| `WireBankName` | Wire | `recipientBank.name` |
-| `WireBankABA` | Wire | `recipientBank.aba` — **the field is `aba`, NOT `routingNumber`** |
-| `WalletAddress` | Stablecoin | `walletAddress`; also the key for `get_stablecoin_recipient` |
-| `Chain` | Stablecoin | used at recipient-creation time (e.g. `POLY`) |
-| `Currency` | Stablecoin | `currency` — `USD` (the only supported value) |
-
-The demo register's concrete rows mirror
-[../demo-setup-pay-and-bill/seed/workers.md](../demo-setup-pay-and-bill/seed/workers.md),
-which in turn mirrors
-[../demo-setup-base/seed/persona.md](../demo-setup-base/seed/persona.md).
-
-### Sheet `PaidLog` — (c) append-only audit + dedupe
-
-One row per worker per period paid. Never edit or delete prior rows.
-
-`PeriodStart | PeriodEnd | Worker | Hours | PayRate | GrossPay | Rail | PaywherePaymentId | QBOBillId | QBOInvoiceIds`
-
-`PeriodStart`/`PeriodEnd` are the period's Monday/Sunday (ISO).
-`QBOInvoiceIds` is the comma-separated id list of the invoice(s) that billed
-this worker's hours for the period — normally exactly one.
-
-## Hour reports — where the hours come from
+## Hours — QBO time-activities
 
 A **period** is a Mon–Sun week; its key is the **ISO date of its Monday**
 (e.g. week Mon 2026-06-01 – Sun 2026-06-07 ⇒ period `2026-06-01`).
 
-- **Gmail — the real path.** Workers mail in hours with the subject
-  convention **`Hours - {Worker} - Week of {YYYY-MM-DD}`** (the period
-  Monday). Find them with `search_threads`, read with `get_thread`.
-- **Drive — the demo path.** Gmail here is drafts/labels/search only — there
-  is no way to inject inbound demo mail — so the demo seeds hour reports as
-  Drive notes named with the **same** convention (filenames and bodies per
-  [../demo-setup-pay-and-bill/seed/workers.md](../demo-setup-pay-and-bill/seed/workers.md)).
-  Find with `search_files`, read with `read_file_content`.
-
-Report bodies carry one line per weekday (0 for a day off) plus a `Total:` line. If the
-total line disagrees with the sum of the day lines, ask the owner — never
-silently pick one. Always state which path supplied each worker's hours. A
-worker with no report for the period is flagged and excluded; hours are never
-invented.
+Last period's hours live in QuickBooks as **time-activities**. Read them with
+`search_time_activities`, filtered to the time-activity date falling in the
+Mon–Sun window. Each time-activity ties a worker (vendor) to a client
+(customer), an hours figure, and the hourly rate. Sum hours per worker for the
+period. A roster worker with **no** time-activity for the period is flagged and
+excluded; hours are never invented.
 
 ## The math
 
 - **Invoice (per client):** one invoice per client per period; one line per
   assigned worker — Qty = hours, Rate = `BillRate`, line amount =
-  hours × BillRate. Use the base seed's service items
-  ([../demo-setup-base/seed/qbo-manifest.md](../demo-setup-base/seed/qbo-manifest.md)):
-  `Consulting Hours – Senior` (Thames, Zurich) / `Contract Staffing Hours`
-  (Alderbrook, Mitsui).
+  hours × BillRate. Use the QBO service items already on the books (e.g. the
+  demo world uses `Consulting Hours – Senior` and `Contract Staffing Hours` —
+  see [../../DATASET.md](../../DATASET.md)).
 - **Worker pay:** gross = hours × `PayRate`. Stablecoin adds a 1% rail fee on
   top (previewed via `make_batch_payment` `dryRun`).
-- **Margin identity:** per persona.md, BillRate = 1.3 × PayRate (rounded to
-  whole dollars — exact for all four demo workers). So for any hours mix,
-  **invoiced total ≈ 1.3 × pay total**: a ~23.1% gross margin on revenue (a
-  30% markup on pay). Report it in the reconcile summary; a material
-  deviation means an hours or rate mismatch worth investigating.
+- **Margin identity:** BillRate = 1.3 × PayRate (rounded to whole dollars). So
+  for any hours mix, **invoiced total ≈ 1.3 × pay total**: a ~23.1% gross
+  margin on revenue (a 30% markup on pay). Report it in the reconcile summary;
+  a material deviation means an hours or rate mismatch worth investigating.
+
+  **Example only** (the demo world's last-week hours — use the live numbers):
+  Priya 40h @ $40 pay = $1,600 / @ $52 bill = $2,080; Marcus 36h @ $30 =
+  $1,080 / @ $39 = $1,404; Elena 40h @ $60 = $2,400 / @ $78 = $3,120 (wire);
+  Devon 32h @ $50 = $1,600 / @ $65 = $2,080 (stablecoin).
 
 ## Dedupe markers
 
@@ -152,9 +122,9 @@ items carry no description — match those by amount + date + type.
 
 `payments: []` of 1–50 items, each discriminated by `rail`:
 
-- `{rail: "ach", fromAccountNumber, recipientIdType: "Inline", recipient {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentDate (YYYY-MM-DD), paymentName}` — made AND authorized automatically. **Always `recipientIdType: "Inline"`** (mock recipients are global/permanent, so DisplayName is ambiguous).
-- `{rail: "wire", fromAccountNumber, amount, processDate, recipient {name, accountNumber, address1, city, state, postalCode}, recipientBank {name, aba}, purposeOfWire?, description?}` — `recipientBank.aba`, never `routingNumber`.
-- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber, amount}` — recipient must be VERIFIED first (`get_stablecoin_recipient {walletAddress}`).
+- `{rail: "ach", fromAccountNumber, recipientRef, paymentAmount, paymentName}` — **preferred**: the worker is pre-configured, the server fills the recipient. Made AND authorized automatically. **Fallback** (no pre-configured recipient): `{rail: "ach", fromAccountNumber, recipientIdType: "Inline", recipient {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentName}`.
+- `{rail: "wire", fromAccountNumber, recipientRef, amount, description?}` — **preferred**. **Fallback**: `{rail: "wire", fromAccountNumber, amount, recipient {name, accountNumber, address1, city, state, postalCode}, recipientBank {name, aba}, purposeOfWire?, description?}` — `recipientBank.aba`, never `routingNumber`. `processDate` is **optional** and defaults to the next business day server-side; set it only to override.
+- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber, amount}` — recipient must be VERIFIED first (`get_stablecoin_recipient {walletAddress}`). Stablecoin has no recipientRef form.
 
 Options: `dryRun: true` validates without moving money — stablecoin items
 return the **real 1% fee**, other rails report `validated_not_executed`;
@@ -179,18 +149,10 @@ limit?, aggregate?}`. Returns `{accountsQueried, scanned, matched, returned,
 truncated, transactions?, aggregate?}`; `truncated: true` ⇒ narrow the date
 range.
 
-### Gmail (real-data path) — drafts/labels/search only
+### QuickBooks — time-activities (the hours) and vendors (the roster)
 
-`search_threads` (find hour-report mail by subject), `get_thread` (read it).
-Gmail **cannot send or inject inbound mail** — which is exactly why the demo
-seeds hour reports in Drive instead.
-
-### Google Drive (demo path)
-
-`search_files` (find hour notes by name), `read_file_content` (read them).
-
-### Local workbook mechanics
-
-Read/write `workers-register.xlsx` with Bash + Python (`openpyxl`): load the
-workbook, read `Workers` rows into memory, and **append** `PaidLog` rows
-(never rewrite existing ones) at record time.
+- `search_time_activities` — returns each time-activity's vendor (worker),
+  customer (client), hours, hourly rate, and date. Filter to the period's
+  Mon–Sun window and sum hours per worker. This is the only source of hours.
+- `search_vendors` — the worker roster: DisplayName, placed client, BillRate,
+  PayRate, rail, and recipientRef (per "The worker roster" above).
