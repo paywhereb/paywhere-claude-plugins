@@ -21,8 +21,10 @@ finance agent. The one exception is setup, which the presenter runs once.
 
 Approve the gate. **Record the returned bank username/password** (also posted to
 the demo Slack channel). Confirm the report shows Operating ≈ $23,000, Reserve
-≈ $20,138, recipients configured, enrichment written, and `beatsReady`. If the
-books seed reports `errorCount > 0`, re-check the QBO sandbox chart of accounts.
+≈ $20,138, open AR $9,500, **open AP $3,950** (= $2,750 due-this-week bills + the
+$1,200 NorthPeak reconciliation item, which beat 4 resolves — see DATASET.md),
+recipients configured, enrichment written, and `beatsReady`. If the books seed
+reports `errorCount > 0`, re-check the QBO sandbox chart of accounts.
 
 ---
 
@@ -47,33 +49,43 @@ Transfer $10,000 from savings to checking
 ```
 → A normal internal transfer (approval-gated).
 
-**4. Investigate a charge** (the `get_transaction_detail` beat)
+**4. Investigate + reconcile a charge** (the `get_transaction_detail` + write-back beat)
 ```
-I don't recognize the payment to NorthPeak Analytics — can you get me more information?
+There's an ACH debit for $1,280 I don't recognize — the statement just says
+"NPA*ENRICH 8002231". What is it?
 ```
-→ The plain bank row shows only `ACH DEBIT NORTHPEAK ANALYTICS — $1,280`.
-`get_transaction_detail` reveals the counterparty (220 Kearny St Ste 600, San
-Francisco CA), memo ("Data enrichment subscription — annual, billed in arrears,
-contract #NP-2231"), category, ref NP-INV-4471, and the note that it auto-renewed
-(signed by M. Webb 11 months ago).
+→ The plain bank row shows only `ACH DEBIT NPA*ENRICH 8002231 — $1,280` (a
+payment-processor passthrough, not a vendor name). `get_transaction_detail` — or,
+as a fallback, the NorthPeak invoice in Gmail — resolves it: **NorthPeak
+Analytics LLC**, 220 Kearny St Ste 600, San Francisco CA; "Data enrichment
+subscription — annual, billed in arrears (contract #NP-2231)"; ref NP-INV-4471;
+auto-renewed (signed by M. Webb ~11 months ago) **at a higher rate, $1,200 →
+$1,280**.
 
 **Why it's not recognized (say this out loud — it's the "aha"):** the bank feed
-only gives you *who* and *how much*, never *why*. The payee name is right there,
-so this isn't about a hidden vendor — it's that the charge has no context:
+hands you a cryptic descriptor and an amount, never *who* or *why*:
 
-- **It's annual, not monthly.** Unlike the SaaS lines you see every month, this
-  one only hits once a year, so it doesn't register as familiar.
-- **Someone else set it up.** It was authorized by M. Webb ~11 months ago, not
-  the owner looking at the statement today.
-- **It auto-renewed silently.** No fresh decision, no heads-up — it just billed
-  in arrears and ACH-debited Operating.
+- **The descriptor is opaque.** `NPA*ENRICH 8002231` is a processor passthrough —
+  it doesn't even name the vendor (the `8002231` echoes contract NP-2231).
+- **It's annual, not monthly**, so it doesn't register as a familiar line.
+- **Someone else set it up** (M. Webb, ~11 months ago) and it **auto-renewed
+  silently** — at a new, higher price.
 
-Frame the contrast explicitly, e.g.: *"Your bank line is just a payee and an
-amount — no purpose or terms. Pulling the detail: it's an annual data-enrichment
-subscription (contract NP-2231) that auto-renewed, authorized by M. Webb about a
-year ago. That's why it didn't look familiar — it bills once a year and renewed
-on its own."* (If the agent falls back to email instead of `get_transaction_detail`,
-the invoice tells the identical story — same beat either way.)
+**Then the reconciliation (the agentic payoff):**
+```
+Does this match my books? Fix it if not.
+```
+→ The agent finds QBO bill `PWD-BILL-0601` for NorthPeak is still **open at the
+old $1,200**, while the bank actually paid **$1,280** — the payment never matched
+(wrong amount + unrecognizable descriptor), so QBO left the bill unpaid. It
+proposes the correction — **update the bill to $1,280 and record the bill payment
+against this charge** — and, on approval, writes it back to QuickBooks
+(`update_bill` + `create_bill_payment`). The $80 gap is the silent auto-renew
+price increase; the invoice (bank detail or Gmail) is the evidence. The bill is
+dated out of the beat-5 window, so it never shows up in "pay bills due this week"
+— it's resolved here. (Frame it: *"Your books still think this is $1,200 and
+unpaid; your bank shows $1,280 actually went out. Want me to correct the bill and
+match the payment?"*)
 
 **5. Pay the bills due this week** (ACH + Wire, pre-configured recipients)
 ```
