@@ -125,13 +125,21 @@ All gross × rate are whole dollars by design.
 2. **Categorize spending (6 months)** — reads the bank; contractor labor, payroll
    (Gusto), rent, cloud/SaaS, the NorthPeak charge.
 3. **Transfer $10,000 savings→checking** — a normal action.
-4. **Investigate NorthPeak** — ONE distinctive ACH debit **NorthPeak Analytics
-   LLC — $1,280**, dated `W-1:Tue`. Plain row shows only
-   `ACH DEBIT NORTHPEAK ANALYTICS`; `get_transaction_detail` reveals: 220 Kearny
-   St Ste 600, San Francisco CA; memo "Data enrichment subscription — annual,
-   billed in arrears (contract #NP-2231)"; category "Software & Subscriptions";
-   ref "NP-INV-4471"; note "Renewed automatically; signed by M. Webb 11 months
-   ago." Mirrored in QBO as a paid bill.
+4. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
+   **$1,280**, dated `W-1:Tue`, with a deliberately cryptic statement line
+   `ACH DEBIT NPA*ENRICH 8002231` (a processor passthrough — neither the vendor
+   name nor anything that auto-matches the books; `8002231` echoes contract
+   NP-2231). `get_transaction_detail` (or the Gmail invoice) reveals: NorthPeak
+   Analytics LLC, 220 Kearny St Ste 600, San Francisco CA; memo "Data enrichment
+   subscription — annual, billed in arrears (contract #NP-2231)"; category
+   "Software & Subscriptions"; ref "NP-INV-4471"; and that it **auto-renewed at a
+   higher rate ($1,200 → $1,280)**, signed by M. Webb 11 months ago.
+   **Reconciliation:** the matching QBO bill `PWD-BILL-0601` is still the OLD
+   **$1,200** rate and is **OPEN/unpaid** — the bank payment never matched
+   (wrong amount + unrecognizable descriptor). The agent's fix: update the bill to
+   $1,280 and record the bill payment against this charge. (The bill's due date is
+   `W+0:Fri+7`, out of the beat-5 window, so it never appears in "pay bills due
+   this week"; the agent resolves it here in beat 4.)
 5. **Pay bills due this week (ACH + Wire, pre-configured recipients)** —
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
@@ -145,13 +153,21 @@ All gross × rate are whole dollars by design.
    - **Mid-demo:** the presenter posts Alderbrook's live $4,800 deposit via
      `deposit_to_mock_account`, then "check again."
 
-## Reconciliation (two small standing discrepancies — keeps month-end-prep honest)
+## Reconciliation (standing discrepancies — keeps month-end-prep honest)
 
+- **NorthPeak amount mismatch (beat #4):** the bank auto-debited the **renewed
+  $1,280** annual rate under a cryptic descriptor, but QBO bill `PWD-BILL-0601`
+  is still the **old $1,200** and **open/unpaid** (the payment never matched).
+  This is the *fixable* reconciliation the agent demonstrates: update the bill to
+  $1,280 and record the payment. Because it's an open bill, it adds **$1,200 to
+  open AP** — so QBO **open AP seeds at $3,950** ($2,750 due-this-week + the
+  $1,200 NorthPeak item). It is dated out of the beat-5 window and is resolved in
+  beat 4, so the pay-bills ($2,750) and payroll beats are unaffected.
 - **Interest credit (a):** a small current-week Reserve interest credit
   ($13.40) in the bank with **no QBO counterpart**.
 - **Wire fee (b):** a tiny promo wire fee ($1.20) in the bank that QBO books as
   $0.00.
-- The **Hallsten $2,600 phantom** is the third, deliberate, *large* discrepancy
+- The **Hallsten $2,600 phantom** is a deliberate, *large* discrepancy
   (received in bank, not recorded in QBO) — the bookkeeping beat, not "drama."
 
 Per month: invoiced = payments received = bank client credits; bills paid = bank
