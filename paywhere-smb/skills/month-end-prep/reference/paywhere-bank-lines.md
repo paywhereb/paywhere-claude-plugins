@@ -54,12 +54,11 @@ transaction's amount.
 Prefer the structured source first:
 
 - **`get_transaction_detail`** (by `accountNumber` + `id`, or `accountNumber`
-  + `postDate` + `amount`) returns an enriched `detail` for a line:
-  counterparty name/address/bank, memo, category, payment rail, and any
-  invoice/doc reference. Use this whenever you need to answer "who is this to
-  / what was it for / I don't recognize this charge." When the line has no
-  enrichment on file, `detail` is `null` — fall back to parsing the text
-  fields below.
+  + `postDate` + `amount`) returns whatever enriched `detail` is on file for a
+  line. It is best-effort and often **sparse** — sometimes just a reference or
+  invoice number — and frequently `null`. When it hands you a reference you
+  don't recognize, follow the thread (e.g. search Gmail for that invoice). When
+  `detail` is `null`, fall back to parsing the text fields below.
 
 When you have to parse text, the counterparty lives in `description` /
 `statementDescription`:
