@@ -140,6 +140,15 @@ CryptoConsult (Stablecoin). Hallsten earns no commission → the visible
 
 ## Notes
 
+- **The `Paywhere` and `paywhere-mock` connectors MUST be signed in as the same
+  bank user (same resolved user ID).** They are separate connectors with separate
+  tokens, but the bank world *and* the `get_transaction_detail` enrichment are
+  keyed by the resolved user ID (set by the bank-login username), not by the
+  token. If they are signed in as different users, `/demo-setup` builds a world
+  the `Paywhere` connector can't see — balances read the wrong world and NorthPeak
+  comes back with `detail: null`. Always sign **both** connectors in as the same
+  user, and if you re-authorize one, re-authorize the other and re-run
+  `/demo-setup`. (The skill's step-5 readback now checks for this.)
 - Every money-moving step is approval-gated — the agent always shows the batch
   and waits for an explicit yes.
 - Phase-2-A produces Gmail **drafts**, never sends.
