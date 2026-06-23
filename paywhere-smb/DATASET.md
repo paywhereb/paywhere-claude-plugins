@@ -101,9 +101,10 @@ Slack $120 · HubSpot $360 · Grant Henderson CPAs $470 · DigitalOcean $200.
 Wire: **Sutter Hill Properties** rent $2,100 + $45 wire fee.
 
 All vendors + the ACH/Wire workers + the ACH/Wire commission payees are
-**pre-configured as recipients at seed time** (recipient store), so a pay step
-passes only a `recipientRef` + amount. recipientRefs are `ach:<slug>` /
-`wire:<slug>` (e.g. `ach:digitalocean`, `wire:sutter-hill`).
+**seeded as saved payees at seed time**, so a pay step passes only the payee's
+**name** (`recipientId`) + amount and the bank resolves the bank details. The
+match is forgiving on minor name variations (suffix/spacing/case); the payee
+name is the same name that appears on the QuickBooks vendor/worker record.
 
 ## Commission map (server-side; phase-2 C)
 
@@ -140,7 +141,7 @@ All gross × rate are whole dollars by design.
    $1,280 and record the bill payment against this charge. (The bill's due date is
    `W+0:Fri+7`, out of the beat-5 window, so it never appears in "pay bills due
    this week"; the agent resolves it here in beat 4.)
-5. **Pay bills due this week (ACH + Wire, pre-configured recipients)** —
+5. **Pay bills due this week (ACH + Wire, saved payees)** —
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
    ≈ **$910** (AWS $760 + Google Workspace $150, both ACH due `W+0:Fri`).

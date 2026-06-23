@@ -4,14 +4,14 @@ Three concerns, three homes — all in QuickBooks + Paywhere, no local files:
 
 | Concern | Home | Why |
 |---|---|---|
-| (a) Who works where, at what rates, paid by which rail | **QBO worker vendors** | The vendor record carries the worker's client, BillRate, PayRate, rail, and recipientRef |
+| (a) Who works where, at what rates, paid by which rail | **QBO worker vendors** | The vendor record carries the worker's client, BillRate, PayRate, and rail; the worker's name is the payee name |
 | (b) How many hours were actually worked | **QBO time-activities** | Evidence in the books. Hours are read, never invented |
 | (c) Bill and pay once and only once | **QBO marker DocNumbers** (`PWD-PB-…`) | The system-of-record dedupe signal |
 
 QuickBooks records the *client invoices* (revenue) and the *worker cost* (a
 Bill + Bill Payment per worker per period). Paywhere is the bank that actually
-pays the workers; each worker is **pre-configured as a recipient** at setup, so
-the pay step passes a `recipientRef` + amount.
+pays the workers; the pay step passes the worker's **name** (`recipientId`) +
+amount, and the bank resolves it to the worker's saved payee.
 
 ## The worker roster — QBO worker vendors
 
@@ -26,18 +26,18 @@ required field ⇒ flag the worker and exclude — never guess.
 | `BillRate` | $/hour billed to the client |
 | `PayRate` | $/hour paid to the worker |
 | `Rail` | `ACH` / `Wire` / `Stablecoin` — the `make_batch_payment` item discriminator |
-| `recipientRef` | `ach:<slug>` / `wire:<slug>` — the pre-configured recipient the server pays (ACH/Wire workers) |
+| `DisplayName` (again) | For ACH/Wire workers, the worker's name is the payee name passed as `recipientId` |
 | `WalletAddress` | Stablecoin workers only — the wallet to pay and the key for `get_stablecoin_recipient` |
 
-**recipientRef vs inline:** for ACH/Wire workers the pay step passes only
-`recipientRef` + amount and the server fills the bank/wire details. If a worker
-has **no** pre-configured recipient (a real worker not yet onboarded), fall
-back to the inline recipient block from their vendor record rather than
-erroring (see "Tool signatures"). Stablecoin is never a recipientRef rail — it
-always uses the stablecoin payment flow.
+**Pay by name vs inline:** for ACH/Wire workers the pay step passes only the
+worker's name (`recipientId`) + amount, and the bank resolves it to the saved
+payee. If a worker has **no** saved payee (a real worker not yet onboarded),
+fall back to the inline recipient block from their vendor record rather than
+erroring (see "Tool signatures"). Stablecoin never uses pay-by-name — it always
+uses the stablecoin payment flow.
 
-The demo world's concrete worker roster, rates, rails, and recipientRefs are
-documented in [../../DATASET.md](../../DATASET.md) (seeded by `/demo-setup`).
+The demo world's concrete worker roster, rates, and rails are documented in
+[../../DATASET.md](../../DATASET.md) (seeded by `/demo-setup`).
 
 ## Hours — QBO time-activities
 
@@ -122,9 +122,9 @@ items carry no description — match those by amount + date + type.
 
 `payments: []` of 1–50 items, each discriminated by `rail`:
 
-- `{rail: "ach", fromAccountNumber, recipientRef, paymentAmount, paymentName}` — **preferred**: the worker is pre-configured, the server fills the recipient. Made AND authorized automatically. **Fallback** (no pre-configured recipient): `{rail: "ach", fromAccountNumber, recipientIdType: "Inline", recipient {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentName}`.
-- `{rail: "wire", fromAccountNumber, recipientRef, amount, description?}` — **preferred**. **Fallback**: `{rail: "wire", fromAccountNumber, amount, recipient {name, accountNumber, address1, city, state, postalCode}, recipientBank {name, aba}, purposeOfWire?, description?}` — `recipientBank.aba`, never `routingNumber`. `processDate` is **optional** and defaults to the next business day server-side; set it only to override.
-- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber, amount}` — recipient must be VERIFIED first (`get_stablecoin_recipient {walletAddress}`). Stablecoin has no recipientRef form.
+- `{rail: "ach", fromAccountNumber, recipientId: <worker name>, paymentAmount, paymentName}` — **preferred**: the bank resolves the name to the worker's saved payee. Made AND authorized automatically. **Fallback** (no saved payee): `{rail: "ach", fromAccountNumber, recipient {name, aba, accountNumber, accountType, emailAddress}, paymentAmount, paymentName}`.
+- `{rail: "wire", fromAccountNumber, recipientId: <worker name>, amount, description?}` — **preferred**. **Fallback**: `{rail: "wire", fromAccountNumber, amount, recipient {name, accountNumber, address1, city, state, postalCode}, recipientBank {name, aba}, purposeOfWire?, description?}` — `recipientBank.aba`, never `routingNumber`. `processDate` is **optional** and defaults to the next business day; set it only to override.
+- `{rail: "stablecoin", walletAddress, currency: "USD", accountNumber, amount}` — recipient must be VERIFIED first (`get_stablecoin_recipient {walletAddress}`). Stablecoin has no pay-by-name form.
 
 Options: `dryRun: true` validates without moving money — stablecoin items
 return the **real 1% fee**, other rails report `validated_not_executed`;
@@ -154,5 +154,5 @@ range.
 - `search_time_activities` — returns each time-activity's vendor (worker),
   customer (client), hours, hourly rate, and date. Filter to the period's
   Mon–Sun window and sum hours per worker. This is the only source of hours.
-- `search_vendors` — the worker roster: DisplayName, placed client, BillRate,
-  PayRate, rail, and recipientRef (per "The worker roster" above).
+- `search_vendors` — the worker roster: DisplayName (also the payee name),
+  placed client, BillRate, PayRate, and rail (per "The worker roster" above).

@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 0.1.0
+version: 0.2.0
 description: >
   Catches the business up on accounts payable in one pass: pulls the AP aging
   from QuickBooks, proposes the overdue bills for payment, checks the bank
@@ -22,9 +22,9 @@ User: "pay my bills"
   overdue / due-this-week / due-later buckets and days-overdue per bill
 → Propose the default selection: every OVERDUE bill; show running total vs
   the live operating balance (list_accounts → get_account_balance)
-→ Resolve each vendor's rail: match each open bill to a pre-configured
-  recipient (pass recipientRef + amount — no raw bank details); for a vendor
-  with no configured recipient, confirm/onboard with the owner
+→ Resolve each vendor's rail: pay each open bill by the vendor's name
+  (recipientId + amount — the bank resolves it to the saved payee; no raw bank
+  details); for a vendor with no saved payee, confirm/onboard with the owner
 → Dry run: make_batch_payment with dryRun:true → per-item validation
 → THE GATE: one confirmation table, one explicit "yes, pay these"
 → Execute: ONE make_batch_payment across all rails
@@ -45,12 +45,11 @@ marks bills paid in QuickBooks one at a time) is what this skill replaces.
 - **Paywhere** is the bank: the live balance says *what can be paid*, the
   rails (ACH / wire / stablecoin) move the money, and the transaction feed
   proves each payment actually posted.
-- **Payment details** (ABA, account numbers, wire instructions) come from a
-  **pre-configured recipient** when one exists — the pay tools take a
-  `recipientRef` + amount and fill the bank details server-side, so this skill
-  never handles raw account numbers. When no recipient is configured for a
-  vendor, the owner confirms the details (real-business onboarding flow). They
-  are **never guessed**.
+- **Payment details** (ABA, account numbers, wire instructions) come from your
+  **saved payees** when one exists — the pay tools take the vendor's **name**
+  (`recipientId`) + amount and resolve the bank details, so this skill never
+  handles raw account numbers. When no saved payee matches a vendor, the owner
+  confirms the details (real-business onboarding flow). They are **never guessed**.
 
 If QuickBooks is not connected, **stop** — without the system of record there
 is no trustworthy list of what's owed and nowhere to book what gets paid. If
@@ -87,19 +86,19 @@ still runs; nothing executes.
   owner names, **warn before the gate** and offer to narrow the selection or
   top up from savings (`transfer_funds`, separately gated).
 
-### 3. Resolve the rail + recipient per vendor
+### 3. Resolve the rail + payee per vendor
 
-- **Prefer a pre-configured recipient.** For each open bill, match the vendor
-  to a configured recipient and pay with **`recipientRef` + amount** — the
-  tool fills the bank details (ACH or wire) server-side, so this skill never
-  touches an ABA or account number. Match by vendor name; if the match is
+- **Pay by the vendor's name.** For each open bill, pass the vendor's name as
+  **`recipientId` + amount** — the bank resolves it to the matching saved payee
+  and fills the ACH/wire details, so this skill never touches an ABA or account
+  number. Matching is forgiving on minor name variations; if the match is truly
   ambiguous, ask before paying.
-- **No configured recipient** (a real business that hasn't onboarded one):
-  fall back to the normal recipient-onboarding flow — ask the owner to confirm
-  the rail and details, read them back, then pass them inline. **NEVER guess
-  or autocomplete an ABA, account number, or wire instruction.** A vendor with
-  no recipient and no confirmed details is **flagged and excluded** from the
-  batch, listed so the owner can supply details and re-add it.
+- **No saved payee** (a real business that hasn't onboarded one): fall back to
+  the normal onboarding flow — ask the owner to confirm the rail and details,
+  read them back, then pass them **inline**. **NEVER guess or autocomplete an
+  ABA, account number, or wire instruction.** A vendor with no saved payee and
+  no confirmed details is **flagged and excluded** from the batch, listed so the
+  owner can supply details and re-add it.
 - **Wire** `processDate` is optional — when omitted it defaults to the next
   business day server-side; tell the owner when the wire will move. (There is
   no separate wire-config call.)
@@ -235,8 +234,7 @@ books drift; this skill won't do it.
 ## Reference
 
 - [`/demo-setup`](../demo-setup/SKILL.md) — seeds the demo world (including the
-  overdue + due-this-week open bills and their pre-configured recipients) this
-  skill shines on.
+  overdue + due-this-week open bills and their saved payees) this skill shines on.
 - [../../DATASET.md](../../DATASET.md) — the demo dataset reference: the open-bill
   set, expected numbers, and the recipient/rail map (for understanding the demo;
   the skill reads it all from QuickBooks/Paywhere at run time).

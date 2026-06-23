@@ -1,14 +1,14 @@
 ---
 name: pay-and-bill
-version: 0.1.0
+version: 0.2.0
 description: >
   Runs the hours-to-cash cycle for a staffing firm: reads last period's worker
   hours from QuickBooks time-activities, aggregates per worker and per client,
   invoices each client for the hours in QuickBooks, pays each worker over their
   Paywhere rail (ACH / Wire / Stablecoin) in one batch, books a Bill + Bill
   Payment per worker, and reconciles against the bank. Worker rates and rails
-  come from the QuickBooks vendor records; recipients are pre-configured at
-  setup so a pay step passes a recipientRef + amount. Dedupes with PWD-PB
+  come from the QuickBooks vendor records; a pay step passes the worker's name
+  (recipientId) + amount and the bank resolves the saved payee. Dedupes with PWD-PB
   markers so re-runs are safe. Use when the owner says "bill clients for hours,"
   "invoice the hours," "pay my contractors," "pay the workers," or "run the
   pay-and-bill cycle."
@@ -27,7 +27,7 @@ User: "run the pay-and-bill cycle"
 → Dedupe: search_invoices / search_bills for PWD-PB-…-{period}-% markers
 → GATE 1: invoice table → approval → create_invoice per client
 → GATE 2: pay table (incl. stablecoin fee from dryRun) → approval
-→ ONE make_batch_payment (mixed rails, recipientRef per worker) → per-item results
+→ ONE make_batch_payment (mixed rails, recipientId=worker name per item) → per-item results
 → Record: create-bill + create_bill_payment per worker
 → Reconcile: query_transactions (debits) + margin summary (≈ 1.3×)
 ```
@@ -46,16 +46,16 @@ right before running — read [DATA-MODEL.md](DATA-MODEL.md).
     period. Hours are read from the books, never invented and never assumed.
   - The client invoice is the revenue; the worker Bill + Bill Payment is the
     cost.
-- **Paywhere** is the bank: it disburses worker pay and proves it posted. Each
-  worker is **pre-configured as a recipient** at setup, so a pay step passes a
-  `recipientRef` + amount — the server fills in the bank/wire details.
+- **Paywhere** is the bank: it disburses worker pay and proves it posted. A pay
+  step passes the worker's **name** (`recipientId`) + amount, and the bank
+  resolves it to the worker's saved payee (ACH/wire details).
 
 ## Setup (first run only)
 
 This skill reads what is already in QuickBooks and Paywhere — it does not stand
 up its own data. If the QBO worker vendors or last period's time-activities are
 missing, help the owner enter them (or, for the demo world, the persona,
-vendors, time-activities, and pre-configured recipients are seeded by
+vendors, time-activities, and saved payees are seeded by
 `/demo-setup` — see [../../DATASET.md](../../DATASET.md)). Resume `pay-and-bill`
 once the vendors and time-activities exist.
 
@@ -72,9 +72,10 @@ of June 1", "May 18–24") and normalize it to a Monday-start week. The
 ### 2. Read the worker roster from QBO
 
 `search_vendors` for the worker vendors. Each carries the worker's name (the
-hour-report join key and the bill vendor), the placed client, the `BillRate`
-and `PayRate`, and the `rail` + `recipientRef` (per [DATA-MODEL.md](DATA-MODEL.md)).
-A worker missing a rate or a recipientRef → flag and exclude; never guess.
+hour-report join key, the bill vendor, AND the payee name passed as `recipientId`),
+the placed client, the `BillRate` and `PayRate`, and the `rail` (per
+[DATA-MODEL.md](DATA-MODEL.md)). A worker missing a rate or a rail → flag and
+exclude; never guess.
 
 ### 3. Read the hours from QBO time-activities
 
@@ -137,15 +138,15 @@ batch *and* the step-8 QBO bookkeeping for those payments):
 |---|---|---|---|---|---|---|
 
 On approval, **ONE** `make_batch_payment` (`dryRun: false`, `stopOnError:
-false`), items built per [DATA-MODEL.md](DATA-MODEL.md). **Prefer
-`recipientRef`** for ACH and wire workers — pass `{rail, fromAccountNumber,
-recipientRef, amount, …}` and the server fills the bank/wire details (workers
-are pre-configured as recipients at setup). **Degrade gracefully:** if a
-worker has no pre-configured recipient (a real worker not yet onboarded), fall
-back to the inline recipient block from their vendor record — ACH with the full
-`recipient` block, wire with `recipient` + `recipientBank {name, aba}` — rather
-than erroring. Stablecoin always uses the stablecoin flow `{walletAddress,
-currency: "USD", accountNumber, amount}` (recipientRef is ACH/Wire only). ACH
+false`), items built per [DATA-MODEL.md](DATA-MODEL.md). **Pay by the worker's
+name** for ACH and wire workers — pass `{rail, fromAccountNumber, recipientId:
+<worker name>, amount, …}` and the bank resolves it to the worker's saved payee.
+**Degrade gracefully:** if a worker has no saved payee (a real worker not yet
+onboarded), fall back to the inline recipient block from their vendor record —
+ACH with the full `recipient` block, wire with `recipient` + `recipientBank
+{name, aba}` — rather than erroring. Stablecoin always uses the stablecoin flow
+`{walletAddress, currency: "USD", accountNumber, amount}` (pay-by-name is ACH/Wire
+only). ACH
 `paymentName` / wire `description` = the worker's bill marker (reconcile trace);
 `paymentDate`/`processDate` is **optional and defaults to the next business
 day** server-side — set it only to override that default.
@@ -189,13 +190,13 @@ bills + bill payments (ids), and the margin line.
 ## Graceful degradation — say what's skipped, never half-work silently
 
 - **No Paywhere**: run steps 1–6 only — invoices still go out — then produce
-  the **drafted payment list** (worker, gross, rail, recipientRef or payment
+  the **drafted payment list** (worker, gross, rail, payee name or payment
   fields) without executing anything. No bank batch, no bills; tell the owner
   exactly that.
 - **No QuickBooks**: **stop** — QBO is the system of record for both the
   worker roster/rates and the time-activities (the hours). Without it there is
   no source of truth; invoicing and cost booking cannot be skipped or faked.
-- **A worker with no pre-configured recipient**: don't error — fall back to the
+- **A worker with no saved payee**: don't error — fall back to the
   inline recipient details on their vendor record (step 7). If those are also
   missing, flag and exclude that worker.
 
@@ -243,4 +244,4 @@ bills + bill payments (ids), and the margin line.
   shapes, the invoice/pay/margin math, PWD-PB marker formats, and the verbatim
   MCP tool signatures.
 - [../../DATASET.md](../../DATASET.md) — the demo world's persona, worker
-  roster, weekly hours, and pre-configured recipients (seeded by `/demo-setup`).
+  roster, weekly hours, and saved payees (seeded by `/demo-setup`).
