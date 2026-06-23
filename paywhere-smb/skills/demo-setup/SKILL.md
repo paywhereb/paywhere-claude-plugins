@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 0.1.0
+version: 0.2.0
 description: >
   Builds the entire canonical Paywhere SMB demo world in TWO tool calls — one to
   the paywhere-mock seeder (bank) and one to the QuickBooks seeder (books) — with
