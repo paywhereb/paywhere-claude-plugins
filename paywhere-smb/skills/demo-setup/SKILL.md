@@ -85,7 +85,7 @@ connector reports the *same thing*:
    different number or a wildly different balance (e.g. an inflated Reserve) means
    Paywhere is on a **different bank user** than the seeder.
 2. Call **`get_transaction_detail` on the NorthPeak ACH debit** (the beat-4 row,
-   ~ -$1,280, `ACH DEBIT NORTHPEAK ANALYTICS`). Assert `detail` is **non-null**.
+   ~ -$1,280, `ACH DEBIT NPA*ENRICH 8002231`). Assert `detail` is **non-null**.
    The bank row can be `found:true` while `detail` is `null` — that specifically
    means the connector's userId differs from the seeder's (enrichment is keyed by
    userId), even if the account numbers happen to match.
