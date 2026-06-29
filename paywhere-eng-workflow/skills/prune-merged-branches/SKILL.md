@@ -71,9 +71,16 @@ repo's* merged PRs, so your local branches either all fall into
 SKIP-noPR or, worse, a same-named branch matches an unrelated SHA. Use
 `mktemp` so every run gets its own file:
 
+Match any SSH host (`git@<host>:`) and any HTTPS host, not just
+`git@github.com:` — repos here commonly use a custom SSH host alias
+(e.g. `git@github-paywhere:paywhereb/paywhere-admin`) configured in
+`~/.ssh/config`. A `github.com`-only pattern leaves the prefix intact,
+the `--repo` arg is then a garbage slug, and `gh` fails or queries the
+wrong repo:
+
 ```bash
 ORIGIN_SLUG=$(git remote get-url origin \
-  | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
+  | sed -E 's#^(git@[^:]+:|https://[^/]+/)##; s#\.git$##')
 
 MAP=$(mktemp "${TMPDIR:-/tmp}/merged-prs.XXXXXX")
 
