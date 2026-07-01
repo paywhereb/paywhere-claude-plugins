@@ -93,13 +93,24 @@ Before the steps below, load `.claude/eng-workflow.json`:
 
    Capture the returned identifier (e.g. `ENG-###`) and URL — you'll need both for the PR.
 
-9. **Create the PR**: Push is not needed (both branches are already on the remote). Prepend the ticket identifier to the title and add a `Linear ticket:` line at the top of the body so it appears above `## Summary`:
+9. **Create the PR**: Push is not needed (both branches are already on the remote). Prepend the ticket identifier to the title and add a `Linear ticket:` line at the top of the body so it appears above `## Summary`.
+
+   Label the PR `release`. This marks it as release plumbing so
+   auto-generated release-notes tooling (e.g. a repo's
+   `.github/release.yml` `exclude.labels`) can keep these
+   `main→production` PRs out of the changelog. `gh pr create --label`
+   fails if the label doesn't exist, so ensure it first (idempotent):
 
    ```bash
+   gh label create release \
+     --description "main→production release PR; excluded from auto-generated release notes" \
+     --color 5319e7 2>/dev/null || true
+
    gh pr create \
      --base production \
      --head <defaultBranch> \
      --title "<ENG-###>: <title>" \
+     --label release \
      --body "$(cat <<'EOF'
    Linear ticket: <ENG-### URL>
 
