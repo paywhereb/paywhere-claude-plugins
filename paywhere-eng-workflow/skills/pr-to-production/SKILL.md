@@ -104,7 +104,8 @@ Before the steps below, load `.claude/eng-workflow.json`:
    ```bash
    gh label create release \
      --description "main→production release PR; excluded from auto-generated release notes" \
-     --color 5319e7 2>/dev/null || true
+     --color 5319e7 \
+     --force
 
    gh pr create \
      --base production \
