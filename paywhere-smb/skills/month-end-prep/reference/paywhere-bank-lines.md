@@ -41,7 +41,7 @@ Each row in `get_account_transactions` carries:
 | `postDate` | Date-time the line posted (e.g. `2026-06-02 14:05:16-05:00`). Compare on the date part for matching. |
 | `amount` | Signed decimal. Positive = credit (money in), negative = debit (money out). |
 | `description` | Human-readable line description (e.g. `Amazon Web Services Inc`, `Thames Fintech Ltd - consulting hours`). |
-| `statementDescription` | The raw bank statement descriptor (e.g. `ACH DEBIT AMAZON WEB SERVICES INC`, `WIRE IN THAMES FINTECH LTD`, `ACH CR ALDERBROOK VENTURES`). Cryptic processor descriptors land here — match and fingerprint on this field. |
+| `statementDescription` | The raw bank statement descriptor (e.g. `ACH DEBIT AMAZON WEB SERVICES INC`, `STABLECOIN IN THAMES FINTECH LTD`, `ACH CR ALDERBROOK VENTURES`). Cryptic processor descriptors land here — match and fingerprint on this field. |
 | `status` | Settlement status of the line. |
 | `type` | Rail/category of the line: `ACH`, `DomesticWire`, `Transfer`, `Cash`. (`query_transactions` matches `types` case-insensitively, but use these exact values.) |
 
@@ -74,6 +74,8 @@ When you have to parse text, the counterparty lives in `description` /
   `WIRE OUT <PAYEE>`; `description` carries the human label.
 - **Stablecoin payouts** — `statementDescription` is
   `STABLECOIN PAYOUT <NAME>`.
+- **Stablecoin credits** — `statementDescription` is `STABLECOIN IN <PAYER>`
+  (a client paying in stablecoin); seeded as a `Transfer`-type line.
 - **Transfers / fees / interest** — descriptive labels like
   `INTEREST PAYMENT`, `WIRE TRANSFER FEE`, or an internal transfer label.
 
