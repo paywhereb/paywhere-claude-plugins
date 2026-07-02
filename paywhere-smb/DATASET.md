@@ -61,15 +61,23 @@ grammar lives in the header of `src/demo/dates.ts`.
 
 | Client | Pays by | Monthly | Personality |
 |---|---|---|---|
-| Thames Fintech Ltd | Wire | $6,400 | prompt |
+| Thames Fintech Ltd | Stablecoin | $6,400 | prompt |
 | Zurich Dynamics AG | Wire | $7,200 | prompt |
 | Alderbrook Ventures LLC | ACH-style | $4,800 | **slow — the overdue-AR payer** |
-| Mitsui Digital KK | Wire | $4,200 | **partial — two $2,100 halves** |
+| Mitsui Digital KK | Stablecoin | $4,200 | **partial — two $2,100 halves** |
 | Hallsten & Berg AB | ACH-style | $2,600 | **the unrecorded "phantom" credit** |
 
-Wire receipts seed as `DomesticWire` deposits with `inboundWireData`; ACH-style
-credits seed as `Transfer` deposits with an `ACH CR <CLIENT>` statement
-description (the mock bank can't post ACH *deposits*).
+The rail mix gives one inbound line of each type. Wire receipts (Zurich) seed as
+`DomesticWire` deposits with `inboundWireData` (`WIRE IN <CLIENT>`); stablecoin
+receipts (Thames, Mitsui) seed as `Transfer` deposits with a `STABLECOIN IN
+<CLIENT>` descriptor; ACH-style credits (Alderbrook, Hallsten) seed as `Transfer`
+deposits with an `ACH CR <CLIENT>` description (the mock bank can't post native
+stablecoin/ACH *deposits*). Switching a client's rail only changes how its
+receipts are seeded (deposit type + descriptor) — the amounts, and therefore the
+tuned closing balances, are rail-independent. The two stablecoin clients' wallets
+are registered + **approved as stablecoin senders** by `seed_demo_world` (see
+[Stablecoin counterparties](#stablecoin-counterparties-approved-at-setup)), so
+Phase-2-A's `initiate_stablecoin_receipt` requests work without the live KYC wait.
 
 ## Workers (contractors) — pay = bill ÷ 1.3
 
@@ -117,6 +125,28 @@ name is the same name that appears on the QuickBooks vendor/worker record.
 | Hallsten & Berg | — | — | — | **deliberately absent → "skipped, not in register"** |
 
 All gross × rate are whole dollars by design.
+
+## Stablecoin counterparties (approved at setup)
+
+`seed_demo_world` creates these through the authenticated Paywhere API and then
+**approves their wallet-owner verification via the admin API** (`POST
+/stablecoin/{recipients,senders}/{wallet}/approve`), all in the one setup call —
+so the Phase-2 stablecoin beats are KYC-ready out of the box. All wallets are
+USDC on **Polygon** (`POLY`) testnet addresses (reuse across roles is fine —
+demo-only).
+
+| Role | Owner | Owner type | Used by |
+|---|---|---|---|
+| Recipient | Devon Okafor | Individual | pay-and-bill (phase-2 B) — contractor payout |
+| Recipient | CryptoConsult DAO | Business | commissions (phase-2 C) — Mitsui 10% payee |
+| Sender | Thames Fintech Ltd | Business | getting paid (phase-2 A) — stablecoin receipt |
+| Sender | Mitsui Digital KK | Business | getting paid (phase-2 A) — stablecoin receipt |
+
+The exact wallet addresses live in the server dataset
+(`paywhere-mcp-api/src/demo/bankDataset.ts`, `STABLECOIN_RECIPIENTS` /
+`STABLECOIN_SENDERS`) — nothing is hardcoded into the skills. The setup report
+surfaces `stablecoinRecipientsApproved` (2) and `stablecoinSendersApproved` (2);
+any failure is reported in `stablecoinErrors` without failing the rest of the seed.
 
 ---
 

@@ -68,6 +68,13 @@ for explicit approval** before either call. (Both tools also require
   the user to record them now.
 - **Capture `dateModel` verbatim** from the response — you pass it to the books
   seed unchanged. The rotation takes effect on the next tool call.
+- This single call **also creates and approves the demo's stablecoin
+  recipients + senders** (USDC on Polygon) against the freshly-rotated bank user,
+  so the Phase-2 stablecoin beats work without the live KYC wait. Check the
+  response's `stablecoinRecipientsApproved` (expect **2** — Devon, CryptoConsult)
+  and `stablecoinSendersApproved` (expect **2** — Thames, Mitsui; Zurich stays on
+  wire). If `stablecoinErrors` is present, report it — those beats may need a
+  manual approval, but the rest of the bank/books world is still good.
 
 ### 4. Seed the books — `seed_demo_books {dateModel, confirm:true}`
 - Pass the `dateModel` from step 3 **verbatim** (this is what keeps bank and
@@ -103,6 +110,9 @@ From the two responses, report:
   numbers**, confirmed via the step-5 readback (not just the seeder's claim).
 - QBO **created-vs-existing** counts, **open AR / AP**, and the DocNumber-persistence note.
 - That the NorthPeak `get_transaction_detail` readback returned enrichment (beat 3 ready).
+- **Stablecoin counterparties approved** — 2 recipients (Devon, CryptoConsult) +
+  2 senders (Thames, Mitsui) registered and approved (Phase-2 stablecoin beats
+  ready). Flag any `stablecoinErrors`.
 - Which beats are ready (the `beatsReady` list) and the live demo prompts live in
   [`../../../demo/demo-script.md`](../../../demo/demo-script.md).
 
@@ -124,3 +134,9 @@ From the two responses, report:
 - **`errorCount > 0`** on the books seed: report the `errors` sample; usually a
   missing chart-of-accounts ref (bank/income/expense) — confirm the sandbox has
   a checking, an income, and an expense account.
+- **`stablecoinErrors` present** on `seed_demo_world` (fewer than 2 recipients /
+  2 senders approved): the bank/books world is still fine — only the Phase-2
+  stablecoin beats are at risk. A re-run of `/demo-setup` re-creates and
+  re-approves against the new world; if it persists, the demo's admin API
+  (`PAYWHERE_ADMIN_BASE_URL`) or `PAYWHERE_BASE_URL` may be unset/unreachable on
+  this deployment.
