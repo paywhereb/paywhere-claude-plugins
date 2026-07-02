@@ -1,0 +1,28 @@
+name: Gemini PR Review
+
+# Review on open / reopen / ready-for-review; drafts are skipped.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Same-repo PRs only: this repo is PUBLIC, and fork PRs neither get the
+    # id-token: write needed for WIF nor should they drive an auto-approving
+    # review agent with untrusted diff content.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    # The caller declares permissions; the reusable inherits them (org rule:
+    # the reusable itself has no permissions: block). WIF needs id-token: write;
+    # posting the review needs pull-requests: write.
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+      issues: write
+    uses: paywhereb/.github/.github/workflows/gemini-pr-review.yml@main
