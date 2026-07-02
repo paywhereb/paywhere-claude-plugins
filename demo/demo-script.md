@@ -23,7 +23,9 @@ Approve the gate. **Record the returned bank username/password** (also posted to
 the demo Slack channel). Confirm the report shows Operating ≈ $23,000, Reserve
 ≈ $20,138, open AR $9,500, **open AP $3,950** (= $2,750 due-this-week bills + the
 $1,200 NorthPeak reconciliation item, which beat 3 resolves — see DATASET.md),
-recipients configured, enrichment written, and `beatsReady`. If the books seed
+recipients configured, enrichment written, **stablecoin counterparties approved**
+(2 recipients — Devon, CryptoConsult; 2 senders — Thames, Mitsui — so the
+Phase-2 stablecoin beats are KYC-ready), and `beatsReady`. If the books seed
 reports `errorCount > 0`, re-check the QBO sandbox chart of accounts.
 
 ---
@@ -137,8 +139,9 @@ goes once you're covered, not a backstop you raid for an operating gap.
 Send out this month's invoices and create stablecoin payment requests for the
 clients who pay that way, then draft the emails
 ```
-→ Invoices in QBO + `initiate_stablecoin_receipt` for the stablecoin clients +
-**Gmail drafts** (drafts only — nothing is sent).
+→ Invoices in QBO + `initiate_stablecoin_receipt` for the stablecoin clients
+(Thames, Mitsui — their wallets were registered + approved as stablecoin senders
+at setup; Zurich still pays by wire) + **Gmail drafts** (drafts only — nothing is sent).
 
 **B. Pay-and-bill** (hours from QBO time-activities; saved payees)
 ```
