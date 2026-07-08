@@ -12,7 +12,7 @@ Today this marketplace ships two plugins:
 - **[`paywhere-eng-workflow`](paywhere-eng-workflow/)** — Shared
   engineering workflow for Paywhere repos: `/start`, `/finish`,
   `/create`, `/review`, plus `safe-deps`, `tc-reconcile`,
-  `pr-to-production`, `pull-latest`, `squash`, and
+  `pr-to-production`, `tf-drift`, `pull-latest`, `squash`, and
   `prune-merged-branches`. Parameterised per repo via
   `.claude/eng-workflow.json`.
 
@@ -211,7 +211,7 @@ paywhere-claude-plugins/
     │   └── plugin.json
     ├── README.md
     ├── commands/            # start, finish, create, review, eng-init
-    └── skills/              # pull-latest, squash, pr-to-production, tc-reconcile, safe-deps, conventions
+    └── skills/              # pull-latest, squash, pr-to-production, tc-reconcile, tf-drift, safe-deps, conventions
 ```
 
 ## What's inside the SMB plugin
@@ -241,8 +241,14 @@ opt into:
 - `/create` — bootstrap a Linear ticket from the working diff.
 - `/review` — review the current implementation against the ticket and
   the shared conventions.
-- `safe-deps`, `tc-reconcile`, `pr-to-production`, `pull-latest`,
-  `squash` — the operational skills.
+- `safe-deps`, `tc-reconcile`, `pr-to-production`, `tf-drift`,
+  `pull-latest`, `squash` — the operational skills.
+- `tf-drift` — explain the latest Terraform drift sweep in plain English,
+  attribute the change via CloudTrail, and drive the gated revert (or draft
+  a codify PR) **without** bypassing the human approval gate. Gated on
+  `guards.tfDrift.enabled`. Designed for **no-CLI ops**: side-load the plugin
+  into **Cowork / claude.ai** (`./scripts/package.sh paywhere-eng-workflow`)
+  and triage drift from a GUI chat — no terminal or Terraform fluency needed.
 - `/eng-init` — write `.claude/eng-workflow.json` for a fresh repo.
 
 Each host repo configures the plugin via a per-repo
