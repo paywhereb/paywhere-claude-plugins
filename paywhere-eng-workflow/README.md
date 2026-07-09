@@ -99,7 +99,8 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
     "safeDeps":       { "enabled": true,  "mirrorPins": [
       { "package": "@playwright/test", "syncedWith": [".teamcity/settings.kts", "CLAUDE.md"] }
     ]},
-    "prToProduction": { "enabled": true }
+    "prToProduction": { "enabled": true },
+    "tfDrift":        { "enabled": true,  "driftWorkflow": "terraform-drift.yml", "remediateWorkflow": "terraform-remediate-drift.yml" }
   },
   "extraGuardsSkill": ".claude/skills/local-checks"
 }
@@ -137,6 +138,13 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
   bumps the package.
 - `guards.prToProduction.enabled` — `false` disables the
   `pr-to-production` skill for this repo.
+- `guards.tfDrift.enabled` — `false` (or absent) disables the `tf-drift`
+  skill for this repo. Only Terraform repos with a drift-sweep workflow
+  should enable it.
+- `guards.tfDrift.driftWorkflow` — the nightly drift-sweep workflow file
+  (default `terraform-drift.yml`) the skill reads runs from.
+- `guards.tfDrift.remediateWorkflow` — the one-click revert workflow file
+  (default `terraform-remediate-drift.yml`) the skill drives for a revert.
 - `extraGuardsSkill` — path to an optional repo-local skill the plugin
   invokes for invariants only that repo cares about. `safe-deps` calls it
   after its standard gates pass.

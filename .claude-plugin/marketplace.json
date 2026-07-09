@@ -9,7 +9,7 @@
       "name": "paywhere-smb",
       "source": "./paywhere-smb",
       "description": "Small-business finance workflows (cash-flow forecasting, month-end close, payroll planning, AP batch bill-pay, hours billing + contractor payouts, invoice chasing, commission payouts across ACH/Wire/Stablecoin) running against Paywhere + QuickBooks, with a single repeatable /demo-setup command.",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "category": "finance",
       "tags": [
         "smb",
@@ -24,8 +24,8 @@
     {
       "name": "paywhere-eng-workflow",
       "source": "./paywhere-eng-workflow",
-      "description": "Shared Paywhere engineering workflow: Linear-ticket-driven branch/PR flow, dependency refresh, TeamCity reconcile, production cuts. Parameterised per-repo via .claude/eng-workflow.json.",
-      "version": "0.1.1",
+      "description": "Shared Paywhere engineering workflow: Linear-ticket-driven branch/PR flow, dependency refresh, TeamCity reconcile, production cuts, and Terraform drift triage. Parameterised per-repo via .claude/eng-workflow.json.",
+      "version": "0.2.0",
       "category": "dev-tools",
       "tags": [
         "paywhere",
