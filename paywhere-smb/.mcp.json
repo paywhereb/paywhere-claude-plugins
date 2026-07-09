@@ -2,15 +2,15 @@
   "mcpServers": {
     "quickbooks": {
       "type": "http",
-      "url": "https://qbo-demo.paywhere.com/mcp"
+      "url": "https://qbo-demo.dev.paywhere.com/mcp"
     },
     "Paywhere": {
       "type": "http",
-      "url": "https://demo.paywhere.com/mcp"
+      "url": "https://demo.dev.paywhere.com/mcp"
     },
     "paywhere-mock": {
       "type": "http",
-      "url": "https://demo.paywhere.com/mock-mcp"
+      "url": "https://demo.dev.paywhere.com/mock-mcp"
     },
     "gmail": {
       "type": "http",
