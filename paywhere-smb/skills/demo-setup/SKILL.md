@@ -1,12 +1,13 @@
 ---
 name: demo-setup
-version: 0.2.0
+version: 0.3.0
 description: >
   Builds the entire canonical Paywhere SMB demo world in TWO tool calls — one to
-  the paywhere-mock seeder (bank) and one to the QuickBooks seeder (books) — with
-  all orchestration and date math done server-side. Use when the owner says "set
-  up the demo," "reset the demo," "set up the sandbox," or "rebuild demo data."
-  Replaces the old five demo-setup-* commands.
+  the Paywhere connector's demo-seeder tools (present only on demo deployments)
+  and one to the QuickBooks seeder (books) — with all orchestration and date
+  math done server-side. Use when the owner says "set up the demo," "reset the
+  demo," "set up the sandbox," or "rebuild demo data." Replaces the old five
+  demo-setup-* commands.
 ---
 
 # Demo Setup
@@ -22,40 +23,28 @@ them here.
 
 ```
 User: "set up the demo"
-→ Preflight: paywhere-mock + Paywhere + quickbooks connectors all respond
+→ Preflight: Paywhere (with seeder tools) + quickbooks connectors respond
 → Summarize what will happen + WAIT for approval (this REPLACES the demo world)
-→ seed_demo_world {confirm:true}            (paywhere-mock)  → bank world + dateModel + creds
+→ seed_demo_world {confirm:true}            (Paywhere)   → bank world + dateModel + creds
 → seed_demo_books {dateModel, confirm:true}  (quickbooks) → books on the same dates
-→ VERIFY the Paywhere connector sees the seeded world (cross-connector readback)
+→ VERIFY the seed landed (post-seed readback)
 → Report balances, rows seeded, QBO created-vs-existing, open AR/AP, beats ready
 ```
-
-> **The single most important invariant:** the **paywhere-mock** and **Paywhere**
-> connectors must be signed in as the **same bank user**. They are separate OAuth
-> connectors with separate tokens, but the bank world *and* the
-> `get_transaction_detail` enrichment are keyed by the resolved **userId** (set by
-> the bank-login username), not by the token. If the two connectors are signed in
-> as different bank users, the seeder builds a world the Paywhere connector cannot
-> see — balances read the wrong world and NorthPeak's `detail` comes back `null`.
-> Step 5 below actively checks for this; do not skip it.
 
 ## Workflow
 
 ### 1. Preflight — connectors
-Verify all three respond before touching anything; if any is missing, say which
-and **stop** (a half-seed is worse than none):
-- **paywhere-mock** (Demo Seeder) — e.g. `get_demo_world`
+First confirm this is a **demo deployment** — a free check, no tool call
+needed: the Paywhere connector's tool list must include the demo-seeder tools
+(`seed_demo_world` / `get_demo_world`). The seeder tools ride on the Paywhere
+connector itself but are only registered on demo deployments. If they are
+absent, this is **not** a demo deployment — **stop** and say so; never try to
+seed a real Paywhere connector.
+
+Then verify both connectors respond before touching anything; if either is
+missing, say which and **stop** (a half-seed is worse than none):
 - **Paywhere** (the bank) — e.g. `list_accounts`
 - **quickbooks** — e.g. `get_company_info`
-
-Then confirm **paywhere-mock and Paywhere are the same bank user**. Call
-`get_demo_world` (paywhere-mock) and `list_accounts` (Paywhere) and check the
-**bank username / account numbers line up**. If they don't, **stop** and tell the
-presenter to sign **both** connectors in as the *same* bank user before seeding —
-seeding into a split pair produces a world the Paywhere connector can't see
-(wrong balances, `null` NorthPeak detail). Re-doing OAuth on **either** connector
-with different bank credentials reverts that connector to a different world, so
-re-run this skill after any reconnect, and reconnect both connectors together.
 
 ### 2. Approval gate
 This **replaces the caller's entire demo world**. State that plainly and **wait
@@ -73,29 +62,24 @@ for explicit approval** before either call. (Both tools also require
 - Pass the `dateModel` from step 3 **verbatim** (this is what keeps bank and
   books on identical dates). No token or secret is needed.
 
-### 5. Verify the Paywhere connector sees the seeded world (cross-connector readback)
-**Do not trust the seeder's own numbers — read them back through the connector the
-presenter will actually demo on.** `seed_demo_world` returns the world it *built*
-(its `accounts[].accountNumber` + `closing` balances); confirm the **Paywhere**
+### 5. Post-seed readback
+**Do not trust the seeder's own numbers — read them back through the same
+connector the presenter will demo on.** `seed_demo_world` returns the world it
+*built* (its `accounts[].accountNumber` + `closing` balances); confirm the
 connector reports the *same thing*:
 
-1. Call **`list_accounts` on the Paywhere connector.** Assert the returned account
-   numbers and balances **equal `seed_demo_world`'s `accounts` / `closing`** (demo
-   accounts look like `9<userId×5><gen×2><seq×2>`, e.g. `9000250101`). A `7…` /
-   different number or a wildly different balance (e.g. an inflated Reserve) means
-   Paywhere is on a **different bank user** than the seeder.
+1. Call **`list_accounts`.** Assert the returned account numbers and balances
+   **equal `seed_demo_world`'s `accounts` / `closing`** (demo accounts look like
+   `9<userId×5><gen×2><seq×2>`, e.g. `9000250101`).
 2. Call **`get_transaction_detail` on the NorthPeak ACH debit** (the beat-3 row,
-   ~ -$1,280, `ACH DEBIT NPA*ENRICH 8002231`). Assert `detail` is **non-null**.
-   The bank row can be `found:true` while `detail` is `null` — that specifically
-   means the connector's userId differs from the seeder's (enrichment is keyed by
-   userId), even if the account numbers happen to match.
+   ~ -$1,280, `ACH DEBIT NPA*ENRICH 8002231`). Assert `detail` is **non-null**
+   (the enrichment write is part of the seed).
 
-If **either** check fails, **STOP — do not report `beatsReady`** and tell the
-presenter:
-> ⚠️ The Paywhere connector is signed in as a different bank user than the seeder
-> (it shows `<actual>`, expected `<seeded>`). Sign **both** connectors in as the
-> same bank user (`<bankUsername>`) and re-run `/demo-setup` — don't re-auth just
-> one.
+If **either** check fails, the seed didn't land — **STOP, do not report
+`beatsReady`**, and re-run `/demo-setup` from the top (the idempotent reset
+makes this safe). If it fails twice in a row, report the mismatch (expected vs
+actual accounts/balances, or the `null` NorthPeak detail) instead of retrying
+further.
 
 ### 6. Report
 From the two responses, report:
@@ -107,15 +91,14 @@ From the two responses, report:
   [`../../../demo/demo-script.md`](../../../demo/demo-script.md).
 
 ## Edge cases
-- **Split connectors** (step-5 readback mismatch): Paywhere shows different account
-  numbers/balances than the seeder, or NorthPeak `get_transaction_detail` returns
-  `found:true` but `detail:null`. The two connectors are signed in as different
-  bank users → the Paywhere connector can't see the seeded world / enrichment. Sign
-  **both** connectors in as the same bank user and re-run from the top. Re-authing
-  only one connector (or as a *different* username, e.g. a `demo-<n>-g<m>` reset
-  user instead of the original) is what causes this.
+- **Seeder tools absent from the Paywhere connector** (preflight): not a demo
+  deployment — stop; this skill never runs against real accounts.
 - **Half-seeded world** (a call fails midway): don't patch around unknown state —
   re-run `/demo-setup` from the top (a fresh generation orphans the broken world).
+- **Step-5 readback mismatch**: the seed didn't land (wrong balances/accounts or
+  `null` NorthPeak detail) — re-run `/demo-setup`. Note that re-authorizing the
+  connector with **old (pre-reset) credentials** points the session at an old
+  world; re-run `/demo-setup` after any reconnect.
 - **`seedStoppedAtIndex` is non-null** on `seed_demo_world`: the batch hit its
   time guard — re-run `/demo-setup` (idempotent reset makes this safe).
 - **`seed_demo_books` reports `docNumberPersisted: false`**: the sandbox dropped

@@ -105,17 +105,18 @@ received but unrecorded in QBO — it must NOT be counted as collectible.)
 
 **Mid-demo "money just landed"** — the presenter posts Alderbrook's live deposit.
 This is **triggered from the chat via MCP, not a script**: paste the prompt below
-(it calls `deposit_to_mock_account` on the **Demo Seeder / paywhere-mock**
-connector; it posts immediately, so the next balance check sees it). Copy/paste:
+(it calls `deposit_to_mock_account` on the **Paywhere** connector — a
+demo-seeder tool, present on demo deployments only; it posts immediately, so
+the next balance check sees it). Copy/paste:
 ```
-Using the Demo Seeder, post a $4,800 deposit into my Operating Checking with statement description "ACH CR ALDERBROOK VENTURES" — simulating Alderbrook's incoming payment.
+Using the demo-seeder deposit tool, post a $4,800 deposit into my Operating Checking with statement description "ACH CR ALDERBROOK VENTURES" — simulating Alderbrook's incoming payment.
 ```
 Then, back in the owner's voice:
 ```
 Alderbrook just paid — check again
 ```
 → Operating now clears Friday comfortably. (The agent resolves the Operating
-account number itself; both connectors must be on the same bank user — see Notes.)
+account number itself.)
 
 **6. Move money** (the closer — now that payroll is secured)
 ```
@@ -162,15 +163,11 @@ CryptoConsult (Stablecoin). Hallsten earns no commission → the visible
 
 ## Notes
 
-- **The `Paywhere` and `paywhere-mock` connectors MUST be signed in as the same
-  bank user (same resolved user ID).** They are separate connectors with separate
-  tokens, but the bank world *and* the `get_transaction_detail` enrichment are
-  keyed by the resolved user ID (set by the bank-login username), not by the
-  token. If they are signed in as different users, `/demo-setup` builds a world
-  the `Paywhere` connector can't see — balances read the wrong world and NorthPeak
-  comes back with `detail: null`. Always sign **both** connectors in as the same
-  user, and if you re-authorize one, re-authorize the other and re-run
-  `/demo-setup`. (The skill's step-5 readback now checks for this.)
+- **Re-authorizing the Paywhere connector with pre-reset credentials points it
+  at an old world** — the bank world and the `get_transaction_detail` enrichment
+  are keyed by the resolved user ID (set by the bank-login username). If balances
+  look wrong or NorthPeak comes back with `detail: null` after a reconnect,
+  re-run `/demo-setup`. (The skill's step-5 readback checks the seed landed.)
 - Every money-moving step is approval-gated — the agent always shows the batch
   and waits for an explicit yes.
 - Phase-2-A produces Gmail **drafts**, never sends.

@@ -8,10 +8,6 @@
       "type": "http",
       "url": "https://demo.dev.paywhere.com/mcp"
     },
-    "paywhere-mock": {
-      "type": "http",
-      "url": "https://demo.dev.paywhere.com/mock-mcp"
-    },
     "gmail": {
       "type": "http",
       "url": "https://gmailmcp.googleapis.com/mcp/v1"

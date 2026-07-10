@@ -13,7 +13,7 @@ That builds the **entire** demo world — the **Meridian Staffing & Advisory LLC
 persona, scaled ~0.30× (Operating opens $40,000 → closes ≈ $23,000, Reserve
 ≈ $20,000) — in two calls:
 
-1. `seed_demo_world {confirm:true}` (paywhere-mock) — resets the mock bank to a
+1. `seed_demo_world {confirm:true}` (Paywhere) — resets the mock bank to a
    fresh world, pre-configures ACH/Wire recipients, seeds ~6 months of
    date-relative bank history, writes transaction enrichment, and returns the
    bank credentials + a **`dateModel`**.
@@ -36,20 +36,18 @@ copy-paste run-of-show is in [`demo-script.md`](demo-script.md).
 
 All wired in [`paywhere-smb/.mcp.json`](../paywhere-smb/.mcp.json):
 
-- **QuickBooks** — hosted Paywhere QBO fork at `qbo-demo.paywhere.com/mcp`
+- **QuickBooks** — hosted Paywhere QBO fork at `qbo-demo.dev.paywhere.com/mcp`
   (wraps a QBO sandbox company). The `seed_demo_books` tool needs no token — it
   is gated by `confirm:true`, like the connector's other write tools.
-- **Paywhere** — hosted demo MCP at `demo.paywhere.com/mcp`, backed by a
-  mock bank.
-- **paywhere-mock** — the demo seeder at `demo.paywhere.com/mock-mcp`.
-  Same OAuth server and the same bank sign-in as the Paywhere connector,
-  but it must be **authorized separately** in the client. Only `/demo-setup`
-  uses it.
+- **Paywhere** — hosted demo MCP at `demo.dev.paywhere.com/mcp`, backed by a
+  mock bank. On demo deployments it also carries the demo-seeder tools
+  (`seed_demo_world`, `reset_demo`, …) that only `/demo-setup` uses — one
+  connector, one sign-in.
 - **Gmail** — throwaway sandbox Google account (phase-2 "getting paid" drafts).
 
 ## Credential boundaries
 
-- Sign in to both Paywhere connectors with the demo bank credentials from
+- Sign in to the Paywhere connector with the demo bank credentials from
   1Password. `seed_demo_world` (like `reset_demo`) **rotates** those
   credentials: it creates a fresh mock bank user, repoints your connector
   session transparently (no re-auth), returns the new username/password in its
@@ -61,8 +59,8 @@ All wired in [`paywhere-smb/.mcp.json`](../paywhere-smb/.mcp.json):
   points back at the old world — run `/demo-setup` again.
 - The QBO fork wraps a real QBO sandbox company: no real customer data, but
   don't commit its credentials.
-- Never point the demo plugin at production Paywhere. The seeder surface
-  (`/mock-mcp`) only exists on demo deployments.
+- Never point the demo plugin at production Paywhere. The seeder tools only
+  exist on demo deployments.
 
 ## Running the demo
 
