@@ -128,7 +128,7 @@ Before recommending a command, check which connectors are active. If the best-ma
 | `/price-check` | QuickBooks | — |
 | `/tax-prep` | QuickBooks | Paywhere |
 | `/pay-commissions` | QuickBooks, Paywhere | — |
-| `/demo-setup` | paywhere-mock, Paywhere, QuickBooks | — |
+| `/demo-setup` | Paywhere (demo deployment), QuickBooks | — |
 | `business-pulse` (incl. Monday / weekly check-in) | — (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | `/friday-brief` | QuickBooks or Paywhere | — |
 | `/quarterly-review` | QuickBooks | Paywhere |

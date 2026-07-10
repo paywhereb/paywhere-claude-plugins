@@ -14,7 +14,7 @@ This doc carries the numbers that the five deleted `demo-setup-*` manifests used
 to hold, scaled to the revamp.
 
 > Setup is now **two tool calls** made by `/demo-setup`:
-> 1. `seed_demo_world {confirm:true}` (paywhere-mock) → builds the bank world, returns `dateModel` + creds.
+> 1. `seed_demo_world {confirm:true}` (Paywhere — demo deployment) → builds the bank world, returns `dateModel` + creds.
 > 2. `seed_demo_books {dateModel, confirm:true}` (quickbooks) → mirrors the books on the same dates.
 >
 > All date math is server-side; nothing here is hand-resolved.

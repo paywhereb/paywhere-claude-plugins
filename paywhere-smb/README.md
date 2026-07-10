@@ -105,11 +105,11 @@ Run `/smb-onboard` or ask Claude to "set me up."
   `/pay-and-bill`); stores close packets and QBR exports.
 
 **Demo environments only:**
-- **paywhere-mock** — the Paywhere Demo Seeder at
-  <https://demo.paywhere.com/mock-mcp>. Powers the `/demo-setup-*` commands
-  (reset + seed the sandbox). Same sign-in as the Paywhere connector but
-  authorized separately. Only exists on demo deployments — skip it when
-  running against real accounts.
+- On demo deployments, the **Paywhere** connector also carries the
+  demo-seeder tools (`seed_demo_world`, `reset_demo`, …) that power the
+  `/demo-setup` command (reset + seed the sandbox) — one connector, one
+  sign-in. The seeder tools only exist on demo deployments; real accounts
+  never see them.
 
 You don't need all of these to start. Connect Paywhere + QuickBooks and
 you'll immediately see value — the plugin tells you when connecting another
@@ -158,12 +158,13 @@ checkpoints for your approval before taking action.
 
 `/demo-setup` stands up the **entire** repeatable demo environment in two
 server-side calls (bank + books) against the hosted sandbox connectors. It needs
-the **paywhere-mock** seeder connector and is not meant for real accounts. See
+a Paywhere connector pointed at a **demo deployment** (where the seeder tools
+are present) and is not meant for real accounts. See
 [`../demo/seed.md`](../demo/seed.md) and [`../demo/demo-script.md`](../demo/demo-script.md).
 
 | Command | What it does | Skills used | Required |
 |---|---|---|---|
-| `/demo-setup` | Builds the whole demo world (Meridian Staffing & Advisory LLC, scaled ~0.30×): `seed_demo_world` resets the mock bank + seeds ~6 months of date-relative history + pre-configures recipients + writes enrichment, then `seed_demo_books` mirrors the QBO books on the same dates. Readies every Phase-1 and Phase-2 beat in one run. | demo-setup | paywhere-mock, Paywhere, QuickBooks |
+| `/demo-setup` | Builds the whole demo world (Meridian Staffing & Advisory LLC, scaled ~0.30×): `seed_demo_world` resets the mock bank + seeds ~6 months of date-relative history + pre-configures recipients + writes enrichment, then `seed_demo_books` mirrors the QBO books on the same dates. Readies every Phase-1 and Phase-2 beat in one run. | demo-setup | Paywhere (demo deployment), QuickBooks |
 
 ### Weekly & quarterly briefs
 
@@ -192,7 +193,7 @@ commands above compose them.
 | **pay-bills** | AP batch bill-pay: QBO AP aging → overdue-bill selection → one approval → mixed-rail batch payment (saved payees) → bill payments written back → settlement verified against the bank. | "pay my bills", "AP aging", "what's overdue" | QuickBooks | Paywhere |
 | **pay-and-bill** | Hours-to-cash loop: read last week's hours from QBO time-activities → invoice each client → pay workers in one batch → book worker bills → reconcile. | "bill clients for hours", "pay my contractors" | QuickBooks, Paywhere | — |
 | **plan-payroll** | Payroll readiness with real-time bank data when Paywhere is connected (settlement detection, shortfall projection, reminder drafts); QBO-only forecast otherwise. | "can I make payroll", "am I good for payroll" | QuickBooks | Paywhere, Gmail |
-| **demo-setup** | Repeatable sandbox setup in two server-side calls: builds the whole mock-bank world + mirrored QBO books with deterministic, date-relative demo data (identical Monday through Friday). Sales/demo use only. | "set up the demo", "reset the demo" | paywhere-mock, Paywhere, QuickBooks | — |
+| **demo-setup** | Repeatable sandbox setup in two server-side calls: builds the whole mock-bank world + mirrored QBO books with deterministic, date-relative demo data (identical Monday through Friday). Sales/demo use only. | "set up the demo", "reset the demo" | Paywhere (demo deployment), QuickBooks | — |
 | **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
 | **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
 
