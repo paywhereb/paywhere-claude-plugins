@@ -34,16 +34,17 @@ User: "set up the demo"
 ## Workflow
 
 ### 1. Preflight — connectors
-Verify both respond before touching anything; if either is missing, say which
-and **stop** (a half-seed is worse than none):
+First confirm this is a **demo deployment** — a free check, no tool call
+needed: the Paywhere connector's tool list must include the demo-seeder tools
+(`seed_demo_world` / `get_demo_world`). The seeder tools ride on the Paywhere
+connector itself but are only registered on demo deployments. If they are
+absent, this is **not** a demo deployment — **stop** and say so; never try to
+seed a real Paywhere connector.
+
+Then verify both connectors respond before touching anything; if either is
+missing, say which and **stop** (a half-seed is worse than none):
 - **Paywhere** (the bank) — e.g. `list_accounts`
 - **quickbooks** — e.g. `get_company_info`
-
-Then confirm this is a **demo deployment**: the Paywhere connector's tool list
-must include the demo-seeder tools (`seed_demo_world` / `get_demo_world`). The
-seeder tools ride on the Paywhere connector itself but are only registered on
-demo deployments. If they are absent, this is **not** a demo deployment —
-**stop** and say so; never try to seed a real Paywhere connector.
 
 ### 2. Approval gate
 This **replaces the caller's entire demo world**. State that plainly and **wait

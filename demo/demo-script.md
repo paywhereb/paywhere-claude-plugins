@@ -109,7 +109,7 @@ This is **triggered from the chat via MCP, not a script**: paste the prompt belo
 demo-seeder tool, present on demo deployments only; it posts immediately, so
 the next balance check sees it). Copy/paste:
 ```
-Post a $4,800 deposit into my Operating Checking with statement description "ACH CR ALDERBROOK VENTURES" — simulating Alderbrook's incoming payment.
+Using the demo-seeder deposit tool, post a $4,800 deposit into my Operating Checking with statement description "ACH CR ALDERBROOK VENTURES" — simulating Alderbrook's incoming payment.
 ```
 Then, back in the owner's voice:
 ```

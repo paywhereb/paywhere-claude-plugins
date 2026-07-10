@@ -36,7 +36,7 @@ From inside a Claude Code session:
 
 Once installed, ask Claude to "set me up" — it'll run the `smb-onboard`
 skill, walk you through connecting Paywhere (OAuth at
-<https://demo.paywhere.com/mcp>) and QuickBooks, and run a demo recipe.
+<https://demo.dev.paywhere.com/mcp>) and QuickBooks, and run a demo recipe.
 
 ### Cowork — side-load the `.plugin` archive
 
@@ -79,7 +79,7 @@ ask it to.
 server URL:
 
 ```
-https://demo.paywhere.com/mcp
+https://demo.dev.paywhere.com/mcp
 ```
 
 For QuickBooks, Gmail, and Google Drive, add each one separately as its
@@ -93,7 +93,7 @@ Run `/smb-onboard` or ask Claude to "set me up."
 - **Paywhere** — your bank. Powers cash position, settled bank lines, the
   reconciliation flow at the heart of month-end close, and the three
   payment rails (ACH, Wire, Stablecoin) used by commission payouts. Connect
-  via OAuth at <https://demo.paywhere.com/mcp>.
+  via OAuth at <https://demo.dev.paywhere.com/mcp>.
 - **QuickBooks** — your books. Powers the bookkeeping layer (AR, AP, P&L,
   invoice register, customer payments) that Paywhere reconciles against, and
   the Bill / Bill-Payment records that commission payouts write back.
@@ -203,8 +203,8 @@ The skills read **live data** from your connected accounts and never assume
 specific records — point them at your real books or at a sandbox. To explore
 end-to-end before going live, [`demo/seed.md`](../demo/seed.md) walks through
 standing up an example scenario (a QuickBooks sandbox via the hosted fork at
-`qbo-demo.paywhere.com` paired with the hosted Paywhere demo MCP at
-`demo.paywhere.com`). What each flow surfaces depends entirely on the data
+`qbo-demo.dev.paywhere.com` paired with the hosted Paywhere demo MCP at
+`demo.dev.paywhere.com`). What each flow surfaces depends entirely on the data
 present — the figures vary, the behavior is the same:
 
 - **`/close-month`** — reconciles the month's Paywhere bank lines against the

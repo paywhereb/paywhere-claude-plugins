@@ -36,10 +36,10 @@ copy-paste run-of-show is in [`demo-script.md`](demo-script.md).
 
 All wired in [`paywhere-smb/.mcp.json`](../paywhere-smb/.mcp.json):
 
-- **QuickBooks** — hosted Paywhere QBO fork at `qbo-demo.paywhere.com/mcp`
+- **QuickBooks** — hosted Paywhere QBO fork at `qbo-demo.dev.paywhere.com/mcp`
   (wraps a QBO sandbox company). The `seed_demo_books` tool needs no token — it
   is gated by `confirm:true`, like the connector's other write tools.
-- **Paywhere** — hosted demo MCP at `demo.paywhere.com/mcp`, backed by a
+- **Paywhere** — hosted demo MCP at `demo.dev.paywhere.com/mcp`, backed by a
   mock bank. On demo deployments it also carries the demo-seeder tools
   (`seed_demo_world`, `reset_demo`, …) that only `/demo-setup` uses — one
   connector, one sign-in.
