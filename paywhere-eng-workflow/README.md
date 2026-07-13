@@ -27,6 +27,8 @@ TeamCity, and release skills.
 | `tc-reconcile` | `/tc-reconcile` | Fold the auto-raised TeamCity reconcile PR's patches back into `.teamcity/settings.kts`. |
 | `safe-deps` | `/safe-deps` | Curated dependency refresh: bundle safe bumps into a single PR, report risky ones. Can hand off to a per-repo `local-checks` skill for repo-specific invariants. |
 | `prune-merged-branches` | `/prune-merged-branches` | Safely delete local branches whose PR has been merged. Reports first, deletes only after confirmation. Refuses any branch with commits past the merged PR head, so un-pushed work is never lost. Squash-merge-aware — uses GitHub's merged-PR signal, not git's ancestry check. |
+| `tf-drift` | `/tf-drift` | Interpret the nightly Terraform drift sweep in plain English, attribute changes via CloudTrail, and route each workspace to the right fix — apply (unapplied merge), revert (out-of-band), or codify — driving the gated PLAN phase only. |
+| `tf-apply` | `/tf-apply` | Walk an eligible operator through the post-merge apply: find the right `plan_run_id` automatically, show the plan, verify they're a valid non-author dispatcher, and dispatch — the second-person gate stays enforced server-side. |
 | `conventions` | — | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
 
 ### Why the prefix split
@@ -145,6 +147,9 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
   (default `terraform-drift.yml`) the skill reads runs from.
 - `guards.tfDrift.remediateWorkflow` — the one-click revert workflow file
   (default `terraform-remediate-drift.yml`) the skill drives for a revert.
+- `guards.tfDrift.applyWorkflow` — the post-merge apply workflow file
+  (default `terraform-apply.yml`) the `tf-drift` unapplied-merge route and the
+  `tf-apply` skill dispatch. `tf-apply` reads this same block.
 - `extraGuardsSkill` — path to an optional repo-local skill the plugin
   invokes for invariants only that repo cares about. `safe-deps` calls it
   after its standard gates pass.
