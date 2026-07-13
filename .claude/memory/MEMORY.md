@@ -1,2 +1,3 @@
 - [Plugin install paths per client](feedback-plugin-install-paths.md) — Claude Code = marketplace slash commands (verified). Cowork = side-load `.plugin` zip via `scripts/package.sh`. Desktop / claude.ai chat = no plugin support, raw MCP only.
 - [Bump plugin version on change](feedback-bump-plugin-version-on-change.md) — any plugin change must bump that plugin's version (plugin.json + marketplace.json in sync, + the changed skill's SKILL.md), or clients ship stale behavior.
+- [SessionStart hooks must not fire on resume](feedback-sessionstart-hooks-not-on-resume.md) — resume already carries the injected rules; matcher stays `startup|clear|compact` (Brett, 2026-07-13).
