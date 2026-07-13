@@ -31,6 +31,35 @@ TeamCity, and release skills.
 | `tf-apply` | `/tf-apply` | Walk an eligible operator through the post-merge apply: find the right `plan_run_id` automatically, show the plan, verify they're a valid non-author dispatcher, and dispatch — the second-person gate stays enforced server-side. |
 | `conventions` | — | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
 
+### Always-on org rules (SessionStart hook)
+
+The plugin injects [`rules/ORG-RULES.md`](rules/ORG-RULES.md) — the
+Paywhere org-wide Claude rules (no attribution trailers, source-controlled
+memory, no PATs, IaC-managed branch protection, …) — into every Claude
+session opened inside a paywhereb repo. Mechanics:
+
+- [`hooks/hooks.json`](hooks/hooks.json) registers a `SessionStart` hook
+  with matcher `startup|clear|compact`. It deliberately does **not** fire
+  on `resume`: a resumed session already carries the rules from its
+  original startup, and re-injecting them burns context for nothing.
+  `clear` and `compact` stay in because those events wipe or squash the
+  injected context.
+- [`scripts/session-start.sh`](scripts/session-start.sh) gates on the
+  `origin` remote pointing at the `paywhereb` GitHub org (https, ssh, and
+  custom SSH host-alias forms all match), with the presence of
+  `.claude/eng-workflow.json` as a fallback. Personal and non-Paywhere
+  projects get nothing injected.
+- In a paywhereb repo that has no `.claude/eng-workflow.json` yet, the
+  hook additionally asks Claude to proactively offer
+  `/paywhere-eng-workflow:eng-init` to onboard the repo.
+- Rule changes ship as plugin releases: edit `rules/ORG-RULES.md`, bump
+  the plugin version, merge; teammates pick it up with
+  `claude plugin update paywhere-eng-workflow`.
+- Plugin hooks only fire where the plugin is *enabled*, so enable it at
+  **user scope** (see the repo-root [ONBOARDING.md](../ONBOARDING.md)) —
+  that's what makes the rules and the eng-init nudge follow you into
+  every paywhereb clone, including ones without checked-in settings.
+
 ### Why the prefix split
 
 It's a Claude Code convention, not a Paywhere choice:

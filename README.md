@@ -18,6 +18,11 @@ Today this marketplace ships two plugins:
 
 ## Installation
 
+> **Paywhere engineers:** follow [ONBOARDING.md](ONBOARDING.md) — a
+> one-time setup that installs `paywhere-eng-workflow`, enables it at
+> user scope, and gets the org-wide Claude rules injected into every
+> paywhereb repo automatically.
+
 The plugin system runs in **Claude Code** and **Cowork**. Claude
 Desktop and claude.ai chat don't support plugins; they only support
 raw MCP servers via Custom Connectors.
@@ -41,6 +46,10 @@ cd paywhere-claude-plugins
 ./scripts/package.sh paywhere-smb
 # → dist/paywhere-smb-<version>.plugin
 ```
+
+> Always build fresh with `package.sh` — the archives checked into
+> `dist/` lag the current plugin versions (stale at 0.3.1 while the
+> plugin is at 0.7.1) and are due to be pruned.
 
 ### Claude Desktop / claude.ai
 
