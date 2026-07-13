@@ -1,6 +1,7 @@
 #!/bin/sh
 # SessionStart hook — inject the Paywhere org-wide rules
-# (rules/ORG-RULES.md) into sessions opened inside a paywhereb repo.
+# (rules/ORG-RULES.md) into sessions opened inside a paywhereb repo or a
+# workspace directory containing paywhereb clones.
 #
 # Fires on startup/clear/compact only, deliberately NOT on resume: a
 # resumed session already carries the rules from its original startup,
@@ -9,9 +10,13 @@
 #
 # Gating: the plugin is enabled at user scope, so this script runs in
 # every project — it must decide for itself whether the rules apply.
-#   1. `origin` remote points at the paywhereb GitHub org → inject.
-#   2. Fallback: .claude/eng-workflow.json exists         → inject.
-#   3. Otherwise (personal / non-Paywhere project)        → exit silently.
+#   1. `origin` remote points at the paywhereb GitHub org → repo mode.
+#   2. .claude/eng-workflow.json exists                   → repo mode.
+#   3. An immediate child directory is a paywhereb clone  → workspace
+#      mode (multi-repo sessions started from a parent dir like
+#      ~/Projects/Paywhere). Rules inject; the eng-init nudge does not —
+#      a workspace root is not itself a repo to onboard.
+#   4. Otherwise (personal / non-Paywhere project)        → exit silently.
 set -eu
 
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
@@ -20,20 +25,43 @@ cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
 # (with or without embedded token), git@github.com:, ssh:// — and
 # custom SSH host aliases like git@github-paywhere:paywhereb/… (see
 # prune-merged-branches, DEV-71: a github.com-only pattern misses them).
-origin="$(git remote get-url origin 2>/dev/null || true)"
-case "$origin" in
-  *github.com[:/]paywhereb/*) ;;
-  git@*:paywhereb/*) ;;
-  ssh://git@*/paywhereb/*) ;;
-  *) [ -f .claude/eng-workflow.json ] || exit 0 ;;
-esac
+is_paywhereb_remote() {
+  case "$1" in
+    *github.com[:/]paywhereb/*) return 0 ;;
+    git@*:paywhereb/*) return 0 ;;
+    ssh://git@*/paywhereb/*) return 0 ;;
+  esac
+  return 1
+}
+
+mode=""
+if is_paywhereb_remote "$(git remote get-url origin 2>/dev/null || true)"; then
+  mode=repo
+elif [ -f .claude/eng-workflow.json ]; then
+  mode=repo
+else
+  # Workspace-root fallback. Probe immediate children only ([ -e ]
+  # because .git is a file in worktrees, not a directory), capped so a
+  # huge non-Paywhere directory can't stall session startup.
+  probes=0
+  for d in */; do
+    [ -e "${d}.git" ] || continue
+    if is_paywhereb_remote "$(git -C "$d" remote get-url origin 2>/dev/null || true)"; then
+      mode=workspace
+      break
+    fi
+    probes=$((probes + 1))
+    [ "$probes" -ge 50 ] && break
+  done
+fi
+[ -n "$mode" ] || exit 0
 
 rules_file="${CLAUDE_PLUGIN_ROOT:-}/rules/ORG-RULES.md"
 [ -f "$rules_file" ] || exit 0
 
 context="$(cat "$rules_file")"
 
-if [ ! -f .claude/eng-workflow.json ]; then
+if [ "$mode" = repo ] && [ ! -f .claude/eng-workflow.json ]; then
   context="$context
 
 ---
