@@ -49,6 +49,13 @@ session opened inside a paywhereb repo. Mechanics:
   custom SSH host-alias forms all match), with the presence of
   `.claude/eng-workflow.json` as a fallback. Personal and non-Paywhere
   projects get nothing injected.
+- **Workspace roots count too**: a session started from a parent
+  directory whose immediate children include a paywhereb clone (e.g.
+  `~/Projects/Paywhere/`) also gets the rules — multi-repo sessions are
+  common. Workspace mode skips the eng-init nudge, since the parent
+  directory isn't itself a repo to onboard. Note that repo-level Claude
+  config (checked-in settings, CLAUDE.md, memory) still only loads when
+  the session starts inside that repo.
 - In a paywhereb repo that has no `.claude/eng-workflow.json` yet, the
   hook additionally asks Claude to proactively offer
   `/paywhere-eng-workflow:eng-init` to onboard the repo.
