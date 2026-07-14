@@ -1,6 +1,6 @@
 ---
 name: pay-and-bill
-version: 0.2.0
+version: 0.2.1
 description: >
   Runs the hours-to-cash cycle for a staffing firm: reads last period's worker
   hours from QuickBooks time-activities, aggregates per worker and per client,
@@ -60,6 +60,13 @@ vendors, time-activities, and saved payees are seeded by
 once the vendors and time-activities exist.
 
 ## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Determine the period"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly, so don't skip it
+just because the steps are already numbered here.
 
 ### 1. Determine the period
 

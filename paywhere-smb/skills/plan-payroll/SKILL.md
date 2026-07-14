@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 0.2.0
+version: 0.2.1
 description: >
   Answers "am I good for payroll?" two ways. With Paywhere connected (the
   closed loop): real-time account balances, obligations through the payroll
@@ -54,6 +54,14 @@ Probe Paywhere with `list_accounts`:
   settlement detection** (the forecast may tell them to chase a customer who
   already paid this morning), and **confidence bands instead of a live
   verdict**. Offer to re-run once Paywhere is connected.
+
+**Progress tracking:** once the mode is decided, call `TaskCreate` once per
+sub-step in that mode's section below (subject = the sub-step's name, e.g.
+"A1. Real-time position" or "B1. Cash forecast") before starting the first
+one, then `TaskUpdate` it to `in_progress` when you begin that sub-step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly. Don't create
+tasks for the mode you did NOT enter.
 
 ## Mode A — Paywhere connected (the closed loop)
 

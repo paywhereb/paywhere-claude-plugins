@@ -16,6 +16,12 @@ description: >
 
 One prompt, one page. Pull live data from every connected tool, synthesize it into a single scannable brief, and surface the single most important thing to act on today. Do the work — don't ask the user to help find the data.
 
+**Progress tracking:** call `TaskCreate` once per step below before starting
+Step 1 (subject = the step's name, e.g. "Step 1 — Pull data in parallel"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly.
+
 ## Step 1 — Pull data in parallel
 
 **Dispatch all connector calls in a single parallel batch** — see `reference/data_sources.md` for the exact tool-to-metric mapping. Do not pull serially; latency turns a 30-second skill into a painful wait.

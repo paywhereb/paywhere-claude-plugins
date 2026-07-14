@@ -9,6 +9,12 @@ Run the month-end heads-up. Pull forward-looking cash data and give the owner a 
 Parse arguments:
 - `--horizon` (default: `30`) — forecast window in days (`30` or `60`)
 
+**Progress tracking:** call `TaskCreate` once per step below before starting
+Step 1 (subject = the step's name, e.g. "Step 1 — Current cash position"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly.
+
 ## Step 1 — Current cash position
 
 Using the `cash-flow-snapshot` skill workflow:

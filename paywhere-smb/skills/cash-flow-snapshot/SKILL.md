@@ -30,6 +30,12 @@ risks by name.
 
 ## Workflow
 
+**Progress tracking:** call `TaskCreate` once per step below before starting
+Step 1 (subject = the step's name, e.g. "Step 1 — Identify available data
+sources"), then `TaskUpdate` it to `in_progress` when you begin that step
+and `completed` when it's done. This is what drives Cowork's visible
+progress display — it does not happen unless you do it explicitly.
+
 ### Step 1 — Identify available data sources
 
 Check which connectors are live. Try in this order:

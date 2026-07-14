@@ -1,6 +1,6 @@
 ---
 name: pay-commissions
-version: 0.3.0
+version: 0.3.1
 description: >
   Pays sales commissions on payments your business actually received, across
   all three Paywhere rails (ACH, Wire, Stablecoin). Uses the business's
@@ -41,6 +41,13 @@ Money moves on three rails in one batch call and is recorded in QuickBooks. Get 
 This skill reads the business's existing commission map and QBO payments — it does not stand up its own data. If no commission map is configured, help the owner define it (client → rate → payee → rail, plus saved ACH/Wire payees and a verified stablecoin recipient). For the demo world this is all seeded by `/demo-setup` — the commission map and payees are documented in [../../DATASET.md](../../DATASET.md). Resume `pay-commissions` once the map exists.
 
 ## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Collect incoming
+payments"), then `TaskUpdate` it to `in_progress` when you begin that step
+and `completed` when it's done. This is what drives Cowork's visible
+progress display — it does not happen unless you do it explicitly, so
+don't skip it just because the steps are already numbered here.
 
 ### 1. Collect incoming payments (Paywhere)
 

@@ -58,6 +58,12 @@ If the intent is ambiguous, ask: "Are you looking at your estimated tax payment 
 
 ## Path 1: Quarterly estimated tax
 
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Pull YTD financials"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly.
+
 ### 1. Pull YTD financials
 
 Use QuickBooks to pull a Profit & Loss report from January 1 of the current year through the last day of the most recently completed quarter. Capture:
@@ -117,6 +123,13 @@ Structure the output as a document with these sections in order:
 ---
 
 ## Path 2: Year-end 1099 prep
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Pull contractor
+payments from all sources"), then `TaskUpdate` it to `in_progress` when you
+begin that step and `completed` when it's done. This is what drives
+Cowork's visible progress display — it does not happen unless you do it
+explicitly.
 
 ### 1. Pull contractor payments from all sources
 

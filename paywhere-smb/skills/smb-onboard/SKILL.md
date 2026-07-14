@@ -35,6 +35,12 @@ Whenever a connector comes up — recommending one, naming what to try next, or 
 
 ## Workflow
 
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Welcome and assess"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly.
+
 1. **Welcome and assess.** Greet the owner briefly. Check which connectors are already active. If a `## Business context` block already exists in the owner's CLAUDE.md or memory, read it first — then skip to the return-session path: show the existing profile, ask what's changed, update only the fields that changed. Do not re-interview from scratch.
 
 2. **Pick two functions, then check what the owner uses.** Ask: *"What are your biggest day-to-day headaches — money, customers, scheduling, or getting organized?"* Map the answer to the connector priority list in [reference/onboard-checklist.md](reference/onboard-checklist.md).

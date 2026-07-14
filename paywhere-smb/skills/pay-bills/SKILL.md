@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 0.3.0
+version: 0.3.1
 description: >
   Catches the business up on accounts payable in one pass: pulls the AP aging
   from QuickBooks, proposes the overdue bills for payment, checks the bank
@@ -59,6 +59,13 @@ Paywhere is not connected, see "The 'before' contrast" below: the analysis
 still runs; nothing executes.
 
 ## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Pull the AP picture"),
+then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly, so don't skip it
+just because the steps are already numbered here.
 
 ### 1. Pull the AP picture
 

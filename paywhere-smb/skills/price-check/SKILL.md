@@ -9,6 +9,12 @@ Run the pricing analysis. Pull cost and revenue data, build the margin table, an
 Parse arguments:
 - `PRODUCT_NAME` (optional) — specific product or service to analyze; if omitted, analyze all active products
 
+**Progress tracking:** call `TaskCreate` once per step below before starting
+Step 1 (subject = the step's name, e.g. "Step 1 — Current margin
+baseline"), then `TaskUpdate` it to `in_progress` when you begin that step
+and `completed` when it's done. This is what drives Cowork's visible
+progress display — it does not happen unless you do it explicitly.
+
 ## Step 1 — Current margin baseline
 
 1. Pull QuickBooks revenue by product/service for the last 90 days.

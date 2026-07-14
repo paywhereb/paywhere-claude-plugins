@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 0.3.1
+version: 0.3.2
 description: >
   Builds the entire canonical Paywhere SMB demo world in TWO tool calls — one to
   the Paywhere connector's demo-seeder tools (present only on demo deployments)
@@ -32,6 +32,13 @@ User: "set up the demo"
 ```
 
 ## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Preflight —
+connectors"), then `TaskUpdate` it to `in_progress` when you begin that step
+and `completed` when it's done. This is what drives Cowork's visible
+progress display — it does not happen unless you do it explicitly, so
+don't skip it just because the steps are already numbered here.
 
 ### 1. Preflight — connectors
 First confirm this is a **demo deployment** — a free check, no tool call
