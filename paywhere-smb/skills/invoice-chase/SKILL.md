@@ -1,6 +1,6 @@
 ---
 name: invoice-chase
-version: 0.2.0
+version: 0.2.1
 description: >
   Drafts overdue-invoice reminder emails from QuickBooks AR, cross-referenced
   against Paywhere bank credits (so a customer who already wired you doesn't
@@ -35,6 +35,12 @@ Ask the owner one question before running for the first time:
 Do not ask again on subsequent runs.
 
 ## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Pull overdue
+receivables"), then `TaskUpdate` it to `in_progress` when you begin that
+step and `completed` when it's done. This is what drives Cowork's visible
+progress display — it does not happen unless you do it explicitly.
 
 1. **Pull overdue receivables.** Query QuickBooks AR aging for all invoices more than 1 day past due.
 

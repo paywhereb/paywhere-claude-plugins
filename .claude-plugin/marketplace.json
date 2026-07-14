@@ -9,7 +9,7 @@
       "name": "paywhere-smb",
       "source": "./paywhere-smb",
       "description": "Small-business finance workflows (cash-flow forecasting, month-end close, payroll planning, AP batch bill-pay, hours billing + contractor payouts, invoice chasing, commission payouts across ACH/Wire/Stablecoin) running against Paywhere + QuickBooks, with a single repeatable /demo-setup command.",
-      "version": "0.7.2",
+      "version": "0.7.3",
       "category": "finance",
       "tags": [
         "smb",
