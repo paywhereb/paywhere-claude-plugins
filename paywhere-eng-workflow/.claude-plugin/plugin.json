@@ -1,6 +1,6 @@
 {
   "name": "paywhere-eng-workflow",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Shared Paywhere engineering workflow: Linear-ticket-driven branch/PR flow, dependency refresh, TeamCity reconcile, production cuts, and Terraform drift triage + gated apply. Parameterised per-repo via .claude/eng-workflow.json.",
   "author": {
     "name": "Paywhere",
