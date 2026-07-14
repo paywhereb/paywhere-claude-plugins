@@ -1,7 +1,7 @@
 ---
 name: tf-apply
 description: Walk a human operator through the post-merge Terraform apply (the second-person gate) without hunting for a run id. Use when the Slack #aws-alerts "Terraform apply pending" / "unapplied merge" message fires, when someone asks "how do I apply this / apply the merged terraform / run the pending apply / apply <workspace>", or when /tf-drift routes an unapplied merge here. Finds the right plan_run_id automatically, shows the plan, verifies the operator is a valid non-author dispatcher, and dispatches the apply on their confirmation.
-version: 0.1.0
+version: 0.2.0
 allowed-tools: Read, Bash
 ---
 
@@ -137,10 +137,45 @@ gh run watch "$APPLY_RUN" -R paywhereb/$REPO_NAME
 gh run view "$APPLY_RUN" -R paywhereb/$REPO_NAME
 ```
 
-- **Success** → report which workspaces applied (the workflow also comments the
-  outcome on the merged PR and records `refs/applied/<ws>`). If this apply came
-  from a `/tf-drift` unapplied-merge hand-off, offer to re-run the drift sweep
-  (`gh workflow run terraform-drift.yml`) to confirm the workspace is clean.
+`gh run view` shows job conclusions and annotations **only**. Terraform's
+operator-facing output — `Warning:` blocks and `local-exec` provisioner
+banners, which is how our modules tell the applier about required manual
+follow-ups (e.g. the ci-dev ECS workspaces' "task definition changed → the
+service will NOT pick this up automatically → run `aws ecs update-service …`")
+— exists **only in the job logs**. Scraping them is a mandatory part of this
+step, not an optional extra:
+
+```bash
+mkdir -p /tmp/tf-apply
+gh run view "$APPLY_RUN" -R paywhereb/$REPO_NAME --json jobs \
+  --jq '.jobs[] | select(.name|startswith("apply")) | "\(.databaseId)\t\(.name)"' \
+| while IFS=$'\t' read -r JOB_ID JOB_NAME; do
+    LOG="/tmp/tf-apply/job-$JOB_ID.log"
+    gh run view --job "$JOB_ID" -R paywhereb/$REPO_NAME --log > "$LOG"
+    echo "===== $JOB_NAME ====="
+    grep -E 'Apply complete!|Destroy complete!' "$LOG"
+    # Module-authored operator banners (local-exec provisioner output).
+    grep '(local-exec):' "$LOG" | grep -v 'Executing:' | sed 's/^.*(local-exec): \{0,1\}//'
+    # Terraform warnings.
+    grep -A8 'Warning:' "$LOG"
+  done
+```
+
+- **Success** → per workspace, report the `Apply complete! Resources: X added,
+  Y changed, Z destroyed` line, then **relay every warning and local-exec
+  banner verbatim** and turn each into an explicit, numbered "manual follow-up
+  required" item. The apply is not done until those are relayed — a green run
+  with an unread banner is exactly how required follow-ups get lost. (The
+  workflow also comments the outcome on the merged PR and records
+  `refs/applied/<ws>`.) If this apply came from a `/tf-drift` unapplied-merge
+  hand-off, offer to re-run the drift sweep (`gh workflow run
+  terraform-drift.yml`) to confirm the workspace is clean.
+- **Report only what the logs state — never infer side effects.** A replaced
+  `aws_ecs_task_definition` does **not** mean the service deployed: the ci-dev
+  ECS workspaces set `lifecycle { ignore_changes = [task_definition] }`, and
+  their banner names the exact `aws ecs update-service` command (or TeamCity
+  Deploy build re-trigger) still required. If the log doesn't show it
+  happening, do not claim it happened.
 - **Guard failure** ("second-person gate" / "stale plan") → relay the guard's
   message plainly and the fix: a different person dispatches, or re-run the
   plan job if main moved (Step 1's expired/stale branch). Do not retry blindly.
@@ -149,6 +184,10 @@ gh run view "$APPLY_RUN" -R paywhereb/$REPO_NAME
 
 ## Important
 
+- **Green ≠ done.** Job conclusions and annotations don't carry terraform's
+  warnings or `local-exec` banners; only the job logs do. Step 5's log scrape
+  is mandatory before declaring success, and every banner must reach the
+  operator verbatim with its follow-up called out.
 - **You are a convenience, not a gate bypass.** The second-person check
   (dispatcher ≠ PR author), freshness, and plan fidelity are all enforced by
   the workflow's guard server-side. You only remove the run-id hunt and typing.
