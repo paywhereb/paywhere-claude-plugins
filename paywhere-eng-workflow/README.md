@@ -28,7 +28,7 @@ TeamCity, and release skills.
 | `safe-deps` | `/safe-deps` | Curated dependency refresh: bundle safe bumps into a single PR, report risky ones. Can hand off to a per-repo `local-checks` skill for repo-specific invariants. |
 | `prune-merged-branches` | `/prune-merged-branches` | Safely delete local branches whose PR has been merged. Reports first, deletes only after confirmation. Refuses any branch with commits past the merged PR head, so un-pushed work is never lost. Squash-merge-aware — uses GitHub's merged-PR signal, not git's ancestry check. |
 | `tf-drift` | `/tf-drift` | Interpret the nightly Terraform drift sweep in plain English, attribute changes via CloudTrail, and route each workspace to the right fix — apply (unapplied merge), revert (out-of-band), or codify — driving the gated PLAN phase only. |
-| `tf-apply` | `/tf-apply` | Walk an eligible operator through the post-merge apply: find the right `plan_run_id` automatically, show the plan, verify they're a valid non-author dispatcher, and dispatch — the second-person gate stays enforced server-side. |
+| `tf-apply` | `/tf-apply` | Walk an eligible operator through the post-merge apply: find the right `plan_run_id` automatically, show the plan, verify they're a valid non-author dispatcher (skipped for `repo.environment: "nonprod"` repos, where self-apply is by design), and dispatch. |
 | `conventions` | — | Reference document (not a runnable skill) — the canonical commit, branch, PR, and Linear formats other skills point at. |
 
 ### Always-on org rules (SessionStart hook)
@@ -130,7 +130,8 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
   "repo": {
     "defaultBranch": "main",
     "branchPattern": "{ticket-id-lc}/{slug}",
-    "name": "paywhere-admin"
+    "name": "paywhere-admin",
+    "environment": "prod"
   },
   "guards": {
     "tcReconcile":    { "enabled": true,  "settingsPath": ".teamcity/settings.kts" },
@@ -167,6 +168,14 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
   - `{slug}` — slugified ticket title or user-supplied slug.
 - `repo.name` — repo display name (used in commit/PR templates and
   `pr-to-production`).
+- `repo.environment` — `"prod"` (default) or `"nonprod"`. Read by
+  `tf-apply`'s second-person gate: `"nonprod"` means the repo's own
+  `terraform-apply.yml` has no author/dispatcher check by design (single
+  AWS account, compensating isolation control instead — see e.g.
+  `paywhere-nonprod-infra`), so self-apply is legitimate and `tf-apply`
+  skips the dispatcher-≠-PR-author check. `"prod"` (or absent) keeps the
+  check enforced. This does not change the workflow itself — it only
+  tells the skill which behavior to expect, so get it right.
 - `guards.tcReconcile.enabled` — `false` opts the repo out of TC
   reconciliation entirely (skill exits with a polite message).
 - `guards.tcReconcile.settingsPath` — path to the Kotlin DSL file.
@@ -199,6 +208,7 @@ run `/eng-init`. Run `/eng-init` once per repo to generate it.
 | `repo.defaultBranch` | inferred from `git symbolic-ref refs/remotes/origin/HEAD` |
 | `repo.branchPattern` | `"{ticket-id-lc}/{slug}"` |
 | `repo.name` | inferred from the remote URL |
+| `repo.environment` | `"prod"` (strictest — `tf-apply` enforces the second-person gate) |
 | `guards.*.enabled` | `true` |
 | `extraGuardsSkill` | unset — no extra hook |
 

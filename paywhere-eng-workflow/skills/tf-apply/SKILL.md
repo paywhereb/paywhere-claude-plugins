@@ -1,18 +1,20 @@
 ---
 name: tf-apply
-description: Walk a human operator through the post-merge Terraform apply (the second-person gate) without hunting for a run id. Use when the Slack #aws-alerts "Terraform apply pending" / "unapplied merge" message fires, when someone asks "how do I apply this / apply the merged terraform / run the pending apply / apply <workspace>", or when /tf-drift routes an unapplied merge here. Finds the right plan_run_id automatically, shows the plan, verifies the operator is a valid non-author dispatcher, and dispatches the apply on their confirmation.
+description: Walk a human operator through the post-merge Terraform apply (the second-person gate, where the repo has one) without hunting for a run id. Use when the Slack #aws-alerts "Terraform apply pending" / "unapplied merge" message fires, when someone asks "how do I apply this / apply the merged terraform / run the pending apply / apply <workspace>", or when /tf-drift routes an unapplied merge here. Finds the right plan_run_id automatically, shows the plan, verifies the operator is a valid dispatcher for this repo's gate, and dispatches the apply on their confirmation.
 version: 0.2.0
 allowed-tools: Read, Bash
 ---
 
 Drive the **post-merge Terraform apply** for a no-CLI operator. A merge saves
-a reviewed plan artifact; a **second person (not the PR author)** must then
-dispatch the apply of that exact plan. The friction is finding the right
+a reviewed plan artifact; in most repos a **second person (not the PR
+author)** must then dispatch the apply of that exact plan — some repos
+(`repo.environment: "nonprod"`, see Preamble) deliberately have no such gate
+and allow self-apply by design. The friction is finding the right
 `plan_run_id` from a Slack ping and typing the dispatch correctly — this skill
 removes that: it locates the dispatchable plan run, shows what will apply, and
-dispatches it **as the operator**, with the second-person gate still enforced
-server-side. It is a convenience for the eligible dispatcher, **not** a bypass
-of any gate.
+dispatches it **as the operator**, with whatever gate the repo actually has
+still enforced server-side. It is a convenience for the eligible dispatcher,
+**not** a bypass of any gate.
 
 **Scope.** This is the normal PR-driven apply (`terraform-apply.yml`). It is
 **not** the drift *revert* apply (that's `terraform-remediate-drift.yml`, with
@@ -25,6 +27,11 @@ wants to revert out-of-band drift, send them to `/tf-drift`.
 - Read, with defaults:
   - `guards.tfDrift.applyWorkflow` (default `terraform-apply.yml`)
   - `repo.name`, `repo.defaultBranch` (default `main`)
+  - `repo.environment` (default `"prod"` — treat any missing, empty, or
+    unrecognized value as `"prod"`, never as `"nonprod"`. An existing
+    config file written before this field existed has no opinion here,
+    and the safe reading of silence is "the gate applies." Only an
+    explicit `"nonprod"` skips Step 3's author check.)
 - Use these below instead of hardcoding. If `gh` is not installed /
   authenticated, stop and tell the user to run `gh auth login`.
 
@@ -85,8 +92,17 @@ those. If the operator only wants a subset, note it (you'll pass a
 
 ## Step 3 — Verify the operator is an eligible dispatcher (the gate)
 
-The apply guard rejects the dispatch if the dispatcher authored the merged PR.
-Check it **before** dispatching so the operator isn't surprised by a red run:
+**If `repo.environment` is `"nonprod"`** — this repo's own
+`terraform-apply.yml` has no second-person check by design (relaxed gate,
+compensated for elsewhere — e.g. single-account isolation). Say so plainly
+("`$REPO_NAME` is configured as nonprod — self-apply is allowed here, no
+second-person check to run") and go straight to Step 4. Don't run the author
+check below; it isn't the real gate for this repo and a false read either way
+just muddies the report.
+
+**Otherwise (`"prod"`, or the field absent/unrecognized)** — the apply guard
+rejects the dispatch if the dispatcher authored the merged PR. Check it
+**before** dispatching so the operator isn't surprised by a red run:
 
 ```bash
 ME=$(gh api user --jq '.login')
@@ -105,6 +121,12 @@ PR_NUMBER=$(jq -r '.number // empty' <<<"$PR_JSON")
 
 Never fabricate or impersonate a second identity; the dispatcher is always the
 real `gh` user running this skill.
+
+If you ever suspect `repo.environment` is wrong for this repo (e.g. a `"prod"`
+run's dispatch fails with no author-mismatch message, or a `"nonprod"` run's
+dispatch fails with one anyway), say so and suggest fixing the config —
+`.claude/eng-workflow.json` is a hint for this skill, not the actual gate; the
+workflow's own guard job is authoritative regardless of what's configured.
 
 ## Step 4 — Dispatch the apply (with explicit confirmation)
 
@@ -188,12 +210,18 @@ gh run view "$APPLY_RUN" -R paywhereb/$REPO_NAME --json jobs \
   warnings or `local-exec` banners; only the job logs do. Step 5's log scrape
   is mandatory before declaring success, and every banner must reach the
   operator verbatim with its follow-up called out.
-- **You are a convenience, not a gate bypass.** The second-person check
-  (dispatcher ≠ PR author), freshness, and plan fidelity are all enforced by
-  the workflow's guard server-side. You only remove the run-id hunt and typing.
+- **You are a convenience, not a gate bypass.** Whatever gate the repo
+  actually has — the second-person check (dispatcher ≠ PR author) in `"prod"`
+  repos, freshness, and plan fidelity — is enforced by the workflow's guard
+  server-side. You only remove the run-id hunt and typing.
+- **`repo.environment` is a hint, not the gate.** It tells you whether to
+  *run* the author check client-side so the operator isn't surprised by a red
+  run — it does not change what the workflow itself enforces. Default to
+  `"prod"` behavior whenever the field is missing or unrecognized.
 - **Never dispatch on behalf of a mismatched identity.** The dispatcher is the
-  real `gh` user. If they're the PR author, stop (Step 3) — don't reach for
-  break-glass unless they explicitly declare an emergency and are an admin.
+  real `gh` user. If they're the PR author in a `"prod"` repo, stop (Step 3) —
+  don't reach for break-glass unless they explicitly declare an emergency and
+  are an admin.
 - **Never widen credentials** or edit the workflow / runner roles to make an
   apply "work". A gate failure is the gate working.
 - **No Claude attribution** anywhere.

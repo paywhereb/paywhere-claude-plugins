@@ -90,6 +90,24 @@ unless the user objects.
 - `guards.prToProduction`: ask if the repo deploys via a
   `main → production` PR cut. Default `enabled: true` for repos that
   do.
+- `repo.environment` (only if `.github/workflows/terraform-apply.yml`
+  exists — this only matters for Terraform repos `tf-apply` operates
+  on): read that workflow file and check whether its `guard` job (the
+  `workflow_dispatch` path) checks the dispatcher against the merged
+  PR's author. Don't just ask — the workflow is the source of truth,
+  and guessing wrong in either direction is unsafe (marking a real
+  second-person gate as `"nonprod"` would make `tf-apply` skip a check
+  that still fails server-side and confuse the operator; marking a
+  gateless workflow `"prod"` just adds friction, which is safe but
+  worth getting right).
+  - Gate present (checks dispatcher ≠ PR author) → `repo.environment:
+    "prod"`.
+  - No such check (e.g. the workflow's own header documents a
+    "relaxed gate ... this is non-prod" design, single-account
+    isolation as the compensating control) → `repo.environment:
+    "nonprod"`.
+  - If you can't tell, default to `"prod"` (the strict, safe default)
+    and mention the ambiguity in the closing report.
 
 ### 5. Ask about an extra guards skill
 
@@ -107,7 +125,8 @@ with two-space indentation.
 Template (drop optional keys when not applicable — `extraGuardsSkill`
 when no repo-local skill exists, `guards.tcReconcile.settingsPath`
 when `tcReconcile.enabled` is `false`, `guards.safeDeps.mirrorPins`
-when there are no pins yet):
+when there are no pins yet, `repo.environment` when there's no
+`terraform-apply.yml`):
 
 ```json
 {
@@ -125,7 +144,8 @@ when there are no pins yet):
   "repo": {
     "name": "<repo-name>",
     "defaultBranch": "main",
-    "branchPattern": "{ticket-id-lc}/{slug}"
+    "branchPattern": "{ticket-id-lc}/{slug}",
+    "environment": "<prod|nonprod>"
   },
   "guards": {
     "tcReconcile":    { "enabled": <bool>, "settingsPath": "<path>" },
