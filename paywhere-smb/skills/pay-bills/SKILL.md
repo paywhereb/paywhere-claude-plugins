@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 0.2.0
+version: 0.3.0
 description: >
   Catches the business up on accounts payable in one pass: pulls the AP aging
   from QuickBooks, proposes the overdue bills for payment, checks the bank
@@ -22,6 +22,8 @@ User: "pay my bills"
   overdue / due-this-week / due-later buckets and days-overdue per bill
 → Propose the default selection: every OVERDUE bill; show running total vs
   the live operating balance (list_accounts → get_account_balance)
+→ Look up saved payee rails: list_saved_payees once, building a name → rail
+  map so no vendor's rail is guessed
 → Resolve each vendor's rail: pay each open bill by the vendor's name
   (recipientId + amount — the bank resolves it to the saved payee; no raw bank
   details); for a vendor with no saved payee, confirm/onboard with the owner
@@ -86,13 +88,24 @@ still runs; nothing executes.
   owner names, **warn before the gate** and offer to narrow the selection or
   top up from savings (`transfer_funds`, separately gated).
 
-### 3. Resolve the rail + payee per vendor
+### 3. Look up saved payee rails
 
-- **Pay by the vendor's name.** For each open bill, pass the vendor's name as
-  **`recipientId` + amount** — the bank resolves it to the matching saved payee
-  and fills the ACH/wire details, so this skill never touches an ABA or account
-  number. Matching is forgiving on minor name variations; if the match is truly
-  ambiguous, ask before paying.
+- Call `list_saved_payees` **once**. It returns every saved payee's name
+  and rail (ACH or WIRE), no bank details. Build a name → rail map before
+  touching any payment tool.
+- Match each selected bill's vendor name against the list (forgiving on
+  minor variations); that match's rail is what the batch item for that
+  vendor must use. **Never guess a vendor's rail or default to ACH.**
+- No match (or a truly ambiguous match) → carry the vendor into the next
+  step as rail-unresolved rather than guessing.
+
+### 4. Resolve the payee per vendor
+
+- **Pay by the vendor's name.** For each open bill, build the batch item on
+  the rail resolved in step 3, passing the vendor's name as **`recipientId`
+  + amount** — the bank resolves it to the matching saved payee and fills
+  the ACH/wire details, so this skill never touches an ABA or account
+  number.
 - **No saved payee** (a real business that hasn't onboarded one): fall back to
   the normal onboarding flow — ask the owner to confirm the rail and details,
   read them back, then pass them **inline**. **NEVER guess or autocomplete an
@@ -102,6 +115,12 @@ still runs; nothing executes.
 - **Wire** `processDate` is optional — when omitted it defaults to the next
   business day server-side; tell the owner when the wire will move. (There is
   no separate wire-config call.)
+- If a batch item's rail turns out wrong anyway (a stale or ambiguous match
+  from step 3), `make_ach_payment` / `make_wire_payment` / `make_batch_payment`
+  now name the correct rail directly in the error (e.g. `"'Sutter Hill
+  Properties' is a saved payee, but pays by WIRE, not ACH — retry with
+  make_wire_payment (or a batch item with rail: 'wire')."`) — retry on the
+  named rail; don't report the payee as unresolved.
 - Before paying anything, check each selected bill for an **already-paid**
   signal: `search_bill_payments` against the bill, and `query_transactions`
   for a recent debit matching the vendor/amount. A hit means the bill may be
@@ -109,7 +128,7 @@ still runs; nothing executes.
   and offer to book the missing Bill Payment instead (a QBO write, still
   gated). Never double-pay.
 
-### 4. Dry run
+### 5. Dry run
 
 One `make_batch_payment` with `dryRun: true` over the entire selection.
 Every item should come back `validated_not_executed` (a stablecoin item, if
@@ -118,7 +137,7 @@ that fails validation is shown as flagged with its error; fix or exclude it
 before the gate. Keep the item order — execution maps results back to bills
 by `index`.
 
-### 5. The gate — one approval for the whole batch
+### 6. The gate — one approval for the whole batch
 
 Present a single table and **wait for an explicit "yes, pay these"** (column
 values come from live data, not these placeholders):
@@ -134,7 +153,7 @@ flagged/excluded list with reasons. Partial approval is fine — but **adding,
 removing, or changing any row after approval restarts the gate** (and the dry
 run, if amounts or details changed).
 
-### 6. Execute — one batch
+### 7. Execute — one batch
 
 - **ONE `make_batch_payment`** call with the approved items exactly as
   dry-run (no `dryRun`). Items run sequentially; `stopOnError` defaults to
@@ -147,7 +166,7 @@ run, if amounts or details changed).
   cause and re-submit **only the failed items** in a new batch — never the
   whole list (the succeeded items would pay twice).
 
-### 7. Write back to QuickBooks — marker-first
+### 8. Write back to QuickBooks — marker-first
 
 Money has moved; record it **immediately**, before anything else:
 
@@ -166,7 +185,7 @@ Money has moved; record it **immediately**, before anything else:
   retry won't stick, hand the owner the exact references so it can be booked
   manually, and say in plain terms that the books are behind the bank.
 
-### 8. Verify settlement and show the after picture
+### 9. Verify settlement and show the after picture
 
 - Per payment, `query_transactions` with `direction: "debit"`, `dateFrom` =
   today, and `descriptionContains` (payment name / vendor) or an exact amount
@@ -185,10 +204,13 @@ Money has moved; record it **immediately**, before anything else:
 ## The "before" contrast — running without Paywhere
 
 This is the demo's before/after moment, and the skill's honest degraded mode
-on real books. **Without the Paywhere connector, steps 1–3 still run in
-full**: the owner gets the complete AP aging analysis and a **drafted payment
-list** — who would be paid, how much, on which rail, with details resolved or
-flagged — but **nothing executes**. End that run by saying exactly what
+on real books. **Without the Paywhere connector, steps 1–2 still run in
+full**: the owner gets the complete AP aging analysis. Step 3 (the rail
+lookup) has nothing to call without Paywhere, so every vendor is flagged
+**"rail unconfirmed — ask the owner"** rather than resolved, and the
+resulting **drafted payment list** — who would be paid, how much, on which
+rail (where confirmed), with details resolved or flagged — reflects that, but
+**nothing executes**. End that run by saying exactly what
 connecting Paywhere would unlock: dry-run validation of the whole batch,
 one-approval mixed-rail execution (ACH + wire in a single call), automatic
 Bill Payment write-back, and settlement verification against the live bank
@@ -211,7 +233,7 @@ books drift; this skill won't do it.
 - **Duplicate vendors with similar DisplayNames** ("DigitalOcean" vs
   "Digital Ocean Inc"): ask which is canonical before resolving details or
   booking anything. Never merge or pick silently.
-- **Bill already paid at the bank but not booked**: caught by the step-3
+- **Bill already paid at the bank but not booked**: caught by the step-4
   check (`search_bill_payments` + `query_transactions`). Surface it, exclude
   it, offer to book the missing Bill Payment — don't double-pay.
 - **Insufficient balance mid-batch**: the affected items fail individually
@@ -224,7 +246,7 @@ books drift; this skill won't do it.
 
 ## Approval gates
 
-- **Never move money without the explicit batch approval** (step 5). One
+- **Never move money without the explicit batch approval** (step 6). One
   approval covers exactly one batch; changing the set restarts the gate.
 - **Never invent payment details** — missing or unconfirmed details mean the
   bill is flagged and excluded, not guessed at.
