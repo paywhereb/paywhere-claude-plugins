@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 0.3.0
+version: 0.3.1
 description: >
   Builds the entire canonical Paywhere SMB demo world in TWO tool calls — one to
   the Paywhere connector's demo-seeder tools (present only on demo deployments)
@@ -74,12 +74,17 @@ connector reports the *same thing*:
 2. Call **`get_transaction_detail` on the NorthPeak ACH debit** (the beat-3 row,
    ~ -$1,280, `ACH DEBIT NPA*ENRICH 8002231`). Assert `detail` is **non-null**
    (the enrichment write is part of the seed).
+3. Call **`list_saved_payees`.** Assert its count **equals
+   `seed_demo_world`'s `recipientsConfigured`**, and spot-check
+   **"Sutter Hill Properties"** comes back with `rail: "wire"` — a
+   mismatch here is exactly the failure mode that makes `/pay-bills`
+   misreport a saved wire payee as unresolved.
 
-If **either** check fails, the seed didn't land — **STOP, do not report
+If **any** check fails, the seed didn't land — **STOP, do not report
 `beatsReady`**, and re-run `/demo-setup` from the top (the idempotent reset
 makes this safe). If it fails twice in a row, report the mismatch (expected vs
-actual accounts/balances, or the `null` NorthPeak detail) instead of retrying
-further.
+actual accounts/balances, the `null` NorthPeak detail, or the saved-payee
+count/rail mismatch) instead of retrying further.
 
 ### 6. Report
 From the two responses, report:
@@ -87,6 +92,7 @@ From the two responses, report:
   numbers**, confirmed via the step-5 readback (not just the seeder's claim).
 - QBO **created-vs-existing** counts, **open AR / AP**, and the DocNumber-persistence note.
 - That the NorthPeak `get_transaction_detail` readback returned enrichment (beat 3 ready).
+- That the `list_saved_payees` readback matched `recipientsConfigured` (beat 4 ready).
 - Which beats are ready (the `beatsReady` list) and the live demo prompts live in
   [`../../../demo/demo-script.md`](../../../demo/demo-script.md).
 
@@ -95,10 +101,11 @@ From the two responses, report:
   deployment — stop; this skill never runs against real accounts.
 - **Half-seeded world** (a call fails midway): don't patch around unknown state —
   re-run `/demo-setup` from the top (a fresh generation orphans the broken world).
-- **Step-5 readback mismatch**: the seed didn't land (wrong balances/accounts or
-  `null` NorthPeak detail) — re-run `/demo-setup`. Note that re-authorizing the
-  connector with **old (pre-reset) credentials** points the session at an old
-  world; re-run `/demo-setup` after any reconnect.
+- **Step-5 readback mismatch**: the seed didn't land (wrong balances/accounts,
+  `null` NorthPeak detail, or a saved-payee count/rail mismatch) — re-run
+  `/demo-setup`. Note that re-authorizing the connector with **old (pre-reset)
+  credentials** points the session at an old world; re-run `/demo-setup` after
+  any reconnect.
 - **`seedStoppedAtIndex` is non-null** on `seed_demo_world`: the batch hit its
   time guard — re-run `/demo-setup` (idempotent reset makes this safe).
 - **`seed_demo_books` reports `docNumberPersisted: false`**: the sandbox dropped
