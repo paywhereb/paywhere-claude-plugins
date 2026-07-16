@@ -17,6 +17,25 @@ file in `paywhere-claude-plugins` and ship it as a plugin release.
 - Tickets for the Paywhere API use team `ENG` (Engineering) and include
   the `Backend` label (parent: Component).
 
+## Ticket granularity — refinements vs. new work
+
+- **Same-session refinements stay on the original ticket.** When work in the
+  current session refines, corrects, or extends something this session (or a
+  ticket referenced in it) already shipped — renaming or removing a field just
+  added, adjusting behavior just built, fixing a review comment — do NOT open
+  a new Linear ticket. Instead: add the change to the existing ticket's
+  description (an explicit "Refinements" section with the date), post a
+  comment explaining what changed and why, attach the new PR to that ticket,
+  and reference that ticket's ID in the branch name, commit message, and PR.
+- **Genuinely new issues get their own ticket.** A bug, gap, or feature
+  discovered during the work that is not a modification of the deliverable
+  itself (e.g. a pre-existing data bug surfaced while verifying something
+  else) is new scope: open a separate ticket and link it as related to the
+  ticket that surfaced it.
+- **The test:** "would this change have been part of the original ticket's
+  description had we known at planning time?" Yes → same ticket. No, it's a
+  distinct problem with its own lifecycle → new ticket, linked as related.
+
 ## Memory storage — always in source control
 
 - **Never save memory files to `~/.claude/projects/<encoded-path>/memory/`**
