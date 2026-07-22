@@ -6,12 +6,15 @@ Three concerns, three homes — all in QuickBooks + Paywhere, no local files:
 |---|---|---|
 | (a) Who works where, at what rates, paid by which rail | **QBO worker vendors** | The vendor record carries the worker's client, BillRate, PayRate, and rail; the worker's name is the payee name |
 | (b) How many hours were actually worked | **QBO time-activities** | Evidence in the books. Hours are read, never invented |
-| (c) Bill and pay once and only once | **QBO marker DocNumbers** (`PWD-PB-…`) | The system-of-record dedupe signal |
+| (c) Bill and pay once and only once | **Bank-side markers** (`PWD-PB-…` in each payment's description) | The dedupe signal — the read-only demo books never record a run |
 
-QuickBooks records the *client invoices* (revenue) and the *worker cost* (a
-Bill + Bill Payment per worker per period). Paywhere is the bank that actually
-pays the workers; the pay step passes the worker's **name** (`recipientId`) +
-amount, and the bank resolves it to the worker's saved payee.
+QuickBooks is **read** for the roster and the hours; the demo connector is
+**read-only** (the shared books reseed server-side daily), so the *client
+invoices* (revenue) and the *worker cost* (a Bill + Bill Payment per worker
+per period) that would be written outside a demo are narrated, not created.
+Paywhere is the bank that actually pays the workers; the pay step passes the
+worker's **name** (`recipientId`) + amount, and the bank resolves it to the
+worker's saved payee.
 
 ## The worker roster — QBO worker vendors
 
@@ -37,7 +40,8 @@ erroring (see "Tool signatures"). Stablecoin never uses pay-by-name — it alway
 uses the stablecoin payment flow.
 
 The demo world's concrete worker roster, rates, and rails are documented in
-[../../DATASET.md](../../DATASET.md) (seeded by `/demo-setup`).
+[../../DATASET.md](../../DATASET.md) (seeded server-side in the shared books;
+the matching saved payees ride the caller's bank world via `/demo-setup`).
 
 ## Hours — QBO time-activities
 
@@ -88,35 +92,40 @@ collision):
 | Alderbrook Ventures LLC | `alderbrook` | | Elena Sorokina | `elena` |
 | Mitsui Digital KK | `mitsui` | | Devon Okafor | `devon` |
 
-Before creating anything, search `search_invoices` for DocNumber
-`PWD-PB-INV-{period}-%` and `search_bills` for `PWD-PB-BILL-{period}-%` —
-both filters match `DocNumber` **and** `PrivateNote` with `LIKE`. Always
-write the full marker string at the **start of `PrivateNote`** as well: QBO
-sandboxes without custom transaction numbers may silently replace a custom
-DocNumber (verify on the first write — see SKILL.md), in which case dedupe
-rides the PrivateNote.
+The markers live at the **bank**: ACH `paymentName` and wire `description`
+are set to the worker's bill marker when the batch is built, so
+`query_transactions` with `descriptionContains: "PWD-PB-BILL-{period}"` finds
+every worker a prior run already paid (the dedupe check, before the gates)
+and `descriptionContains: "PWD-PB"` finds them again at reconcile time.
+Stablecoin items carry no description — match those by amount + date + type.
+The read-only demo books never record a run, so QBO carries no marker rows —
+don't search it for them.
+
+The invoice marker names the per-client invoice the narration describes;
+outside a demo both markers would also be written into QBO (DocNumber +
+the start of `PrivateNote`):
 
 - Invoice `PrivateNote`: `PWD-PB-INV-{period}-{client-slug} — hours {PeriodStart}–{PeriodEnd}: {worker} {hours}h @ ${BillRate}` (one clause per worker line).
 - Bill `PrivateNote`: `PWD-PB-BILL-{period}-{worker-slug} — {worker}, week of {period}, {hours}h @ ${PayRate} = ${gross}; Paywhere {rail} ref {paymentId}`.
 
-The bank-side trace uses the same string: ACH `paymentName` and wire
-`description` are set to the bill marker, so `query_transactions` with
-`descriptionContains: "PWD-PB"` finds them at reconcile time. Stablecoin
-items carry no description — match those by amount + date + type.
-
 ## Tool signatures (verbatim)
 
-### QuickBooks fork — note the hyphen anomaly on bill/vendor CRUD
+### QuickBooks fork — read-only on the demo connector
 
-- `search_invoices` / `create_invoice` — search filters `DocNumber` and
-  `PrivateNote` with `LIKE`; create accepts `DocNumber` + `PrivateNote`.
-- `search_bills` / **`create-bill`** (HYPHEN) — same LIKE filters; create
-  accepts `DocNumber` + `PrivateNote`. Book against the worker's vendor.
-- `create_bill_payment` — pays the marker bill from the QBO bank account
-  representing Operating Checking.
-- `search_customers` / `create_customer` — clients, matched by DisplayName.
-- `search_vendors` / **`create-vendor`** (HYPHEN) — workers as vendors,
-  matched by DisplayName. Master data is never deleted.
+The shared demo connector advertises **only read tools** (`get_*` /
+`search_*` / `read_*`); the create/update/delete tools do not exist there.
+
+- `search_invoices` — filters `DocNumber` and `PrivateNote` with `LIKE`
+  (useful for spotting a manually created invoice for the period).
+- `search_bills` — same LIKE filters.
+- `search_customers` — clients, matched by DisplayName.
+- `search_vendors` — workers as vendors, matched by DisplayName.
+
+Outside a demo, the narrated writes would be `create_invoice` (accepts
+`DocNumber` + `PrivateNote`), **`create-bill`** (HYPHEN — the fork's naming
+anomaly on bill/vendor CRUD) against the worker's vendor, and
+`create_bill_payment` from the QBO bank account representing Operating
+Checking.
 
 ### Paywhere — `make_batch_payment` (one call pays all workers, mixed rails)
 

@@ -1,15 +1,16 @@
 ---
 name: pay-bills
-version: 0.3.1
+version: 0.4.0
 description: >
   Catches the business up on accounts payable in one pass: pulls the AP aging
   from QuickBooks, proposes the overdue bills for payment, checks the bank
   balance, resolves each vendor's payment rail (ACH or wire), validates the
   whole run with a dry-run batch, and — after ONE approval — executes a single
-  mixed-rail batch payment through Paywhere, books a Bill Payment against
-  every bill in QuickBooks, and verifies each debit actually posted at the
-  bank. Use when the owner says "pay my bills," "what's overdue," "AP aging,"
-  "catch up on payables," or "pay the vendors."
+  mixed-rail batch payment through Paywhere, narrates the Bill Payment
+  booking that would happen in QuickBooks outside a demo (the demo books are
+  read-only), and verifies each debit actually posted at the bank. Use when
+  the owner says "pay my bills," "what's overdue," "AP aging," "catch up on
+  payables," or "pay the vendors."
 ---
 
 # Pay Bills
@@ -30,9 +31,9 @@ User: "pay my bills"
 → Dry run: make_batch_payment with dryRun:true → per-item validation
 → THE GATE: one confirmation table, one explicit "yes, pay these"
 → Execute: ONE make_batch_payment across all rails
-→ Book: create_bill_payment per bill, marker-first
-→ Verify: query_transactions confirms each debit posted; re-pull the aging
-  to show the overdue bucket cleared
+→ Narrate the booking: outside a demo, each payment would be booked to QBO
+  as a Bill Payment against its bill (the demo books are read-only)
+→ Verify: query_transactions confirms each debit posted at the bank
 ```
 
 One conversation, one approval, one batch — that is the whole product. The
@@ -42,8 +43,10 @@ marks bills paid in QuickBooks one at a time) is what this skill replaces.
 ## What is the source of truth
 
 - **QuickBooks** is the system of record: the open bills say *what is owed to
-  whom and when*, and every payment made here is booked back as a Bill
-  Payment so the books never drift from the bank.
+  whom and when*. Outside a demo, every payment made here would be booked
+  back as a Bill Payment so the books never drift from the bank; the **demo
+  connector is read-only** (the shared books reseed server-side daily), so
+  this skill narrates that booking instead of performing it.
 - **Paywhere** is the bank: the live balance says *what can be paid*, the
   rails (ACH / wire / stablecoin) move the money, and the transaction feed
   proves each payment actually posted.
@@ -54,7 +57,7 @@ marks bills paid in QuickBooks one at a time) is what this skill replaces.
   confirms the details (real-business onboarding flow). They are **never guessed**.
 
 If QuickBooks is not connected, **stop** — without the system of record there
-is no trustworthy list of what's owed and nowhere to book what gets paid. If
+is no trustworthy list of what's owed. If
 Paywhere is not connected, see "The 'before' contrast" below: the analysis
 still runs; nothing executes.
 
@@ -129,11 +132,15 @@ just because the steps are already numbered here.
   make_wire_payment (or a batch item with rail: 'wire')."`) — retry on the
   named rail; don't report the payee as unresolved.
 - Before paying anything, check each selected bill for an **already-paid**
-  signal: `search_bill_payments` against the bill, and `query_transactions`
-  for a recent debit matching the vendor/amount. A hit means the bill may be
-  paid at the bank but not booked — surface it, exclude it from the batch,
-  and offer to book the missing Bill Payment instead (a QBO write, still
-  gated). Never double-pay.
+  signal. **The bank is the real check**: `query_transactions` for a recent
+  debit matching the vendor/amount. (QBO `search_bill_payments` only shows
+  what the seeded books recorded — the read-only demo books never record this
+  skill's payments, so a prior run leaves no trace there.) On a demo re-run
+  the bank check **will** find last run's identical payments — that is the
+  check working, and it's worth showing: surface each candidate bill with its
+  matching prior debit (date, amount, paymentId) as a **potential duplicate**
+  and ask the owner whether to proceed anyway (a deliberate rehearsal re-run)
+  or drop it. Never pay a flagged row without that explicit confirmation.
 
 ### 5. Dry run
 
@@ -173,24 +180,15 @@ run, if amounts or details changed).
   cause and re-submit **only the failed items** in a new batch — never the
   whole list (the succeeded items would pay twice).
 
-### 8. Write back to QuickBooks — marker-first
+### 8. Narrate the booking — what would happen in QuickBooks
 
-Money has moved; record it **immediately**, before anything else:
-
-- For every succeeded item, `create_bill_payment` applied to its bill for the
-  amount paid (the open balance), with `PrivateNote`:
-  `Paid via Paywhere {rail} ref {paymentId} on {date}`.
-- In the seeded demo world, open bills carry `PWD-BILL-` DocNumbers; mirror
-  the id onto the Bill Payment (`PWD-BILL-0610` → `PWD-BPAY-0610`) **and lead
-  the PrivateNote with it** — `PWD-BPAY-0610 — Paid via Paywhere {rail} ref
-  {paymentId} on {date}` — so the seeder's `PrivateNote LIKE 'PWD-%'` fallback
-  still finds these rows if the sandbox drops DocNumbers on bill payments. On
-  real books the PrivateNote reference is the marker.
-- **If a QBO write fails after the money moved, report the partial state
-  loudly** — bill, rail, amount, `paymentId` — and retry the write. Do not
-  declare the run finished while any executed payment is unbooked; if a
-  retry won't stick, hand the owner the exact references so it can be booked
-  manually, and say in plain terms that the books are behind the bank.
+Money has moved. The demo books are **read-only**, so say — briefly, per the
+run, not per bill — what would happen next outside a demo: each Paywhere
+payment would be booked to QuickBooks as a **Bill Payment against its bill**
+for the amount paid, with a marker-first `PrivateNote` (`Paid via Paywhere
+{rail} ref {paymentId} on {date}`), and the books would then show these bills
+as **paid**. That write-back is what keeps the books from drifting from the
+bank; here the shared demo books reseed server-side daily instead.
 
 ### 9. Verify settlement and show the after picture
 
@@ -200,13 +198,15 @@ Money has moved; record it **immediately**, before anything else:
   the bank. A still-`pending` ACH is normal, and a wire whose default
   `processDate` is the next business day won't post until then — report the
   status and offer to re-check rather than calling either missing.
-- If a separate bank wire-fee debit appears, surface it; booking the fee is a
-  one-line follow-up the owner approves separately.
+- If a separate bank wire-fee debit appears, surface it too.
 - Report per bill: **paid ✓** (bank accepted, paymentId) / **posted ✓**
-  (debit visible at the bank) / **booked ✓** (Bill Payment in QBO).
-- Re-pull `get_aged_payables` and close with the before/after aging — the
-  overdue bucket cleared (or exactly what remains and why), the new bank
-  balance, and totals by rail.
+  (debit visible at the bank).
+- Close with the new bank balance and totals by rail. Do **not** re-pull the
+  aging expecting it to clear: the read-only books still show these bills
+  open — that's the missing write-back from step 8, not a failed payment.
+  Say so in one line ("the aging still shows them open because the demo books
+  are read-only; with the QuickBooks write-back, the overdue bucket would now
+  be empty").
 
 ## The "before" contrast — running without Paywhere
 
@@ -219,14 +219,13 @@ resulting **drafted payment list** — who would be paid, how much, on which
 rail (where confirmed), with details resolved or flagged — reflects that, but
 **nothing executes**. End that run by saying exactly what
 connecting Paywhere would unlock: dry-run validation of the whole batch,
-one-approval mixed-rail execution (ACH + wire in a single call), automatic
-Bill Payment write-back, and settlement verification against the live bank
-feed. The aging analysis is the same either way; the difference is whether
-the overdue bucket is still there afterwards.
+one-approval mixed-rail execution (ACH + wire in a single call), and
+settlement verification against the live bank feed. The aging analysis is
+the same either way; the difference is whether the money actually moves.
 
 **Without QuickBooks: stop.** There is no system of record — no trustworthy
-list of what's owed, and nowhere to book a payment. Paying from memory is how
-books drift; this skill won't do it.
+list of what's owed. Paying from memory is how books drift; this skill won't
+do it.
 
 ## Edge cases — spell these out, don't guess
 
@@ -239,10 +238,13 @@ books drift; this skill won't do it.
   before paying.
 - **Duplicate vendors with similar DisplayNames** ("DigitalOcean" vs
   "Digital Ocean Inc"): ask which is canonical before resolving details or
-  booking anything. Never merge or pick silently.
-- **Bill already paid at the bank but not booked**: caught by the step-4
-  check (`search_bill_payments` + `query_transactions`). Surface it, exclude
-  it, offer to book the missing Bill Payment — don't double-pay.
+  paying anything. Never merge or pick silently.
+- **A prior run's payment for the same bill** (the demo re-run case): caught
+  by the step-4 bank check (`query_transactions`) — the read-only books never
+  record demo payments, so the bank is the only place the prior payment
+  shows. Surface it as a potential duplicate with the prior debit's evidence
+  and let the owner decide; never pay a flagged row without that explicit
+  confirmation.
 - **Insufficient balance mid-batch**: the affected items fail individually
   while the rest proceed. Offer `transfer_funds` from savings (its own
   approval gate), then re-submit **only** the failed items.
@@ -257,13 +259,16 @@ books drift; this skill won't do it.
   approval covers exactly one batch; changing the set restarts the gate.
 - **Never invent payment details** — missing or unconfirmed details mean the
   bill is flagged and excluded, not guessed at.
-- `transfer_funds` top-ups and booking a previously unbooked payment are each
-  approved separately — they are never smuggled into the batch approval.
+- **Never pay a potential-duplicate row** (step 4) without the owner's
+  explicit go-ahead on that specific row.
+- `transfer_funds` top-ups are approved separately — never smuggled into the
+  batch approval.
 
 ## Reference
 
-- [`/demo-setup`](../demo-setup/SKILL.md) — seeds the demo world (including the
-  overdue + due-this-week open bills and their saved payees) this skill shines on.
+- [`/demo-setup`](../demo-setup/SKILL.md) — seeds the caller's own bank world
+  (saved payees included), date-aligned to the standing demo books whose
+  overdue + due-this-week open bills this skill shines on.
 - [../../DATASET.md](../../DATASET.md) — the demo dataset reference: the open-bill
   set, expected numbers, and the recipient/rail map (for understanding the demo;
   the skill reads it all from QuickBooks/Paywhere at run time).

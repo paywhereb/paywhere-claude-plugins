@@ -13,11 +13,15 @@ QuickBooks/Paywhere at run time and never hardcode any name or amount below.
 This doc carries the numbers that the five deleted `demo-setup-*` manifests used
 to hold, scaled to the revamp.
 
-> Setup is now **two tool calls** made by `/demo-setup`:
-> 1. `seed_demo_world {confirm:true}` (Paywhere — demo deployment) → builds the bank world, returns `dateModel` + creds.
-> 2. `seed_demo_books {dateModel, confirm:true}` (quickbooks) → mirrors the books on the same dates.
+> Setup: the **books seed themselves** — the shared QBO demo books are
+> read-only and reseed server-side daily (5am ET). `/demo-setup` seeds only
+> the caller's own bank world:
+> 1. `get_demo_dates` (quickbooks, read-only) → the standing books' `dateModel`.
+> 2. `seed_demo_world {confirm:true, dateModel, username?}` (Paywhere — demo
+>    deployment) → builds the caller's bank world on the same dates, returns creds.
 >
-> All date math is server-side; nothing here is hand-resolved.
+> All date math is server-side; nothing here is hand-resolved. Per-user bank
+> worlds mean parallel demos and re-runs are supported.
 
 ---
 
@@ -135,12 +139,15 @@ All gross × rate are whole dollars by design.
    "Data enrichment subscription — annual, billed in arrears (contract #NP-2231)",
    and that it **auto-renewed at a higher rate ($1,200 → $1,280)**, signed by
    M. Webb 11 months ago.
-   **Reconciliation:** the matching QBO bill `PWD-BILL-0601` is still the OLD
-   **$1,200** rate and is **OPEN/unpaid** — the bank payment never matched
-   (wrong amount + unrecognizable descriptor). The agent's fix: update the bill to
-   $1,280 and record the bill payment against this charge. (The bill's due date is
-   `W+0:Fri+7`, out of the beat-4 window, so it never appears in "pay bills due
-   this week"; the agent resolves it here in beat 3.)
+   **Reconciliation (narrate-only):** the matching QBO bill `PWD-BILL-0601` is
+   still the OLD **$1,200** rate and is **OPEN/unpaid** — the bank payment never
+   matched (wrong amount + unrecognizable descriptor). The agent explains the
+   fix — update the bill to $1,280 and record a bill payment against this
+   charge — **without performing it**: the shared demo books are read-only
+   (they reseed server-side daily), so the write-back is narrated as what
+   would happen outside a demo. (The bill's due date is `W+0:Fri+7`, out of
+   the beat-4 window, so it never appears in "pay bills due this week"; the
+   discrepancy stays on the books all demo — by design.)
 4. **Pay bills due this week (ACH + Wire, saved payees)** —
    overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
    **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
@@ -167,11 +174,13 @@ All gross × rate are whole dollars by design.
 - **NorthPeak amount mismatch (beat #3):** the bank auto-debited the **renewed
   $1,280** annual rate under a cryptic descriptor, but QBO bill `PWD-BILL-0601`
   is still the **old $1,200** and **open/unpaid** (the payment never matched).
-  This is the *fixable* reconciliation the agent demonstrates: update the bill to
-  $1,280 and record the payment. Because it's an open bill, it adds **$1,200 to
-  open AP** — so QBO **open AP seeds at $3,950** ($2,750 due-this-week + the
-  $1,200 NorthPeak item). It is dated out of the beat-4 window and is resolved in
-  beat 3, so the pay-bills ($2,750) and payroll beats are unaffected.
+  This is the reconciliation the agent demonstrates by **narration**: it
+  explains the fix (update the bill to $1,280 and record the payment) without
+  writing it — the shared books are read-only. Because it's an open bill, it
+  adds **$1,200 to open AP** — so QBO **open AP seeds at $3,950** ($2,750
+  due-this-week + the $1,200 NorthPeak item) and stays there. It is dated out
+  of the beat-4 window, so the pay-bills ($2,750) and payroll beats are
+  unaffected.
 - **Interest credit (a):** a small current-week Reserve interest credit
   ($13.40) in the bank with **no QBO counterpart**.
 - **Wire fee (b):** a tiny promo wire fee ($1.20) in the bank that QBO books as
@@ -188,9 +197,9 @@ Hallsten unrecorded), which is the demo surface.
 The **bank** carries a full **6 months** (so "categorize spending" is rich); the
 **books** carry the current cycle in full plus `QBO_HISTORY_MONTHS` (2) recent
 matched months — enough for month-end-prep, business-pulse, open AR/AP, and the
-discrepancies — to keep the one-shot `seed_demo_books` within a sane number of
-QBO API calls. See `paywhere-mcp/DEMO-COMPROMISES.md`. Bump `QBO_HISTORY_MONTHS`
-for deeper books.
+discrepancies — to keep the daily server-side books reseed within a sane number
+of QBO API calls. See `paywhere-mcp/DEMO-COMPROMISES.md`. Bump
+`QBO_HISTORY_MONTHS` (on the QBO demo deployment) for deeper books.
 
 ---
 
