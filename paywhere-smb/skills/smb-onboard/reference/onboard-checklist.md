@@ -48,7 +48,7 @@ Run the prove-value recipe immediately after the **first** connector is live —
 3. Gmail → search for unread invoice-related emails, surface top 3
 4. Google Drive only → confirm Drive is readable (`list_recent_files`) — it powers `/pay-and-bill` hour-report notes and close-packet exports
 
-**QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first.
+**QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first. On the shared **read-only demo connector** that update tool does not exist — note the missing profile info and run the recipe anyway; the seeded demo company is already complete.
 
 ---
 

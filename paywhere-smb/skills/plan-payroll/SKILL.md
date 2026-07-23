@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 0.2.1
+version: 0.3.0
 description: >
   Answers "am I good for payroll?" two ways. With Paywhere connected (the
   closed loop): real-time account balances, obligations through the payroll
@@ -135,8 +135,11 @@ morning.**
 6. **The phantom**: an UNRECORDED bank credit whose QBO invoice is still open =
    received-but-unrecorded. Cross it out of collectible AR **and do not add
    it to incoming cash** — it is already inside the balance from A1 (never
-   double-count). Offer to record the QBO payment (`create_payment`) — gated,
-   only with explicit approval. (In the demo world this is Hallsten & Berg's
+   double-count). Narrate the bookkeeping fix: outside a demo, recording the
+   QBO payment against the invoice would close it and take the customer off
+   the books' open AR, so the phantom stops reappearing every run — the demo
+   connector is read-only (the shared books reseed daily), so say that in one
+   line instead of writing it. (In the demo world this is Hallsten & Berg's
    $2,600 credit — landed in the bank, never recorded in QBO — so it must be
    **excluded** from collectible AR even though its invoice still shows open.)
 
@@ -238,8 +241,9 @@ Paywhere is connected.
 - **No sends, ever** — reminders are drafts only (Gmail cannot send; the
   owner sends). No bulk draft creation without approval of the shown set.
 - **No transfers without explicit approval** — `transfer_funds` is surfaced
-  as an option with exact numbers, never executed unprompted. Same for any
-  QBO write (recording a phantom payment is gated).
+  as an option with exact numbers, never executed unprompted. (It is a real
+  bank move and the one write this skill can make; QuickBooks is never
+  written — the phantom-payment fix is narrated, A3.6.)
 - **Forecasts are labeled as estimates** — Mode B output (and any Mode A
   line that relies on modeled timing) says so explicitly; never present a
   forecast as a live verdict.
@@ -262,7 +266,7 @@ Paywhere is connected.
   analog of commissioning on the received amount, not the invoice total);
   keep the remainder in outstanding AR and in any reminder draft.
 - **Received-but-unrecorded (phantom AR)**: cross out of collectible, don't
-  double-count in cash, offer the gated QBO payment recording (A3.5).
+  double-count in cash, narrate the bookkeeping fix (A3.6).
 - **`query_transactions` returns `truncated: true`**: narrow the date range
   and re-query before concluding anything.
 - **QuickBooks missing in Mode A**: real-time balances still work, but

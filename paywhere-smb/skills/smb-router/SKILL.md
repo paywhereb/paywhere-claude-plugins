@@ -57,10 +57,12 @@ Listen to the owner's request. Match it against this routing table — pick the 
 |---|---|
 | "Set up the demo" / "reset the demo" / "rebuild the sandbox" / "seed the demo data" / "seed the cash crunch" | `/demo-setup` |
 
-`/demo-setup` builds the **entire** demo world in two server-side calls (bank +
-books) — there are no longer per-scenario setup commands. One run readies every
-beat (balances, categorize spending, transfer, investigate a charge, pay bills,
-payroll crunch) plus the phase-2 getting-paid / pay-and-bill / commissions flows.
+`/demo-setup` builds the caller's **own** demo bank world in one server-side
+seeding call, date-aligned to the shared read-only QuickBooks books (which
+reseed server-side daily) — there are no per-scenario setup commands and no
+books seeding. One run readies every beat (balances, categorize spending,
+transfer, investigate a charge, pay bills, payroll crunch) plus the phase-2
+getting-paid / pay-and-bill / commissions flows.
 
 **Business intelligence:**
 | Owner says something like... | Route to |

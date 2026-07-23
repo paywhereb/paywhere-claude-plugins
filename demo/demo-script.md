@@ -10,6 +10,10 @@ finance agent. The one exception is setup, which the presenter runs once.
   produce identical bank history + books (only `W+0` due dates shift, by design).
 - **Reset between rehearsals:** just re-run `/demo-setup` (idempotent; orphans
   the prior world). No manual cleanup.
+- **Shared books, your bank:** the QuickBooks demo books are **shared and
+  read-only** — reseeded server-side daily (5am ET). `/demo-setup` seeds only
+  **your own** bank world, date-aligned to those books, so several presenters
+  can demo in parallel without stepping on each other.
 
 ---
 
@@ -19,12 +23,18 @@ finance agent. The one exception is setup, which the presenter runs once.
 /demo-setup
 ```
 
+(Optionally pass a username label — `/demo-setup username: brett` — it's
+folded into your generated bank login, `demo-brett-…`.)
+
 Approve the gate. **Record the returned bank username/password** (also posted to
 the demo Slack channel). Confirm the report shows Operating ≈ $23,000, Reserve
 ≈ $20,138, open AR $9,500, **open AP $3,950** (= $2,750 due-this-week bills + the
-$1,200 NorthPeak reconciliation item, which beat 3 resolves — see DATASET.md),
-recipients configured, enrichment written, and `beatsReady`. If the books seed
-reports `errorCount > 0`, re-check the QBO sandbox chart of accounts.
+$1,200 NorthPeak reconciliation item that beat 3 narrates — see DATASET.md),
+recipients configured, enrichment written, `dateModelSource: "provided"` (the
+bank world aligned to the standing books), and `beatsReady`. If the report says
+the books haven't been seeded server-side yet (`get_demo_dates` →
+`seeded: false`), wait for the daily reseed or ping whoever runs the QBO demo
+deployment — don't demo against unaligned dates.
 
 ---
 
@@ -43,7 +53,7 @@ Categorize my spending over the last few months
 → Reads the bank (6 months). Biggest categories: contractor labor, payroll
 (Gusto), rent, cloud/SaaS — plus a one-off that stands out (NorthPeak).
 
-**3. Investigate + reconcile a charge** (the `get_transaction_detail` → Gmail → write-back beat)
+**3. Investigate + reconcile a charge** (the `get_transaction_detail` → Gmail → narrated-fix beat)
 ```
 There's an ACH debit for $1,280 I don't recognize — the statement just says
 "NPA*ENRICH 8002231". What is it?
@@ -65,21 +75,27 @@ hands you a cryptic descriptor and an amount, never *who* or *why*:
 - **Someone else set it up** (M. Webb, ~11 months ago) and it **auto-renewed
   silently** — at a new, higher price.
 
-**Then the reconciliation (the agentic payoff):**
+**Then the reconciliation (the agentic payoff — narrate-only):**
 ```
-Does this match my books? Fix it if not.
+Does this match my books? What would it take to fix?
 ```
 → The agent finds QBO bill `PWD-BILL-0601` for NorthPeak is still **open at the
 old $1,200**, while the bank actually paid **$1,280** — the payment never matched
 (wrong amount + unrecognizable descriptor), so QBO left the bill unpaid. It
-proposes the correction — **update the bill to $1,280 and record the bill payment
-against this charge** — and, on approval, writes it back to QuickBooks
-(`update_bill` + `create_bill_payment`). The $80 gap is the silent auto-renew
+**explains the fix without performing it**: update the bill to $1,280 and
+record a bill payment against this charge — after which the books would match
+the bank and the bill would show paid. The $80 gap is the silent auto-renew
 price increase; the invoice (found in Gmail) is the evidence. The bill is
-dated out of the beat-4 window, so it never shows up in "pay bills due this week"
-— it's resolved here. (Frame it: *"Your books still think this is $1,200 and
-unpaid; your bank shows $1,280 actually went out. Want me to correct the bill and
-match the payment?"*)
+dated out of the beat-4 window, so it never shows up in "pay bills due this
+week". (Frame it: *"Your books still think this is $1,200 and unpaid; your
+bank shows $1,280 actually went out. Here's exactly the two-line correction
+your bookkeeper — or I, on live books — would make."*)
+
+**Talking point — why it only narrates:** the demo books are shared and
+read-only (they reseed daily so every demo starts from the same picture); on
+a live QuickBooks connection this is a one-approval write-back. The
+diagnosis — cryptic descriptor → enrichment breadcrumb → Gmail evidence →
+the exact correction — is the product moment; the write is the easy part.
 
 **4. Pay the bills due this week** (ACH + Wire, paid by name)
 ```
@@ -88,7 +104,12 @@ Pay the bills due this week
 → Overdue ≈ $1,840 (DigitalOcean $300 ACH, Sutter Hill $560 **wire**, Grant
 Henderson $980 ACH) + due-this-week ≈ $910 (AWS $760 + Google Workspace $150,
 ACH). One mixed-rail batch paid by payee name (no raw bank details), one
-approval, Bill Payments booked back to QBO.
+approval; the agent then narrates the QBO Bill Payments that would be booked
+outside a demo and verifies the debits at the bank. (The aging will still
+show the bills open afterwards — the read-only books never record the
+payments; the agent says so. On a re-run, the pre-pay bank check surfaces
+last run's identical payments as potential duplicates and asks first — show
+it off rather than working around it.)
 
 **5. Payroll check** (the agent should flag this proactively after beat 4; if
 not, prompt it)
@@ -133,22 +154,26 @@ goes once you're covered, not a backstop you raid for an operating gap.
 
 ## Phase 2 — the rails
 
-**A. Getting paid** (invoices + stablecoin requests + Gmail **drafts**, never sent)
+**A. Getting paid** (stablecoin requests + Gmail **drafts**, never sent;
+invoicing narrated)
 ```
 Send out this month's invoices and create stablecoin payment requests for the
 clients who pay that way, then draft the emails
 ```
-→ Invoices in QBO + `initiate_stablecoin_receipt` for the stablecoin clients +
-**Gmail drafts** (drafts only — nothing is sent).
+→ The agent presents the per-client invoice run and **narrates** the QBO
+invoicing (the read-only demo books skip the write; on live books these would
+be created), then does the real parts: `initiate_stablecoin_receipt` for the
+stablecoin clients + **Gmail drafts** (drafts only — nothing is sent).
 
 **B. Pay-and-bill** (hours from QBO time-activities; saved payees)
 ```
 Run the pay-and-bill cycle for last week
 ```
-→ Pulls last week's hours from QBO time-activities, bills clients, pays
-contractors on their rails (ACH/Wire by the worker's name, Devon via stablecoin).
-Whole-dollar: Priya 40h@$40, Marcus 36h@$30, Elena 40h@$60 (wire), Devon
-32h@$50 (stablecoin); bill = pay × 1.3.
+→ Pulls last week's hours from QBO time-activities, presents each client's
+billing (invoicing narrated), pays contractors on their rails (ACH/Wire by
+the worker's name, Devon via stablecoin), and narrates the worker-bill
+booking. Whole-dollar: Priya 40h@$40, Marcus 36h@$30, Elena 40h@$60 (wire),
+Devon 32h@$50 (stablecoin); bill = pay × 1.3.
 
 **C. Commissions** (server-side commission map; no spreadsheet)
 ```

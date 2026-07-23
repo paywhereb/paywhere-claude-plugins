@@ -1,17 +1,19 @@
 ---
 name: pay-and-bill
-version: 0.2.1
+version: 0.3.0
 description: >
   Runs the hours-to-cash cycle for a staffing firm: reads last period's worker
   hours from QuickBooks time-activities, aggregates per worker and per client,
-  invoices each client for the hours in QuickBooks, pays each worker over their
-  Paywhere rail (ACH / Wire / Stablecoin) in one batch, books a Bill + Bill
-  Payment per worker, and reconciles against the bank. Worker rates and rails
-  come from the QuickBooks vendor records; a pay step passes the worker's name
-  (recipientId) + amount and the bank resolves the saved payee. Dedupes with PWD-PB
-  markers so re-runs are safe. Use when the owner says "bill clients for hours,"
-  "invoice the hours," "pay my contractors," "pay the workers," or "run the
-  pay-and-bill cycle."
+  presents the client invoices (narrating the QuickBooks invoicing that would
+  happen outside a demo — the demo books are read-only), pays each worker over
+  their Paywhere rail (ACH / Wire / Stablecoin) in one batch, narrates the
+  Bill + Bill Payment booking per worker, and reconciles against the bank.
+  Worker rates and rails come from the QuickBooks vendor records; a pay step
+  passes the worker's name (recipientId) + amount and the bank resolves the
+  saved payee. Dedupes on the bank side via the PWD-PB markers carried in each
+  payment's description, so re-runs are surfaced. Use when the owner says
+  "bill clients for hours," "invoice the hours," "pay my contractors," "pay
+  the workers," or "run the pay-and-bill cycle."
 ---
 
 # Pay and Bill
@@ -24,16 +26,18 @@ User: "run the pay-and-bill cycle"
 → Read last week's hours from QBO time-activities (search_time_activities)
 → Read worker rates + rails from the QBO worker vendors
 → Aggregate: per-worker hours; per-client hours × BillRate — show the math
-→ Dedupe: search_invoices / search_bills for PWD-PB-…-{period}-% markers
-→ GATE 1: invoice table → approval → create_invoice per client
+→ Dedupe: query_transactions for prior debits carrying PWD-PB-…-{period} markers
+→ GATE 1: invoice table → approval → narrate the per-client QBO invoicing
+  (outside a demo, create_invoice per client — the demo books are read-only)
 → GATE 2: pay table (incl. stablecoin fee from dryRun) → approval
 → ONE make_batch_payment (mixed rails, recipientId=worker name per item) → per-item results
-→ Record: create-bill + create_bill_payment per worker
+→ Narrate the booking: outside a demo, a Bill + Bill Payment per worker
 → Reconcile: query_transactions (debits) + margin summary (≈ 1.3×)
 ```
 
-Money moves on three rails and is recorded in two systems. Get the data model
-right before running — read [DATA-MODEL.md](DATA-MODEL.md).
+Money moves on three rails and is recorded at the bank; the QuickBooks side
+is narrated (the demo books are read-only). Get the data model right before
+running — read [DATA-MODEL.md](DATA-MODEL.md).
 
 ## What is the source of truth
 
@@ -44,8 +48,10 @@ right before running — read [DATA-MODEL.md](DATA-MODEL.md).
     paid — flag and exclude.
   - **Time-activities** carry *how many hours* each worker actually worked the
     period. Hours are read from the books, never invented and never assumed.
-  - The client invoice is the revenue; the worker Bill + Bill Payment is the
-    cost.
+  - Outside a demo, the client invoice is the revenue record and the worker
+    Bill + Bill Payment is the cost record. The **demo connector is
+    read-only** (the shared books reseed server-side daily), so this skill
+    narrates those writes instead of performing them.
 - **Paywhere** is the bank: it disburses worker pay and proves it posted. A pay
   step passes the worker's **name** (`recipientId`) + amount, and the bank
   resolves it to the worker's saved payee (ACH/wire details).
@@ -53,11 +59,12 @@ right before running — read [DATA-MODEL.md](DATA-MODEL.md).
 ## Setup (first run only)
 
 This skill reads what is already in QuickBooks and Paywhere — it does not stand
-up its own data. If the QBO worker vendors or last period's time-activities are
-missing, help the owner enter them (or, for the demo world, the persona,
-vendors, time-activities, and saved payees are seeded by
-`/demo-setup` — see [../../DATASET.md](../../DATASET.md)). Resume `pay-and-bill`
-once the vendors and time-activities exist.
+up its own data. The demo world's persona, worker vendors, and time-activities
+are seeded server-side in the shared books (reseeded daily), and the saved
+payees ride the caller's own bank world via `/demo-setup` — see
+[../../DATASET.md](../../DATASET.md). On real books, the owner would enter the
+vendors and time-activities in QuickBooks first; resume `pay-and-bill` once
+they exist.
 
 ## Workflow
 
@@ -103,30 +110,34 @@ Show the arithmetic line by line (e.g. `40h × $52 = $2,080`, **example
 only — use the live rates**), plus the grand totals and the expected ≈1.3
 invoiced-to-pay ratio ([DATA-MODEL.md](DATA-MODEL.md), "The math").
 
-### 5. Dedupe — before anything is written
+### 5. Dedupe — before anything is paid
 
-`search_invoices` for DocNumber `PWD-PB-INV-{period}-%` and `search_bills`
-for `PWD-PB-BILL-{period}-%` (both filter DocNumber and PrivateNote with
-`LIKE`). Anything already marked → an "already processed" row, excluded from
-its gate. A partial prior run (say, invoices created but workers unpaid)
-leaves only the missing halves in play — that is the point of two marker
-families.
+**The bank is the dedupe signal**: each batch item carries its worker's
+`PWD-PB-BILL-{period}-{worker-slug}` marker as the ACH `paymentName` / wire
+`description`, so `query_transactions {direction: "debit",
+descriptionContains: "PWD-PB-BILL-{period}"}` finds every worker already paid
+for this period by a prior run. (The read-only demo books never record this
+skill's invoices or bills, so QBO carries no trace of a prior run — don't
+search it for markers.) A hit → a **potential duplicate** row: show the prior
+debit's evidence (date, amount, paymentId) and ask the owner whether to pay
+again (a deliberate rehearsal re-run) or drop the worker from the batch.
+Stablecoin items carry no description — match those by amount + date + type.
 
-### 6. GATE 1 — invoice the clients
+### 6. GATE 1 — the client billing picture
 
-Present the invoice table and **wait for explicit approval**:
+Present the invoice table and **wait for explicit approval** before moving on
+to pay (the billing math prices both sides of the cycle — the owner signs off
+on it here):
 
 | Client | Worker(s) | Hours | Bill rate | Invoice total | Status |
 |---|---|---|---|---|---|
 
-Also show: already-invoiced rows (with the existing DocNumber) and excluded
-workers. On approval, `create_invoice` per client: DocNumber
-`PWD-PB-INV-{period}-{client-slug}`, TxnDate today, DueDate per the owner's
-terms (default net-15 — confirm in the table), one line per worker (Qty =
-hours, Rate = BillRate, items per [DATA-MODEL.md](DATA-MODEL.md)), and the
-marker at the start of `PrivateNote`. After the **first** invoice, read it
-back: if the sandbox didn't persist the custom DocNumber, say so and rely on
-the PrivateNote marker for dedupe from here on.
+Also show excluded workers. On approval, **narrate the invoicing** — outside
+a demo, each client would get a QuickBooks invoice (`create_invoice`):
+DocNumber `PWD-PB-INV-{period}-{client-slug}`, TxnDate today, DueDate per the
+owner's terms (default net-15 — confirm in the table), one line per worker
+(Qty = hours, Rate = BillRate), marker-first `PrivateNote`. The read-only
+demo books skip that write; say so in one line and move on.
 
 ### 7. GATE 2 — pay the workers
 
@@ -139,7 +150,7 @@ Before the gate:
   every item and returns the **real 1% stablecoin fee** for the table.
 
 Present and **wait for explicit approval** (the approval covers the bank
-batch *and* the step-8 QBO bookkeeping for those payments):
+batch; step 8's bookkeeping is narration only):
 
 | Worker | Hours | Pay rate | Gross | Rail | Fee | Status |
 |---|---|---|---|---|---|---|
@@ -162,21 +173,16 @@ Report per-item results from `results[]`. **The tool is not idempotent**: on
 partial failure, fix and re-submit **only the failed items** — never the
 whole batch.
 
-### 8. Record — QBO markers
+### 8. Narrate the booking — what would happen in QuickBooks
 
-For every worker whose payment succeeded, **write the markers immediately**:
-
-1. **`create-bill`** (note the hyphen) against the worker's vendor: DocNumber
-   `PWD-PB-BILL-{period}-{worker-slug}`, TxnDate today, amount = gross,
-   `PrivateNote` = the marker + worker, period, hours, and the Paywhere
-   `paymentId` (format in [DATA-MODEL.md](DATA-MODEL.md)).
-2. `create_bill_payment` for the bill, same amount.
-
-**Marker-first discipline:** if the bank payment succeeded but a QBO write
-fails, the money already moved — retry the QBO marker and report the partial
-state explicitly (worker, gross, Paywhere `paymentId`) so next run's dedupe
-still catches it. Never call the run clean until each paid worker has its bill
-marker in QBO.
+The workers are paid; the bookkeeping is narration. Say — briefly, per the
+run — what would happen next outside a demo: each paid worker would get a
+Bill (`create-bill`, DocNumber `PWD-PB-BILL-{period}-{worker-slug}`, amount =
+gross, marker-first `PrivateNote` carrying the Paywhere `paymentId`) and a
+matching Bill Payment (`create_bill_payment`), booking the cost side of the
+cycle. The read-only demo books skip those writes; the dedupe trail lives in
+the bank instead — each payment's description already carries its marker
+(step 7), which is what step 5 finds on a re-run.
 
 ### 9. Reconcile and summarize
 
@@ -187,22 +193,22 @@ marker in QBO.
 - **Margin summary**: invoiced total vs worker pay total vs the ratio —
   should sit at ≈1.3 (persona rates are exactly 1.3×); flag a material
   deviation.
-- Collection of the new invoices is **not** this skill's job: the cash is
-  chased later via `/invoice-chase` and shows up in `/plan-payroll` — say so
-  in the close-out.
+- Collecting the invoiced hours is **not** this skill's job: outside a demo
+  the cash is chased later via `/invoice-chase` and shows up in
+  `/plan-payroll` — say so in the close-out.
 
-End with: invoices created (DocNumber + id), payments (rail + Paywhere id),
-bills + bill payments (ids), and the margin line.
+End with: the billing table as narrated (per-client totals), payments (rail +
+Paywhere id), the one-line bookkeeping narration, and the margin line.
 
 ## Graceful degradation — say what's skipped, never half-work silently
 
-- **No Paywhere**: run steps 1–6 only — invoices still go out — then produce
-  the **drafted payment list** (worker, gross, rail, payee name or payment
-  fields) without executing anything. No bank batch, no bills; tell the owner
-  exactly that.
+- **No Paywhere**: run steps 1–4 and 6 only — the billing picture still gets
+  presented and narrated — then produce the **drafted payment list** (worker,
+  gross, rail, payee name or payment fields) without executing anything. No
+  bank batch; tell the owner exactly that.
 - **No QuickBooks**: **stop** — QBO is the system of record for both the
   worker roster/rates and the time-activities (the hours). Without it there is
-  no source of truth; invoicing and cost booking cannot be skipped or faked.
+  no source of truth; hours and rates cannot be skipped or faked.
 - **A worker with no saved payee**: don't error — fall back to the
   inline recipient details on their vendor record (step 7). If those are also
   missing, flag and exclude that worker.
@@ -228,20 +234,19 @@ bills + bill payments (ids), and the margin line.
   unverified wallet.
 - **Batch partial failure**: re-submit only the failed `results[]` items —
   `make_batch_payment` is not idempotent.
-- **Bank success, QBO failure**: marker-first discipline (step 8) — retry the
-  marker, report partial state.
-- **DocNumber not persisted** (sandbox without custom transaction numbers):
-  detected on the first invoice read-back; dedupe rides the PrivateNote
-  marker instead.
+- **A prior run's payment for the same worker/period** (the demo re-run
+  case): caught by the step-5 bank check — surface it as a potential
+  duplicate with the prior debit's evidence and let the owner decide; never
+  pay a flagged row without that explicit confirmation.
 
 ## Approval gates
 
-- **Gate 1 (step 6)** covers QBO invoice creation; **Gate 2 (step 7)** covers
-  the bank batch and its matching bills/bill payments. Nothing is written or
-  paid before its gate.
+- **Gate 1 (step 6)** covers the client billing picture; **Gate 2 (step 7)**
+  covers the bank batch. Nothing is paid before its gate.
 - One approval covers one batch; adding or changing a row after approval
   restarts that gate.
-- Anything that fails dedupe is shown as "already processed", never re-done.
+- A step-5 potential-duplicate row is never paid without the owner's explicit
+  go-ahead on that specific row.
 - Never invent payment details or hours — missing/malformed data is flagged
   and excluded, not guessed.
 
@@ -251,4 +256,5 @@ bills + bill payments (ids), and the margin line.
   shapes, the invoice/pay/margin math, PWD-PB marker formats, and the verbatim
   MCP tool signatures.
 - [../../DATASET.md](../../DATASET.md) — the demo world's persona, worker
-  roster, weekly hours, and saved payees (seeded by `/demo-setup`).
+  roster, weekly hours (seeded server-side in the shared books), and saved
+  payees (seeded by `/demo-setup`).

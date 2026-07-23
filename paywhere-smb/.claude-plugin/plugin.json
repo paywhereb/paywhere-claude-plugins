@@ -1,6 +1,6 @@
 {
   "name": "paywhere-smb",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "description": "Pre-built small business finance workflows (cash-flow forecasting, month-end close, payroll planning, AP batch bill-pay, hours billing + contractor payouts, invoice chasing, commission payouts across ACH/Wire/Stablecoin) using your Paywhere account, QuickBooks, Gmail, and Google Drive — plus a single repeatable /demo-setup command for the hosted sandbox. You approve every step that touches money.",
   "author": {
     "name": "Paywhere",
