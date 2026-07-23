@@ -1,7 +1,7 @@
 ---
 name: tf-apply
-description: Walk a human operator through the post-merge Terraform apply (the second-person gate, where the repo has one) without hunting for a run id. Use when the Slack #aws-alerts "Terraform apply pending" / "unapplied merge" message fires, when someone asks "how do I apply this / apply the merged terraform / run the pending apply / apply <workspace>", or when /tf-drift routes an unapplied merge here. Finds the right plan_run_id automatically, shows the plan, verifies the operator is a valid dispatcher for this repo's gate, and dispatches the apply on their confirmation.
-version: 0.2.0
+description: Walk a human operator through the post-merge Terraform apply (the second-person gate, where the repo has one) without hunting for a run id. Use when the Slack #aws-alerts "Terraform apply pending" / "unapplied merge" message fires, when someone asks "how do I apply this / apply the merged terraform / run the pending apply / apply <workspace>", or when /tf-drift routes an unapplied merge here. Finds the right plan_run_id automatically, shows the plan, verifies the operator is a valid dispatcher for this repo's gate, and dispatches the apply on their confirmation. Also handles workspaces that plan in CI but apply only locally (e.g. paywhere-devops's terraform/github) — see Step 0.
+version: 0.3.0
 allowed-tools: Read, Bash
 ---
 
@@ -16,16 +16,28 @@ dispatches it **as the operator**, with whatever gate the repo actually has
 still enforced server-side. It is a convenience for the eligible dispatcher,
 **not** a bypass of any gate.
 
-**Scope.** This is the normal PR-driven apply (`terraform-apply.yml`). It is
-**not** the drift *revert* apply (that's `terraform-remediate-drift.yml`, with
-its own `reason` + acknowledger gate — driven via `/tf-drift`). If the operator
-wants to revert out-of-band drift, send them to `/tf-drift`.
+**Scope.** This is the normal PR-driven apply (`terraform-apply.yml`), plus
+the local-apply procedure for workspaces that have no CI apply path at all
+(Step 0). Neither is the drift *revert* apply (that's
+`terraform-remediate-drift.yml`, with its own `reason` + acknowledger gate —
+driven via `/tf-drift`). If the operator wants to revert out-of-band drift,
+send them to `/tf-drift`.
 
 ## Preamble — read `.claude/eng-workflow.json`
 
 - If missing, stop and tell the user to run `/eng-init`.
 - Read, with defaults:
   - `guards.tfDrift.applyWorkflow` (default `terraform-apply.yml`)
+  - `guards.tfDrift.localApplyOnlyWorkspaces` (default `[]`) — workspace
+    names under `terraform/` in this repo that plan in CI but have **no**
+    CI apply path (e.g. paywhere-devops sets `["github"]` — its `github`
+    provider auth doesn't fit the AWS-OIDC pattern `terraform-apply.yml`
+    assumes, by deliberate design, not a gap — see
+    `docs/terraform-cicd-runbook.md`'s Scope note in that repo). A
+    workspace in this list will **never** produce a `tfplan-<ws>` artifact,
+    so Step 1's lookup would silently find nothing for it — check this list
+    first (Step 0) for any workspace the operator names, before assuming
+    Steps 1-4 apply.
   - `repo.name`, `repo.defaultBranch` (default `main`)
   - `repo.environment` (default `"prod"` — treat any missing, empty, or
     unrecognized value as `"prod"`, never as `"nonprod"`. An existing
@@ -34,6 +46,84 @@ wants to revert out-of-band drift, send them to `/tf-drift`.
     explicit `"nonprod"` skips Step 3's author check.)
 - Use these below instead of hardcoding. If `gh` is not installed /
   authenticated, stop and tell the user to run `gh auth login`.
+
+## Step 0 — Local-apply-only workspaces (no CI apply path)
+
+Check this **before** Step 1 whenever the operator names a specific
+workspace (or a drift alert names one): is it in
+`guards.tfDrift.localApplyOnlyWorkspaces`? If not, skip straight to Step 1 —
+everything below is specific to this small set of workspaces.
+
+These workspaces plan in CI (drift sweep + PR-time plan comment) but were
+deliberately never wired into `terraform-apply.yml` — there is no
+`plan_run_id` to find, no guard job, no `tfplan-<ws>` artifact, ever. The
+apply is a **local** `terraform apply`, run from this machine (Bash), not a
+`workflow_dispatch`. The second-person and plan-fidelity principles still
+apply — they're just enforced by you asking, not by a server-side guard.
+
+**0a — Find the plan-of-record.** Don't let the operator apply against a
+bare fresh plan nobody reviewed. Locate the most recent CI-rendered plan for
+this workspace:
+
+```bash
+# Prefer the merged PR's sticky plan comment if this just merged:
+gh pr list -R paywhereb/$REPO_NAME --search "$WS in:title" --state merged --limit 5 --json number,title,url
+gh pr view <PR_NUMBER> -R paywhereb/$REPO_NAME --json comments \
+  --jq '.comments[] | select(.body | startswith("<!-- terraform-plan -->")) | .body'
+# Otherwise, the latest nightly drift artifact for this workspace:
+RUN_ID=$(gh run list --workflow terraform-drift.yml -R paywhereb/$REPO_NAME --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run download "$RUN_ID" -R paywhereb/$REPO_NAME -n "drift-$WS" -D /tmp/tf-apply/"$WS"
+```
+
+Show the operator the `<details>` section (or artifact `plan.txt`) for this
+workspace — this is the plan a reviewer already saw.
+
+**0b — Local credentials.** These workspaces' backends and providers don't
+use the CI OIDC pattern; check the repo's own `CLAUDE.md` ("Running Terraform
+applies" section) for the exact local-execution steps (which AWS SSO
+profile the backend needs, and how the non-AWS provider — e.g. a GitHub App
+token or `gh auth token` — is supplied). Ask the operator to run any missing
+`aws sso login`; don't assume a session is live.
+
+**0c — Fresh plan, diffed against the plan-of-record.**
+
+```bash
+terraform -chdir="terraform/$WS" init -input=false   # backend-config overrides per CLAUDE.md if needed
+terraform -chdir="terraform/$WS" plan -out=/tmp/tf-apply/"$WS"/tfplan
+```
+
+Compare this plan's `Plan: N to add, M to change, P to destroy` line and
+resource list against 0a's plan-of-record. **This is a manual eyeball
+comparison, not the CI path's byte-identical `terraform apply tfplan`
+guarantee — say so plainly, don't overstate it.** If they don't match (main
+moved, something changed since review, or the operator's local state read
+differs), stop and explain why; don't apply a surprise.
+
+**0d — Second-person acknowledgement, still required.** CLAUDE.md's local
+break-glass guidance is explicit: even workspaces exempt from the CI gate
+"require the named second-person acknowledgement." Ask whether the operator
+authored the change being applied:
+
+- If **not** the author → they can act as the reviewing second person
+  themselves, having just walked 0a-0c. Confirm explicitly before applying.
+- If the operator **is** the author → they need a **named colleague** to
+  look at 0a/0c's plans and explicitly ack before you proceed. Do not
+  self-apply just because there's no server-side guard stopping it — the
+  absence of a technical gate is not permission to skip the control. Record
+  who acked in your report.
+
+**0e — Apply and report.** On explicit confirmation:
+
+```bash
+terraform -chdir="terraform/$WS" apply /tmp/tf-apply/"$WS"/tfplan
+```
+
+Report exactly like Step 5: the `Apply complete! Resources: X added, Y
+changed, Z destroyed` line, and **every** `Warning:` block or
+`local-exec` banner verbatim, each turned into a numbered manual-follow-up
+item. Note in the report that this was a **local apply** (no `refs/applied/`
+marker gets recorded — the next drift sweep will show this workspace clean,
+which is the only confirmation that exists for this path).
 
 ## Step 1 — Find the dispatchable plan run (no run id to copy)
 
@@ -228,5 +318,10 @@ gh run view "$APPLY_RUN" -R paywhereb/$REPO_NAME --json jobs \
 - **This is not the revert path.** Reverting out-of-band drift is
   `/tf-drift` → `terraform-remediate-drift.yml`, which has different
   (acknowledger + reason) semantics. Don't apply a revert from here.
+- **Local-apply-only workspaces (Step 0) get no free pass.** No server-side
+  guard existing is not the same as no gate — still find the plan-of-record,
+  still diff before applying, still get a named second person's ack when the
+  operator is the author. Never treat the absence of a `workflow_dispatch`
+  path as license to skip a check the CI-gated workspaces enforce for you.
 - **Stop on ambiguity** — multiple candidate runs, an unclear plan, a
   destructive action, or a tenant/log-archive workspace: surface it and ask.
