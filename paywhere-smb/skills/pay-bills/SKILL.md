@@ -1,274 +1,222 @@
 ---
 name: pay-bills
-version: 0.4.0
+version: 1.0.0
 description: >
-  Catches the business up on accounts payable in one pass: pulls the AP aging
-  from QuickBooks, proposes the overdue bills for payment, checks the bank
-  balance, resolves each vendor's payment rail (ACH or wire), validates the
-  whole run with a dry-run batch, and — after ONE approval — executes a single
-  mixed-rail batch payment through Paywhere, narrates the Bill Payment
-  booking that would happen in QuickBooks outside a demo (the demo books are
-  read-only), and verifies each debit actually posted at the bank. Use when
-  the owner says "pay my bills," "what's overdue," "AP aging," "catch up on
-  payables," or "pay the vendors."
+  Stages this week's vendor payments as ONE mixed-rail batch for the owner to
+  approve on the bank's page: pulls open bills from QuickBooks, selects what is
+  overdue or due within 7 days, HOLDS bills that are not yet due from vendors
+  the owner habitually pays early (pay-when-due), resolves each vendor's rail
+  from the saved payees, pays by name, stages ACH and wire lines (and any
+  savings top-up as a transfer line) in a single make_batch_payment, and
+  prints the /confirm URL as the approval step. Money moves only after the
+  owner approves with a passkey; the QuickBooks Bill Payment booking is
+  narrated (read-only demo books). Use when the owner says "pay the bills due
+  this week," "pay my bills," "pay what's due," "pay Johnstone and Voltage"
+  (any named vendors), "stage the vendor payments," or "catch up on payables."
 ---
 
 # Pay Bills
 
+One conversation, one batch, one approval — on the bank's surface.
+
+> `make_ach_payment`, `make_wire_payment` and `make_batch_payment` **never
+> move money**: they stage lines on the owner's open proposal and return a
+> confirmation URL of the form `https://<bank host>/confirm/<id>/<nonce>`.
+> **Print that URL verbatim as the approval step**; the owner opens it and
+> approves with a passkey, and only then does money move. **Never claim money
+> has moved** — say "staged" / "awaiting your approval". Internal transfers
+> are staged the same way as a `{rail: "transfer", fromAccountNumber,
+> toAccountNumber, amount}` item, **never `transfer_funds`**. Full path:
+> [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
+
 ## Quick start
 
 ```
-User: "pay my bills"
-→ Pull AP: get_aged_payables + search_bills (open) → aging picture with
-  overdue / due-this-week / due-later buckets and days-overdue per bill
-→ Propose the default selection: every OVERDUE bill; show running total vs
-  the live operating balance (list_accounts → get_account_balance)
-→ Look up saved payee rails: list_saved_payees once, building a name → rail
-  map so no vendor's rail is guessed
-→ Resolve each vendor's rail: pay each open bill by the vendor's name
-  (recipientId + amount — the bank resolves it to the saved payee; no raw bank
-  details); for a vendor with no saved payee, confirm/onboard with the owner
-→ Dry run: make_batch_payment with dryRun:true → per-item validation
-→ THE GATE: one confirmation table, one explicit "yes, pay these"
-→ Execute: ONE make_batch_payment across all rails
-→ Narrate the booking: outside a demo, each payment would be booked to QBO
-  as a Bill Payment against its bill (the demo books are read-only)
-→ Verify: query_transactions confirms each debit posted at the bank
+User: "pay the bills due this week"
+→ search_bills (open) + get_aged_payables → overdue / due ≤ 7 days / not yet due
+→ Early-pay history (ap-timing method) → HOLD not-yet-due bills from habitually-early vendors
+→ list_accounts + get_account_balance → operating balance, true available
+→ list_saved_payees once → name → rail map (ACH / WIRE)
+→ Duplicate check: query_transactions debits for each vendor+amount (today/this week)
+→ Show the table (pay / held / excluded) → "stage these?"
+→ ONE make_batch_payment (ACH + wire lines, by payee name) → confirmation_url
+→ Print the URL + confirmation_title. Nothing has moved.
+→ Narrate the QuickBooks Bill Payments that would follow approval
 ```
 
-One conversation, one approval, one batch — that is the whole product. The
-"before" picture (owner logs into the bank, keys each payment by hand, then
-marks bills paid in QuickBooks one at a time) is what this skill replaces.
+## Sources of truth
 
-## What is the source of truth
+- **QuickBooks** says what is owed, to whom, when (open `Balance`, not
+  `TotalAmt`). It is **read-only** here; the Bill Payment booking is narrated.
+- **Paywhere** says what can be paid (live balance), holds the saved payees
+  (rail and bank details, resolved by **name**), stages the proposal and,
+  after approval, shows the debits.
+- **Saved payees** carry the ABA / account / wire instructions. This skill
+  never types one. No saved payee → the owner confirms details, or the bill
+  is excluded and listed.
 
-- **QuickBooks** is the system of record: the open bills say *what is owed to
-  whom and when*. Outside a demo, every payment made here would be booked
-  back as a Bill Payment so the books never drift from the bank; the **demo
-  connector is read-only** (the shared books reseed server-side daily), so
-  this skill narrates that booking instead of performing it.
-- **Paywhere** is the bank: the live balance says *what can be paid*, the
-  rails (ACH / wire / stablecoin) move the money, and the transaction feed
-  proves each payment actually posted.
-- **Payment details** (ABA, account numbers, wire instructions) come from your
-  **saved payees** when one exists — the pay tools take the vendor's **name**
-  (`recipientId`) + amount and resolve the bank details, so this skill never
-  handles raw account numbers. When no saved payee matches a vendor, the owner
-  confirms the details (real-business onboarding flow). They are **never guessed**.
-
-If QuickBooks is not connected, **stop** — without the system of record there
-is no trustworthy list of what's owed. If
-Paywhere is not connected, see "The 'before' contrast" below: the analysis
-still runs; nothing executes.
+Without QuickBooks: **stop** (no system of record). Without Paywhere: the
+analysis runs and a drafted payment list is shown; nothing is staged.
 
 ## Workflow
 
 **Progress tracking:** call `TaskCreate` once per numbered step below before
-starting step 1 (subject = the step's name, e.g. "1. Pull the AP picture"),
-then `TaskUpdate` it to `in_progress` when you begin that step and
-`completed` when it's done. This is what drives Cowork's visible progress
-display — it does not happen unless you do it explicitly, so don't skip it
-just because the steps are already numbered here.
+starting step 1 (subject = the step's name, e.g. "1. Pull open bills"), then
+`TaskUpdate` it to `in_progress` when you begin that step and `completed`
+when it's done. This is what drives Cowork's visible progress display — it
+does not happen unless you do it explicitly.
 
-### 1. Pull the AP picture
+### 1. Pull open bills
 
-- `get_aged_payables` for the bucketed report, and `search_bills` for the
-  open bills themselves (open = positive remaining `Balance`; a bill's
-  `Balance`, not its original `TotalAmt`, is what's still owed — QBO nets
-  partial payments and applied vendor credits into it).
-- Build the aging picture per bill: vendor, DocNumber, bill date, due date,
-  original amount, **open balance**, and days overdue (today − due date).
-  Bucket into **overdue** (due before today), **due this week** (due within
-  the next 7 days), and **due later** — with a total per bucket.
-- Cross-check the report against the bill list; if they disagree (timing,
-  unapplied credits), trust the bills and say so.
-- Resolve "today" from the actual current date — never from a prior session.
+`search_bills` (open) and `get_aged_payables`. Resolve "today" from the actual
+date. Per bill: vendor, DocNumber, due date, open balance, days overdue /
+until due. Bucket **overdue**, **due within 7 days**, **not yet due**. Trust
+the bill list over the report if they disagree, and say so. If the owner
+named vendors ("pay X and Y"), select those vendors' open bills and still run
+the hold check.
 
-### 2. Propose the selection
+### 2. Apply pay-when-due
 
-- **Default proposal: every overdue bill.** The owner can widen ("also pay
-  what's due Friday") or narrow ("skip the CPA bill this week") — recompute
-  and re-present after any change.
-- `list_accounts` to find the operating account (the primary checking
-  account by role — **never a hardcoded account number**), then
-  `get_account_balance` on it. Show the **running selection total against the
-  live balance** as the selection changes.
-- Ask about near-term obligations ("anything big coming up — payroll,
-  rent?"). If the batch would draw the balance below the obligations the
-  owner names, **warn before the gate** and offer to narrow the selection or
-  top up from savings (`transfer_funds`, separately gated).
+Run the early-payment check from
+[`../ap-timing/reference/early-payment-method.md`](../ap-timing/reference/early-payment-method.md)
+(12 months of `search_bills` vs `search_bill_payments`). A **not-yet-due**
+bill from a vendor habitually paid early is **HELD**: shown in the table as
+"held — due {date}, {n} days; usually paid {m} days early", not staged. The
+owner can override ("pay it anyway") — re-present. Overdue and due-within-7
+bills are the default selection. _E.g. an equipment supplier's invoice not
+due for 18 days stays held; a parts supplier's statement due Friday and a
+crane subcontractor paid on receipt go in the batch._
 
-### 3. Look up saved payee rails
+### 3. Balance and true available
 
-- Call `list_saved_payees` **once**. It returns every saved payee's name
-  and rail (ACH or WIRE), no bank details. Build a name → rail map before
-  touching any payment tool.
-- Match each selected bill's vendor name against the list (forgiving on
-  minor variations); that match's rail is what the batch item for that
-  vendor must use. **Never guess a vendor's rail or default to ACH.**
-- No match (or a truly ambiguous match) → carry the vendor into the next
-  step as rail-unresolved rather than guessing.
+`list_accounts` → the operating account by role (primary checking; never a
+hardcoded number) → `get_account_balance`. Compute true available as in
+[`../business-pulse/reference/true-available.md`](../business-pulse/reference/true-available.md)
+(operating − tax-reserve shortfall − pending). Show the batch total against
+it. If the batch would leave less than the next payroll (bank pattern of the
+processor's debits) plus a week of typical outflow, **warn** and offer:
+narrow the selection, or add a savings → operating top-up **as a `transfer`
+line in the same batch** (from Business Savings, never the Tax Reserve). The
+top-up waits for the same passkey.
 
-### 4. Resolve the payee per vendor
+### 4. Rails and payees
 
-- **Pay by the vendor's name.** For each open bill, build the batch item on
-  the rail resolved in step 3, passing the vendor's name as **`recipientId`
-  + amount** — the bank resolves it to the matching saved payee and fills
-  the ACH/wire details, so this skill never touches an ABA or account
-  number.
-- **No saved payee** (a real business that hasn't onboarded one): fall back to
-  the normal onboarding flow — ask the owner to confirm the rail and details,
-  read them back, then pass them **inline**. **NEVER guess or autocomplete an
-  ABA, account number, or wire instruction.** A vendor with no saved payee and
-  no confirmed details is **flagged and excluded** from the batch, listed so the
-  owner can supply details and re-add it.
-- **Wire** `processDate` is optional — when omitted it defaults to the next
-  business day server-side; tell the owner when the wire will move. (There is
-  no separate wire-config call.)
-- If a batch item's rail turns out wrong anyway (a stale or ambiguous match
-  from step 3), `make_ach_payment` / `make_wire_payment` / `make_batch_payment`
-  now name the correct rail directly in the error (e.g. `"'Sutter Hill
-  Properties' is a saved payee, but pays by WIRE, not ACH — retry with
-  make_wire_payment (or a batch item with rail: 'wire')."`) — retry on the
-  named rail; don't report the payee as unresolved.
-- Before paying anything, check each selected bill for an **already-paid**
-  signal. **The bank is the real check**: `query_transactions` for a recent
-  debit matching the vendor/amount. (QBO `search_bill_payments` only shows
-  what the seeded books recorded — the read-only demo books never record this
-  skill's payments, so a prior run leaves no trace there.) On a demo re-run
-  the bank check **will** find last run's identical payments — that is the
-  check working, and it's worth showing: surface each candidate bill with its
-  matching prior debit (date, amount, paymentId) as a **potential duplicate**
-  and ask the owner whether to proceed anyway (a deliberate rehearsal re-run)
-  or drop it. Never pay a flagged row without that explicit confirmation.
+`list_saved_payees` **once** → name → rail map. Match each selected vendor
+(forgiving on suffix/case). The matched rail is the batch item's rail —
+**never guess or default to ACH**. Pay by name: `recipientId` = the payee's
+name, plus amount. No saved payee → ask the owner to confirm the rail and
+details (never autocomplete an ABA or account number); unconfirmed →
+**excluded and listed**. If a tool error names the correct rail (`"… pays by
+WIRE, not ACH"`), retry on that rail. Wire `processDate` defaults to the next
+business day; say so.
 
-### 5. Dry run
+### 5. Duplicate check
 
-One `make_batch_payment` with `dryRun: true` over the entire selection.
-Every item should come back `validated_not_executed` (a stablecoin item, if
-any, returns its real 1% fee — carry it into the confirmation table). An item
-that fails validation is shown as flagged with its error; fix or exclude it
-before the gate. Keep the item order — execution maps results back to bills
-by `index`.
+For each selected bill, `query_transactions {direction: "debit",
+descriptionContains: "<vendor stem>", dateFrom: <7 days ago>}` and an exact
+amount match. A hit (a prior rehearsal run that was approved, or a payment
+made outside this flow) is shown as **possible duplicate** with the debit's
+date and amount; it is not staged without the owner's explicit yes. The
+server also flags lines that look like a recent payment — surface that flag
+the same way.
 
-### 6. The gate — one approval for the whole batch
+### 6. The table — "stage these?"
 
-Present a single table and **wait for an explicit "yes, pay these"** (column
-values come from live data, not these placeholders):
+| Bill | Vendor | Due | Days | Amount | Rail | From |
+|---|---|---|---|---|---|---|
+| _DocNumber_ | _parts supplier_ | {date} | due in 3 | $6,850.00 | ACH | Operating Checking |
+| _DocNumber_ | _electrical sub_ | {date} | overdue 2 | $2,150.00 | ACH | Operating Checking |
+| _DocNumber_ | _crane sub_ | {date} | due in 5 | $1,900.00 | Wire | Operating Checking |
+| _DocNumber_ | _equipment supplier_ | {date} | **held — due in 18** | $11,400.00 | — | usually paid 14 days early |
 
-| Bill | Vendor | Days overdue | Amount | Rail | From account |
-|---|---|---|---|---|---|
-| _DocNumber_ | _vendor_ | 5 | $300.00 | ACH | Operating Checking |
-| _DocNumber_ | _vendor_ | 9 | $560.00 | Wire | Operating Checking |
+Below: batch total, operating balance, true available, projected balance
+after approval, held list, excluded list with reasons. Ask **"stage these
+for approval?"** — this is a courtesy check, not the money gate; the passkey
+on the bank's page is the approval. Any change to the set → re-present.
 
-Below the table: the **batch total**, the **current balance**, and the
-**projected post-batch balance** (balance − total − any fees), plus the
-flagged/excluded list with reasons. Partial approval is fine — but **adding,
-removing, or changing any row after approval restarts the gate** (and the dry
-run, if amounts or details changed).
+### 7. Stage — ONE `make_batch_payment`
 
-### 7. Execute — one batch
+Optionally `dryRun: true` first when a line might fail (new payee, odd
+rail). Then one call with every approved line (`rail: "ach"` items with
+`recipientId`, `paymentAmount`, `paymentName` = "Bill {DocNumber} {vendor}";
+`rail: "wire"` items with `recipientId`, `amount`, `purposeOfWire`; any
+top-up as `rail: "transfer"` with exact unmasked account numbers from
+`list_accounts`). Fill `intent` ("Pay this week's vendor bills; hold
+not-yet-due early-pay vendor") and, in a scheduled run, `sessionType` /
+`taskId` per [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md).
 
-- **ONE `make_batch_payment`** call with the approved items exactly as
-  dry-run (no `dryRun`). Items run sequentially; `stopOnError` defaults to
-  false, so the batch continues past a failed item and reports per-item
-  results. ACH items are made **and authorized** automatically — no separate
-  `authorize_ach_payment` step.
-- Map `results[].index` back to bills; capture each `paymentId` as the
-  Paywhere reference for that bill.
-- **`make_batch_payment` is NOT idempotent.** On partial failure, fix the
-  cause and re-submit **only the failed items** in a new batch — never the
-  whole list (the succeeded items would pay twice).
+Read back `confirmation_url`, `confirmation_title`, `total_amount`,
+`by_rail`, `lines[]`, `expires_at`. An `{ error }` (expired / sealed
+proposal, line cap) is reported in one line and re-staged fresh if the
+proposal expired. Never invent a URL.
 
-### 8. Narrate the booking — what would happen in QuickBooks
+### 8. Print the approval step
 
-Money has moved. The demo books are **read-only**, so say — briefly, per the
-run, not per bill — what would happen next outside a demo: each Paywhere
-payment would be booked to QuickBooks as a **Bill Payment against its bill**
-for the amount paid, with a marker-first `PrivateNote` (`Paid via Paywhere
-{rail} ref {paymentId} on {date}`), and the books would then show these bills
-as **paid**. That write-back is what keeps the books from drifting from the
-bank; here the shared demo books reseed server-side daily instead.
+```
+Staged for approval: {line_count} lines, ${total_amount} ({by_rail})
+{confirmation_title}
+{confirmation_url}
+Nothing has moved. Open the link and approve with your passkey; the bank
+executes the batch after that. Held: {vendor} ${amt} until {date}.
+```
 
-### 9. Verify settlement and show the after picture
+Render the title as the link text over the URL and also print the URL in
+plain text. Do **not** say paid, sent, executed or transferred.
 
-- Per payment, `query_transactions` with `direction: "debit"`, `dateFrom` =
-  today, and `descriptionContains` (payment name / vendor) or an exact amount
-  match (`amountMin` = `amountMax` = amount) to confirm the debit posted at
-  the bank. A still-`pending` ACH is normal, and a wire whose default
-  `processDate` is the next business day won't post until then — report the
-  status and offer to re-check rather than calling either missing.
-- If a separate bank wire-fee debit appears, surface it too.
-- Report per bill: **paid ✓** (bank accepted, paymentId) / **posted ✓**
-  (debit visible at the bank).
-- Close with the new bank balance and totals by rail. Do **not** re-pull the
-  aging expecting it to clear: the read-only books still show these bills
-  open — that's the missing write-back from step 8, not a failed payment.
-  Say so in one line ("the aging still shows them open because the demo books
-  are read-only; with the QuickBooks write-back, the overdue bucket would now
-  be empty").
+### 9. Narrate the booking (what follows approval)
 
-## The "before" contrast — running without Paywhere
+One paragraph, per run not per bill: once approved and executed, each
+payment would be booked to QuickBooks as a **Bill Payment** against its bill
+(with a note carrying the Paywhere payment reference), and the bills would
+show paid. The demo books are read-only and reseed nightly, so this is
+narrated; on live books it is a one-approval write-back. The aging will keep
+showing these bills open in the demo — that is the missing write-back, not a
+failed payment.
 
-This is the demo's before/after moment, and the skill's honest degraded mode
-on real books. **Without the Paywhere connector, steps 1–2 still run in
-full**: the owner gets the complete AP aging analysis. Step 3 (the rail
-lookup) has nothing to call without Paywhere, so every vendor is flagged
-**"rail unconfirmed — ask the owner"** rather than resolved, and the
-resulting **drafted payment list** — who would be paid, how much, on which
-rail (where confirmed), with details resolved or flagged — reflects that, but
-**nothing executes**. End that run by saying exactly what
-connecting Paywhere would unlock: dry-run validation of the whole batch,
-one-approval mixed-rail execution (ACH + wire in a single call), and
-settlement verification against the live bank feed. The aging analysis is
-the same either way; the difference is whether the money actually moves.
+### 10. After the owner approves — verify on request
 
-**Without QuickBooks: stop.** There is no system of record — no trustworthy
-list of what's owed. Paying from memory is how books drift; this skill won't
-do it.
+When the owner says "I approved it" (or on a later "did those go out?"),
+`query_transactions {direction: "debit", dateFrom: <approval date>}` per
+line (vendor stem, exact amount). Report what posted, what is still pending
+(ACH 1–3 business days; a wire whose `processDate` is the next business
+day), and any wire-fee debit. Never report this step before the owner has
+approved.
 
-## Edge cases — spell these out, don't guess
+## Without Paywhere (short)
 
-- **Partially-paid bill**: pay the open `Balance`, never the original
-  `TotalAmt`. Show both in the gate table so the smaller number is explained.
-- **Vendor credits / credit memos**: QBO nets applied credits into the
-  bill's `Balance` — paying the balance is already correct. If
-  `get_vendor_balance` disagrees with the sum of the vendor's open bills,
-  there is likely an **unapplied** credit: surface the difference and ask
-  before paying.
-- **Duplicate vendors with similar DisplayNames** ("DigitalOcean" vs
-  "Digital Ocean Inc"): ask which is canonical before resolving details or
-  paying anything. Never merge or pick silently.
-- **A prior run's payment for the same bill** (the demo re-run case): caught
-  by the step-4 bank check (`query_transactions`) — the read-only books never
-  record demo payments, so the bank is the only place the prior payment
-  shows. Surface it as a potential duplicate with the prior debit's evidence
-  and let the owner decide; never pay a flagged row without that explicit
-  confirmation.
-- **Insufficient balance mid-batch**: the affected items fail individually
-  while the rest proceed. Offer `transfer_funds` from savings (its own
-  approval gate), then re-submit **only** the failed items.
-- **Missing/unconfirmed payment details**: flag and exclude; never fabricate
-  ABA, account, or wire fields.
-- **Wire timing**: `processDate` defaults to the next business day when
-  omitted; tell the owner the wire settles then rather than silently shifting.
+Steps 1–2 run in full: the owner gets the aging and the pay/hold table with
+every rail marked "unconfirmed". Nothing is staged. Say what connecting the
+bank unlocks: saved-payee rails, one mixed-rail proposal, passkey approval
+on the bank's page, settlement verification.
+
+## Edge cases
+
+- **Partially paid bill**: stage the open `Balance`; show both numbers.
+- **Unapplied vendor credit** (`get_vendor_balance` ≠ sum of open bills):
+  surface the difference; ask before staging.
+- **Similar vendor names**: ask which is canonical; never merge silently.
+- **Insufficient balance**: the server validates per line; a failed line is
+  reported, the rest stage. Offer the savings top-up as a transfer line and
+  re-stage only the failed lines.
+- **Expired proposal** (`expires_at` passed, `{ error }` on the next call):
+  re-stage on a fresh call; the old URL is dead.
+- **Scheduled run** (no owner present): skip the "stage these?" question,
+  stage only overdue + due-within-7 non-held bills, print the URL in the run
+  output, dedupe on the day's output file — see
+  [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md).
 
 ## Approval gates
 
-- **Never move money without the explicit batch approval** (step 6). One
-  approval covers exactly one batch; changing the set restarts the gate.
-- **Never invent payment details** — missing or unconfirmed details mean the
-  bill is flagged and excluded, not guessed at.
-- **Never pay a potential-duplicate row** (step 4) without the owner's
-  explicit go-ahead on that specific row.
-- `transfer_funds` top-ups are approved separately — never smuggled into the
-  batch approval.
+- **Money moves only on the bank's `/confirm` page with a passkey.** This
+  skill stages; it never executes and never says it did.
+- **Never invent payment details.** Unconfirmed → excluded and listed.
+- **Never stage a possible duplicate** without the owner's explicit yes on
+  that row.
+- **Never `transfer_funds`.** Top-ups are `transfer` lines in the batch.
+- **Never raid the Tax Reserve** for a top-up.
 
 ## Reference
 
-- [`/demo-setup`](../demo-setup/SKILL.md) — seeds the caller's own bank world
-  (saved payees included), date-aligned to the standing demo books whose
-  overdue + due-this-week open bills this skill shines on.
-- [../../DATASET.md](../../DATASET.md) — the demo dataset reference: the open-bill
-  set, expected numbers, and the recipient/rail map (for understanding the demo;
-  the skill reads it all from QuickBooks/Paywhere at run time).
+- [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md) — the approval path in full
+- [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — the pay-when-due analysis this skill applies
+- [`../demo-setup/SKILL.md`](../demo-setup/SKILL.md) — seeds the saved payees the batch resolves by name

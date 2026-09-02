@@ -1,185 +1,174 @@
 ---
 name: cash-flow-snapshot
+version: 1.0.0
 description: >
-  Reads AR/AP and known fixed costs from QuickBooks and pulls real-time cash
-  position + settled inflows/outflows from your Paywhere bank account — or a
-  CSV upload — and produces a 30/60/90-day cash flow forecast with
-  percentage-variance confidence bands and named risk flags. Delivers a chat
-  summary and a downloadable XLSX. Use when the user asks "forecast my cash
-  flow," "will I make payroll," mentions "runway," or says "cash crunch."
-  Falls back to CSV upload when no connector is live.
-compatibility: "Requires QuickBooks MCP and Paywhere MCP, file upload (CSV fallback). Output uses xlsx skill."
+  The forecast engine: a 13-week direct-method cash forecast built from the
+  bank and the books — opening Operating balance (Tax Reserve and Business
+  Savings excluded), open invoices timed by each customer's real payment lag,
+  seasonality from 12 months of bank inflows, open bills at their due dates,
+  payroll from the bank's debit pattern, recurring debits, the sales-tax
+  remittance and every dated obligation on Google Calendar. Reports the
+  week-by-week table, the minimum-balance week, the reserve to keep, and the
+  historically strongest and weakest months; hands levers to what-if and
+  writes the same formula-driven Excel model the dashboard uses. Read-only.
+  Use when the owner says "13-week cash forecast," "forecast my cash,"
+  "30/60/90-day cash flow," "what's my minimum balance," "how much reserve
+  should I keep," "strongest and weakest months," "cash crunch," "runway,"
+  or "will I run short."
 ---
 
-# Cash Flow Snapshot
+# Cash Flow Snapshot (13-week direct method)
 
-Produces a 30/60/90-day cash flow forecast with percentage-variance confidence
-bands and named risk flags. Delivers a two-part output: a concise chat summary
-and a downloadable XLSX workbook.
-
-**Quick start**
-
-> "Will I make payroll next month?"
-
-Claude pulls AR/AP and fixed costs from connected sources, calculates expected
-inflows and outflows across 30, 60, and 90-day windows, applies confidence
-bands based on each customer's historical payment variance, and flags specific
-risks by name.
-
----
-
-## Workflow
+Cash forecasting for an owner who wants one number: *how low does it get, and
+when.* Everything is built from what actually clears at the bank plus what the
+books say is owed and due; nothing is a percentage-of-revenue guess where a
+dated fact exists. This skill reads only — it stages no payments and writes
+no bookkeeping. Levers ("what if…") live in [`../what-if`](../what-if/SKILL.md)
+and in the Excel model this skill writes.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
-Step 1 (subject = the step's name, e.g. "Step 1 — Identify available data
-sources"), then `TaskUpdate` it to `in_progress` when you begin that step
-and `completed` when it's done. This is what drives Cowork's visible
-progress display — it does not happen unless you do it explicitly.
+Step 1 (subject = the step's name, e.g. "Step 1 — Opening position"), then
+`TaskUpdate` it to `in_progress` when you begin that step and `completed`
+when it's done. This is what drives Cowork's visible progress display — it
+does not happen unless you do it explicitly.
 
-### Step 1 — Identify available data sources
+## Step 1 — Opening position (bank)
 
-Check which connectors are live. Try in this order:
+- `list_accounts` → identify roles by name/type/`isPrimary`: **Operating**
+  (primary checking), **Tax Reserve** (savings named for tax), **Business
+  Savings** (the other savings). Never hardcode account numbers.
+- `get_account_balance` on each. **Opening balance = Operating only.** State
+  in the output that the Tax Reserve (sales tax the business is holding for
+  the state) and Business Savings (the owner's cushion) are excluded from
+  every week of the forecast. If the reserve is short of what has been
+  collected (see [`../tax-reserve-check`](../tax-reserve-check/SKILL.md)),
+  the catch-up transfer appears as an Operating outflow in week 1.
+- `query_transactions {status: ["pending"]}` → pending card authorizations
+  reduce week 1.
+- Resolve "today" from the actual current date. Week 1 starts today and ends
+  the coming Sunday; weeks 2–13 are Monday–Sunday.
 
-1. QuickBooks — AR aging, AP, and fixed costs (the bookkeeping layer)
-2. Paywhere — real-time bank balances and settled inflows/outflows across
-   accounts (the actual cash anchor)
-3. CSV upload — fallback if neither connector is connected
+## Step 2 — Expected inflows, by week
 
-If no connector is live and no file is attached, ask the user to either connect
-a source or upload a CSV (income/expense tabular data, any reasonable format).
-Note which sources were used in the output — this affects confidence band width.
+1. **Open invoices (books):** `search_invoices` with open balance > 0. Place
+   each invoice's open balance in the week of **due date + that customer's
+   mean payment lag**. The lag comes from the customer's 12-month history
+   (`search_payments` matched to `search_invoices`; method in
+   [`../ar-health`](../ar-health/SKILL.md)). Fewer than 3 paid invoices →
+   use the population mean and say so. Invoices already past due + lag land
+   in week 1 or 2, not "now" — an overdue customer does not pay because the
+   forecast wants them to.
+2. **Received-but-unbooked credits:** a recent bank credit whose invoice is
+   still open in the books is already in the opening balance — drop that
+   invoice from inflows (never count it twice).
+3. **Recurring agreement billing:** if invoices recur monthly for the same
+   customers (same amount on the 1st), project the next 1–3 cycles for weeks
+   beyond the open-invoice horizon, timed by the same lag.
+4. **Seasonality for the far weeks:** `query_transactions {aggregate: true,
+   groupBy: "month", dateFrom: <12 months ago>, direction: "credit"}` on
+   Operating gives 12 monthly inflow totals. For weeks not covered by open
+   invoices or recurring billing, use the same calendar month's inflow a year
+   ago, scaled by the trailing-3-month growth ratio, spread evenly by week.
+   Label those weeks "seasonal estimate".
 
-### Step 2 — Pull the data
+## Step 3 — Scheduled outflows, by week
 
-**From QuickBooks:**
-- AR aging report: customer name, invoice amount, invoice date, due date, days outstanding
-- AP: vendor name, amount due, due date
-- Recurring fixed costs: rent, payroll, subscriptions (look for recurring transactions)
+1. **Open bills (books):** `search_bills` open → place at **due date**, not
+   at the date the owner would habitually pay. If the owner's history shows
+   habitually-early payment for a vendor, note the bill is "modeled at due
+   date; you usually pay it {n} days early" (method in
+   [`../ap-timing`](../ap-timing/SKILL.md)).
+2. **Payroll (bank):** `query_transactions {direction: "debit",
+   descriptionContains: "<payroll processor>", dateFrom: <10 weeks ago>}`.
+   Take the last two runs (net + tax lines together), infer the biweekly
+   cadence and project each pay Friday in the window. Use the processor name
+   the bank rows actually carry.
+3. **Recurring debits (bank):** from 12 months of descriptors find debits
+   that repeat monthly with a stable stem (rent, utilities, insurance,
+   software, subscriptions, loan/lease payments). Project each at its usual
+   day of month. Method in
+   [`../subscription-audit`](../subscription-audit/SKILL.md).
+4. **Sales-tax remittance:** the 20th of each month in the window, amount =
+   what the reserve check says is owed for that period (debits the Tax
+   Reserve — so it is NOT an Operating outflow — but the Friday sweeps that
+   fund it ARE). Model the sweeps: each Friday, sales tax on that week's
+   received payments moves Operating → Tax Reserve.
+5. **Google Calendar — dated obligations:** `list_events` (and
+   `search_events` for "tax", "payroll", "estimate", "insurance", "payment",
+   "closing", "due") over the 13 weeks. Events with an amount in the title or
+   description become outflows on their date: quarterly owner estimates,
+   insurance renewals, permit fees, project subcontractor milestones, a
+   dealer appointment with a down payment, a bank meeting. An event without
+   an amount is listed as "dated, unquantified — confirm". Calendar is
+   read-only here; no invites, no reminders unless asked.
+6. **Owner-stated items:** anything the owner names that is in none of the
+   systems (a distribution, a purchase) — include, labeled owner-stated.
 
-**From Paywhere:**
-- `list_accounts` — enumerate every Paywhere account on the user's profile
-  (operating, reserve, payroll, etc.)
-- `get_account_balance` per account — current available and pending balance
-- `get_account_transactions` per account — settled inflows and outflows for
-  the trailing 90 days. Use the signed `amount` to separate credits and
-  debits.
-- Reframe what payment-processor "settlement lag" used to mean: with a real
-  bank account, what matters is *expected clearing time* for outstanding
-  payments. Defaults: ACH 1–3 business days, wire same-day, stablecoin
-  receipt minutes-to-hours (the actual supported chains are returned by
-  `list_supported_chains` if you need to be specific).
+## Step 4 — Build the table and the three answers
 
-**From CSV upload:**
-- Parse as income/expense tabular data
-- Required columns (flexible naming): date, amount, type (income or expense), description
-- If columns are ambiguous, show the header row and ask the user to confirm mapping
+```
+Week  Start       Inflow    Outflow   Close     Notes
+ 1    2026-09-02  $…        $…        $…        payroll Fri; reserve catch-up
+ 2    2026-09-07  …
+ …
+13    …
+```
 
-### Step 3 — Compute historical payment timing
+- **Minimum balance:** the lowest weekly close, its week, and the two items
+  that put it there.
+- **Reserve to keep:** the largest **two-consecutive-week outflow total** in
+  the window minus the inflows those same two weeks can be relied on for
+  (open invoices from prompt payers only). Say that this is the method; the
+  owner can pick a different rule. Compare it to the minimum balance: if the
+  minimum is below the reserve to keep, that is the headline.
+- **Strongest / weakest months:** from the 12 monthly bank aggregates
+  (credits − debits per month), name the top two and bottom two calendar
+  months with their net, and derive month-end Operating balances (current
+  balance minus the net of every later month) so the historical lows have
+  dates and amounts.
 
-For each AR customer (or income source from CSV), calculate:
-- **Mean payment lag** — average days from invoice/transaction date to receipt
-- **Payment variance** — standard deviation of payment lag across last 6–12 payments
-- Use variance to set confidence band width (see Step 4)
+## Step 5 — Confidence and sources
 
-If fewer than 3 payments exist for a customer, use the population mean as the
-point estimate and apply a ±30% variance band as the default. When running on
-CSV data with sufficient history (≥3 payments per source), compute the band
-from the actual payment variance — do not assume ±30%.
+One short block: which weeks rest on open invoices (firm), recurring billing
+(likely), seasonal estimate (soft); whether the calendar was readable; which
+customers' lags were defaulted. No confidence bands — the direct method is
+auditable line by line instead.
 
-### Step 4 — Build the 30/60/90-day forecast
+## Step 6 — Levers (hand-off)
 
-Produce three time windows: 0–30 days, 31–60 days, 61–90 days.
+List the levers available without running them: collect faster, largest
+customer late, revenue ±%, pay-on-due, hire, big purchase (cash / financed),
+line of credit. Say "run `what-if` to see each lever's effect on the minimum
+balance" — [`../what-if`](../what-if/SKILL.md) applies them to this table.
 
-For each window, compute:
+## Step 7 — Write the model (once per run)
 
-| Line | Method |
+Write `models/cash-13w.xlsx` into the working folder with Cowork's file
+tooling, laid out exactly as
+[`reference/model-layout.md`](reference/model-layout.md) specifies. The lever
+cells are inputs; every forecast cell is a formula that references them, so
+the owner can play with the model offline. `build-cash-dashboard` writes the
+same file; `daily-cash-brief` refreshes it. Offer once to also produce the
+HTML dashboard ([`../build-cash-dashboard`](../build-cash-dashboard/SKILL.md)).
+
+## Degraded modes
+
+| Missing | Effect |
 |---|---|
-| Expected inflows | AR due in window, adjusted for mean payment lag |
-| Expected outflows | AP due in window + fixed costs falling in window |
-| Net cash position | Inflows − Outflows |
-| Confidence band | ± weighted average payment variance as a % of expected inflows |
-
-Confidence band formula:
-```
-band_pct = weighted_avg_stddev_days / avg_payment_lag_days
-low  = net_cash × (1 − band_pct)
-high = net_cash × (1 + band_pct)
-```
-
-Round band_pct to one decimal place. Cap at ±50% — higher variance means the
-data is too thin to model; flag it instead (see Step 5).
-
-### Step 5 — Flag named risks
-
-Scan for conditions that push the low-band estimate negative or create a
-liquidity crunch. For each risk found, produce a one-line flag. The phrasings
-below are **style examples** — fill them from the actual forecast, don't copy
-the numbers:
-
-- **Late-payer risk:** "Customer X historically pays 18 days late; that shifts
-  their {$invoice} out of the 30-day window into day 48."
-- **Payroll crunch:** "Payroll ({$amount}) hits {date}. Low-band cash on hand
-  the day before: {$balance}. Shortfall risk: {$gap}."
-- **Thin data warning:** "Only 2 payments on record for Customer Y — confidence
-  band set to default ±30%."
-- **No-connector warning:** "Running on CSV data only — no real-time AP or
-  recurring cost data. Confidence bands are wider than normal."
-
-Limit to the top 5 risks by severity (largest dollar impact first).
-
-### Step 6 — Deliver outputs
-
-**Chat summary** (always):
-```
-Cash Flow Snapshot — [date range]
-Source(s): [connectors used]
-
-            Expected    Low       High
-30-day net: $X,XXX     $X,XXX    $X,XXX
-60-day net: $X,XXX     $X,XXX    $X,XXX
-90-day net: $X,XXX     $X,XXX    $X,XXX
-
-⚠ Risks flagged: [count]
-  • [risk 1]
-  • [risk 2]
-  ...
-```
-
-**XLSX workbook** (always):
-Read `xlsx/SKILL.md` before generating. Produce a workbook with three sheets:
-
-1. **Summary** — the 30/60/90 forecast table with confidence bands. Beneath
-   each window row, expand inline sub-rows showing the individual transactions
-   that make up its inflows (green) and outflows (red). This makes the estimates
-   auditable without leaving the Summary sheet.
-
-2. **Detail** — all transactions grouped by window, sorted by date within each
-   group. Include a running net column (cumulative inflows minus outflows within
-   the window) and a subtotal row at the bottom of each window showing total
-   inflows, total outflows, and net. Grey out past transactions in a separate
-   section at the bottom for reference. Ensure all three windows have rows even
-   if one is empty — show a "No transactions in this window" placeholder row.
-
-3. **Risks** — the flagged risks with dollar impact and affected window.
-
-Save as `cash-flow-snapshot-[YYYY-MM-DD].xlsx`.
-
----
+| Paywhere | Stop for the forecast proper — there is no cleared opening balance. Offer a books-only estimate, labeled as such, from the QuickBooks bank register. |
+| quickbooks | Bank-only forecast: recurring debits, payroll, seasonality; inflows are all "seasonal estimate"; say AR/AP timing is missing. |
+| google calendar | Skip dated obligations; list the categories the owner should check by hand. |
+| everything | One-line CSV fallback: accept a transactions export and run Steps 3.3 and 4 on it, clearly labeled. |
 
 ## Approval gates
 
-No destructive actions — this skill is read-only. No approval gate required
-before generating the forecast.
-
-Remind the user after delivery:
-> "This forecast is based on [sources listed]. It is not a substitute for
-> accounting advice — verify with your bookkeeper before making financing decisions."
-
----
+None — read-only. Close with: "Built from cleared bank data and open
+items in the books; not accounting advice — check timing assumptions with
+your bookkeeper before acting on them."
 
 ## Reference files
 
-| File | Load when |
-|---|---|
-| `reference/gotchas.md` | When a connector returns unexpected data or variance is extreme |
-| `reference/examples/worked-example.md` | When modeling the output format for a new data shape |
+- [`reference/model-layout.md`](reference/model-layout.md) — sheet-by-sheet
+  layout and formulas for `models/cash-13w.xlsx` (shared with
+  `build-cash-dashboard`)
+- [`reference/gotchas.md`](reference/gotchas.md) — known failure modes

@@ -1,5 +1,6 @@
 ---
 name: smb-onboard
+version: 1.0.0
 description: >
   Claude as the trainer. Walks an SMB owner through connecting their first two
   tools, runs one recipe to prove immediate value, interviews them about their

@@ -1,23 +1,27 @@
 ---
 name: tax-season-organizer
+version: 1.0.0
 description: >
-  Prepares tax-season materials for small business owners — framed as deliverables
-  for their accountant, not tax advice. Two modes: (1) quarterly estimated tax
-  calculation — pulls YTD net income from QuickBooks and calculates the federal
-  income tax + self-employment tax liability and quarterly payment due; (2)
-  year-end 1099 prep — scans QuickBooks vendor records (and optionally
-  Paywhere ACH/wire history to catch contractors paid via direct bank
-  payment) for contractors paid over $600, builds a 1099-NEC candidate list
-  with missing W-9 flags, and produces a plain-English summary a CPA can
-  work from directly.
-
-  Trigger this skill whenever the user mentions: quarterly taxes, estimated tax
-  payment, how much to set aside for taxes, 1099s, 1099-NEC, year-end tax prep,
-  contractor payments, W-9s, or any phrase suggesting they are preparing for a
-  tax deadline or handing materials to an accountant. Also trigger proactively
-  when a user asks about net profit or YTD income in a context that suggests
-  they are worried about their tax bill.
+  Prepares owner income-tax materials as deliverables for the accountant,
+  not tax advice. Two modes: (1) quarterly estimated-tax calculation — YTD
+  net income from QuickBooks, estimates already paid read from the bank's IRS
+  debits, liability and next payment computed with every assumption stated;
+  (2) year-end 1099-NEC prep — vendor payments from QuickBooks cross-checked
+  against bank ACH/wire debits for contractors paid but never booked, with a
+  missing-W-9 list. Owner estimates are paid from Operating and are NOT
+  covered by the sales-tax reserve. Sales-tax questions (reserve balance,
+  what is due on the 20th, missed sweeps, the catch-up transfer) go to
+  tax-reserve-check instead. Use when the owner says "quarterly taxes,"
+  "estimated tax payment," "how much should I set aside for income tax,"
+  "1099s," "1099-NEC," "W-9s," "year-end tax prep," or "handing materials to
+  my accountant."
 ---
+
+> **Sales tax is not this skill.** Reserve balance, sales tax collected but
+> not remitted, the 20th remittance, missed Friday sweeps and the catch-up
+> transfer are [`../tax-reserve-check`](../tax-reserve-check/SKILL.md). This
+> skill is the owner's income-tax estimates and 1099s.
+
 
 # Tax Season Organizer
 
@@ -48,7 +52,8 @@ User: "I need to send out 1099s"
 
 Read the user's message and context to decide which path applies:
 
-- **Quarterly estimate** — keywords: estimated payment, quarterly taxes, how much to set aside, safe harbor, Q1/Q2/Q3/Q4
+- **Quarterly estimate** — keywords: estimated payment, quarterly taxes, how much to set aside for income tax, safe harbor, Q1/Q2/Q3/Q4
+- **Sales tax** (reserve, collected-not-remitted, "due on the 20th", sweeps) — not here: route to `../tax-reserve-check` and stop.
 - **Year-end 1099 prep** — keywords: 1099, 1099-NEC, year-end, contractors, W-9, send 1099s, file 1099s
 - **Combined** — some users will ask "year-end summary" and need both. Run quarterly last; run 1099 prep first since it drives the most action items.
 
@@ -73,9 +78,11 @@ Use QuickBooks to pull a Profit & Loss report from January 1 of the current year
 
 If QuickBooks is not connected, ask the user to upload a P&L as CSV or paste the key numbers. For field names and query approach, see [reference/connector-queries.md](reference/connector-queries.md).
 
-### 2. Ask about prior estimated payments
+### 2. Estimated payments already made — read the bank first
 
-Before calculating, ask: "How much have you already paid in estimated taxes so far this year?" If the user doesn't know, note that you'll calculate total liability — they can subtract payments themselves or check with their accountant.
+`list_accounts` → Operating; `query_transactions {direction: "debit", descriptionContains: "IRS", dateFrom: <Jan 1>}` (also try `EFTPS` / `USATAXPYMT`). List the debits found and confirm with the owner. If Paywhere is not connected, ask: "How much have you already paid in estimated taxes this year?"
+
+Say plainly where these come from: **owner estimated taxes are paid from Operating and are not covered by the sales-tax reserve**, which holds sales tax only. The next due date (calendar `search_events` if present) belongs in the owner's true-available picture — link `../tax-reserve-check` for that number.
 
 ### 3. Calculate estimated liability
 
@@ -84,10 +91,11 @@ See [reference/calculation-assumptions.md](reference/calculation-assumptions.md)
 Short version:
 1. **SE tax** = net profit × 0.9235 × 0.153 (then halve it — the deductible half offsets income)
 2. **Adjusted net** = net profit − (SE tax / 2)
-3. **Federal income tax** = apply the bracket rate appropriate to the user's business type and estimated annual income (default to 22% unless the user tells you their bracket; note this assumption explicitly)
-4. **Total annual liability** = federal income tax + SE tax
-5. **Quarterly payment** = (total annual liability − payments made) ÷ quarters remaining
-6. **Safe harbor check** — note whether the user should verify against prior-year tax (100% of prior year, or 110% if AGI > $150k)
+3. **Entity check** — an S-corp owner on payroll has withholding on wages and no SE tax on them; distributions are not wages. State the entity type you assumed (read the books' equity accounts for a hint) before applying step 1.
+4. **Federal income tax** = apply the bracket rate appropriate to the user's business type and estimated annual income (default to 22% unless the user tells you their bracket; note this assumption explicitly)
+5. **Total annual liability** = federal income tax + SE tax
+6. **Quarterly payment** = (total annual liability − payments made) ÷ quarters remaining
+7. **Safe harbor check** — note whether the user should verify against prior-year tax (100% of prior year, or 110% if AGI > $150k)
 
 ### 4. State assumptions and deliver output
 
@@ -135,28 +143,14 @@ explicitly.
 
 Query each connected source for **all payments made to individuals or businesses for services** in the tax year. Do not include payments for goods, refunds, or internal transfers.
 
-**QuickBooks — try live connector first, fall back to CSV if needed:**
+**QuickBooks (read-only):** `search_vendors` (note the `is1099` flag and any W-9/EIN fields), then `search_bill_payments` and `search_purchases` for the tax year, summed per vendor and limited to services (subcontractors, professional fees, referral partners, rent). If the connector returns only category totals, ask the owner for a **Transaction List by Vendor** CSV export and continue with the same logic.
 
-1. **Try live connector.** Attempt to pull vendor-level payment records via the QuickBooks MCP. If the connector returns individual payee records with name, amount, and account category, use them directly and skip the CSV step.
-
-2. **Detect aggregate-only response.** If the MCP returns only category-level totals (e.g. "Contract labor: $7,500" with no payee breakdown), the connector does not yet support vendor-level queries. In this case, prompt the user:
-
-   > "QuickBooks returned summary data only — I need payee-level detail to build your 1099 list. Please export a **Transaction List by Vendor** report (QuickBooks → Reports → Expenses → Transaction List by Vendor, filtered to this tax year) and upload the CSV here. I'll process it automatically."
-
-3. **Process CSV via Desktop connector.** Map columns: payee name, amount, date, payment method, EIN/SSN status. Follow the same aggregation and threshold logic below regardless of whether data came from the live connector or CSV.
-
-> **Note for future connector versions:** If the QuickBooks MCP is upgraded to expose vendor payment records directly, step 1 will succeed and the CSV fallback will be skipped automatically. No changes to this skill are needed — the try-first logic handles it.
-
-For field names and query approach, see [reference/connector-queries.md](reference/connector-queries.md).
-
-**Paywhere (optional cross-check):** Pull ACH and wire outflows for the tax year via `get_account_transactions` filtered to debit (negative `amount`) lines. For each line, identify the counterparty with `get_transaction_detail` (free-text `description`/`statementDescription` as fallback — see `month-end-prep/reference/paywhere-bank-lines.md`). Cross-reference against the QuickBooks vendor list:
+**Paywhere (optional cross-check):** Pull ACH and wire debits for the tax year via `query_transactions {direction: "debit", dateFrom: <Jan 1>}` (slice by quarter if `truncated`). Identify the counterparty from the descriptor stem (`ACH DEBIT <PAYEE>`, `WIRE OUT <PAYEE>`) with `get_transaction_detail` as a best-effort enrichment — see `month-end-prep/reference/paywhere-bank-lines.md`. Cross-reference against the QuickBooks vendor list:
 
 - **Paywhere line matches a QB vendor** → confirms the QB record; useful for spot-checking amounts.
 - **Paywhere line has no matching QB vendor** → flag as "possible contractor payment not in QB" — the accountant should review. Common cause: an owner paid a contractor by wire, never booked it.
 
 Note: a bank does **not** issue 1099-Ks. Paywhere ACH/wire data is for completeness only; the 1099-NEC obligation still lives with the business.
-
-**Desktop/CSV:** If the user uploads a CSV directly (without going through QuickBooks export), map columns: payee name, amount, date, payment method, EIN/SSN status.
 
 ### 2. Aggregate by payee
 
@@ -211,12 +205,17 @@ Structure the 1099 prep output as a document with these sections:
 
 ---
 
+## Output location
+
+Write deliverables to the working folder: `tax/estimate-{YYYY}-Q{n}.md` and `tax/1099-prep-{YYYY}.md`. Nothing is emailed or filed.
+
 ## Guardrails
 
 - **Not tax advice.** Open every deliverable with this: "Prepared for review by your accountant — not tax advice." Include it in the document header, not just in chat.
 - **State every assumption.** If you assumed a 22% bracket, say so. If you excluded state taxes, say so. The accountant will adjust; give them the levers.
 - **Don't merge payees automatically.** Flag likely duplicates for human review.
 - **Don't file anything.** The output is prep material. Filing is out of scope.
+- **Don't move money.** Paying an estimate is `../pay-bills` (staged for passkey approval on the bank's page); this skill only computes.
 - **Corporation exemption is a judgment call.** Note it; don't auto-exclude.
 
 ## Reference files

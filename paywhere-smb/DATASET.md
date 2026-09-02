@@ -1,213 +1,191 @@
-# DATASET.md — the canonical Meridian demo dataset (single source of truth)
+# DATASET.md — the Nick's HVAC demo world (reference, not runtime data)
 
-This file documents the demo world that the **server datasets** build — it is
-**reference, not data the skills read at runtime**. The persona, numbers, and
-recipient map below live ONLY in server code:
+This file describes the world the **server** builds. It is reference for
+presenters and reviewers; **no skill reads it at run time, and no skill
+hardcodes anything in it**. Skills read whatever is in the bank, the books,
+the mailbox and the calendar when they run.
 
-- Bank rows + recipients + enrichment: `paywhere-mcp/paywhere-mcp-api/src/demo/bankDataset.ts`
-- QBO books: `paywhere-qbo-mcp/src/demo/qboDataset.ts`
-- Shared date engine: `src/demo/dates.ts` (both repos; paywhere-mcp authoritative)
+Where the numbers come from:
 
-The plugin **skills stay business-agnostic**: they read whatever is in
-QuickBooks/Paywhere at run time and never hardcode any name or amount below.
-This doc carries the numbers that the five deleted `demo-setup-*` manifests used
-to hold, scaled to the revamp.
+- **Generator:** `buildWorld(dateModel)` in
+  `paywhere-mcp/paywhere-mcp-api/src/demo/world/` (`spec.ts` = the roster,
+  vendors and rules from blueprint §3 as data; `generate.ts` = the events;
+  `answerKey.ts` = every number derived from the generated ledgers). A
+  byte-identical copy lives in `paywhere-qbo-mcp/src/demo/world/` and seeds
+  the books; the same module emits the Gmail and Calendar manifests.
+- **Answer key:** `answerKey` (shape: `types.ts` → `AnswerKey`). `/demo-setup`
+  prints `answerKeySummary` after seeding; the eval suite grades against the
+  full key. Nothing in it is hand-entered.
+- **Date model:** two anchors, `today` and `horizon` (the most recent
+  Sunday), plus a calendar-pinned annual layer (seasonality, stress periods,
+  tax calendar) and a horizon-relative live surface (this week's overdue
+  invoices, bills, payroll, remittance). Same week ⇒ same rows ⇒ same answer
+  key. Blueprint §3.19.
+- **Blueprint:** `paywhere-mcp/docs/plans/nicks-hvac-demo-blueprint.md` §3 is
+  the authoritative narrative; this file is the short form.
 
-> Setup: the **books seed themselves** — the shared QBO demo books are
-> read-only and reseed server-side daily (5am ET). `/demo-setup` seeds only
-> the caller's own bank world:
-> 1. `get_demo_dates` (quickbooks, read-only) → the standing books' `dateModel`.
-> 2. `seed_demo_world {confirm:true, dateModel, username?}` (Paywhere — demo
->    deployment) → builds the caller's bank world on the same dates, returns creds.
->
-> All date math is server-side; nothing here is hand-resolved. Per-user bank
-> worlds mean parallel demos and re-runs are supported.
+> Setup: `/demo-setup` reads the books' `dateModel` (`get_demo_dates`),
+> starts the async bank seed (`seed_demo_world`), polls `get_demo_world` to
+> completion (≈ 4–6 min for ≈ 1,000 rows), reads the world back through the
+> connector and reports the answer-key summary. Books are shared and
+> read-only (reseeded 5am ET); the bank world is per presenter. Mail and
+> calendar are seeded by `paywhere-qbo-mcp/scripts/seed-google.mjs` into the
+> shared `demo-nick@paywhere.com` account.
 
 ---
 
-## Persona
+## The business (qualitative)
 
-**Meridian Staffing & Advisory LLC** — a boutique consulting + staffing firm:
-places senior contractors at clients, bills clients for hours, pays the
-contractors, runs a small advisory retainer practice. Mock/test bank details
-throughout (no real money).
+**Nick's HVAC LLC** — Kansas City metro, HQ on Southwest Blvd in Kansas City
+MO, roughly 45% of work across the state line in Johnson County KS. S-corp;
+owner **Nick Adler** on salary plus quarterly distributions; two hourly
+technicians (Ray Dominguez, Tyler Brooks) paid biweekly through Gusto with
+summer/winter overtime and mileage reimbursement (they drive their own
+vehicles). ≈ $800k trailing-12-month revenue, 10–12% net margin on paper,
+operating cash roughly flat year over year — distributions, owner taxes, AR
+growth and equipment absorb the profit. No credit card, no line of credit,
+no term debt. Systems: QuickBooks Online, Gusto, QuickBooks Payments, a
+field-service app that is not connected, the bank via Paywhere.
 
-## Scale
+**Customers (22, fixed roster):** 13 with monthly service agreements (billed
+on the 1st, net 30, +4% at January renewal; three added during the year as
+growth), repeat one-off customers, small one-offs, and three project
+customers (a warehouse replacement with a 30% deposit, a GC tenant build-out
+with 10% retainage held 120 days, a church renovation with a 50% deposit).
+Repairs, replacements and projects are sub-customer **jobs** in the books,
+so profitability by customer computes from job costing. Referral source
+lives in the customer **Notes**.
 
-Whole business scaled **~0.30×** the old world. Accounts open at:
+**Payment behavior (the AR engine):** profiles, not labels — prompt (0–5
+days), routinely late (10–20 days; includes the largest customer, a
+property manager paying through an AP-automation system), occasionally very
+late (30–60 days on about one invoice in four), delinquent-then-cured (one
+gym customer whose card autopay fails and who is materially late Oct–Jan,
+cured after a payment plan), retainage. Late payers do not look problematic
+on day one; the pattern emerges over 3–4 cycles. DSO ≈ 31 in September,
+worsens to ≈ 41 in November, improves to ≈ 28 by July after deposits are
+required on jobs over $10k (a March policy change visible in the data).
 
-| Role | Type | Opening balance | At demo time (close) |
+**How customers pay (D6):** QuickBooks Payments card/pay-by-link (≈ 35%,
+netted daily settlements — `INTUIT PYMT SOLN DEPOSIT`, gross in the books
+with a negative merchant-fee line), direct ACH credits from customers' own
+banks or AP systems (≈ 30%, `ACH CR <CUSTOMER>`), mobile check deposits
+(≈ 25%, `MOBILE CHECK DEPOSIT <check#>`), wires for project milestones
+(≈ 10%, `WIRE IN` + a $15 fee).
+
+**Vendors (≈ 30, real brands):** parts on statement (ACH on the 28th),
+equipment suppliers on net 30 (**paid 12–18 days early Sep–Apr, on the due
+date May–Aug** — the discoverable AP-timing habit), subcontractors paid on
+receipt (one by wire), Gusto debits (net pay + taxes biweekly, monthly fee),
+rent and utilities, insurance (GL annual in January, WC and auto monthly),
+≈ $1,230/month of software and subscriptions (including a lead-gen
+subscription with zero attributed jobs, an orphaned design-tool seat and a
+duplicate seat), marketing, a CPA, fuel on a debit card, three referral
+partners paid on the 10th, and the tax authorities. **Every vendor,
+subcontractor, partner and tax authority is a saved payee** (ACH for all;
+wire details as well for the crane subcontractor and one equipment
+supplier), so payments by name work from the bare connector.
+
+**Payroll:** 26 biweekly runs; per run `ACH DEBIT GUSTO NET PAY` +
+`ACH DEBIT GUSTO TAX`; a Gusto-style journal entry per run in the books; a
+Gusto payroll-summary email per run in Gmail with the register attached.
+
+**Taxes and the reserve (simplified rules — not tax advice):** Kansas taxes
+parts and labor on commercial repair/maintenance (install labor exempt);
+Missouri taxes parts and equipment only. Explicit tax line items post to
+per-state liability accounts (`Sales Tax Payable - KS/MO`); remittances on
+the 20th debit the **Tax Reserve**. Nick's rule is a manual **Friday
+sweep**: the sales tax included in that week's *received* payments moves
+Operating → Tax Reserve. He skips three Fridays in the cash-tight Oct–Nov
+stretch and once sweeps on invoiced rather than received amounts; on the
+live surface the last two Fridays are missed, so the reserve is short. Owner
+quarterly estimates and the KC earnings tax are paid from **Operating**, not
+the reserve.
+
+**Seasonality and stress periods (calendar-pinned):** index Jan 1.05 · Feb
+0.85 · Mar 0.80 · Apr 0.85 · May 0.95 · Jun 1.20 · Jul 1.35 · Aug 1.30 ·
+Sep 1.00 · Oct 0.80 · Nov 0.85 · Dec 1.00, ±8% deterministic jitter. Four
+stress periods: **A** slow receivables (Oct–Nov), **B** poor AP timing (Apr,
+equipment paid early before project receipts), **C** the timing collision
+(mid-January: annual insurance + owner estimate + December sales tax +
+payroll + a parts statement before a large replacement invoice pays — the
+year's minimum), **D** seasonal investment (May stocking + a recovery
+machine + OT ramp). Nick is never insolvent; the reserve is never raided.
+
+**The vehicle decision:** a cargo van quote, a lender term sheet and an
+insurance quote in Gmail; the dealer appointment on the calendar; the
+mileage-reimbursement offset in payroll. The data supports: one van,
+financed, bought Aug–Oct is comfortable; a second before next summer is not
+without better collections, no early payments, or a line of credit.
+
+**Growth:** H2 ≈ +11% vs H1 (three new agreements, the January price
+increase, more summer replacements, OT up), ≈ $60k of open estimates.
+
+---
+
+## The fixed figures (never change with the date model)
+
+| Item | Value |
+|---|---|
+| Opening balances (12 months ago) | Operating Checking $38,000 · Tax Reserve $3,200 · Business Savings $12,000 |
+| Business Savings | $250/month sweep + interest; never touched |
+| Agreements (monthly) | Westport Commons $2,400 · Fairway Medical Plaza $1,900 · Overland Park Office Suites $1,600 · Metro Auto Group $1,250 · Riverside Tap House $1,050 · Blue Line Fitness $780 · Crossroads Brewing $690 · Prairie Ridge Dental $650 · Sunflower Childcare $560 (from March) · St. Anselm $520 · Union Hill Apartments $460 (from August) · Liberty Storage $440 (from April) · Heartland Vet $380 |
+| Staged live surface | Westport Commons **$7,200, 18 days late** (largest overdue) · Trane Supply **$11,400 due in 18 days** (the early-payment temptation → hold) · bills due this week: Johnstone Supply **$6,850** (ACH), Voltage Electric **$2,150** (ACH), Ironclad Crane & Rigging **$1,900** (wire) · St. Anselm check **#4471 $520** deposited this week, not yet applied in the books · Angi Leads **$349** recurring debit (zero attributed jobs) |
+| Reserve on the live surface | ≈ $1,450 short (the last two Friday sweeps missed) — the exact figure is `tax.shortfall` |
+| Van | $58,500 all-in; finance option $10,000 down, 8.25%, 60 months (≈ $989/mo); +$165 insurance, +$320 fuel/maintenance; mileage offset ≈ $825/mo |
+| Bank fees | Service charge $25/mo; wires $30 out / $15 in |
+| Merchant fees | 2.99% + $0.30 card; 1% capped at $10 ACH; netted from settlements |
+| Engineered imperfections | three recent merchant settlements booked at gross (fee line missing: $71.56, $58.10, $102.30 short at the bank); one duplicate card charge refunded ($650); one failed card autopay; ≈ 5% of recent debit-card rows unrecorded in the books; one referral fee paid on an uncollected retainage invoice |
+
+Everything else — balances at demo time, monthly totals, DSO, aging, the
+bridge, the forecast, the lows — is generated and lands in the answer key.
+
+## Bank accounts (mock bank)
+
+| Account | Type | Purpose |
+|---|---|---|
+| Operating Checking (primary) | Checking | Everything operational |
+| Tax Reserve | Savings | Sales tax only; funded by the Friday sweep; the 20th remittances debit it |
+| Business Savings | Savings | The cushion Nick does not touch |
+
+The mock bank supports Checking and Savings only and its transaction record
+has seven fields, so **statement descriptors carry the rail**: `POS DEBIT …`,
+`RECURRING DEBIT …`, `ACH DEBIT …`, `ACH CR …`, `MOBILE CHECK DEPOSIT <n>`,
+`WIRE IN …` / `WIRE OUT …`, `INTUIT PYMT SOLN DEPOSIT`, `TRANSFER TO TAX
+RESERVE`, `SERVICE CHARGE`, `INTEREST PAID`. ≈ 100 rows/month, ≈ 1,000–1,200
+over 12 months across the three accounts, plus a handful of `pending` card
+authorizations in the current week. ≈ 200 targeted enrichment records
+(`get_transaction_detail`) cover settlements, remittances, referral fees and
+the recurring debits; enrichment is best-effort and may be `null`.
+
+## What reconciles across the four sources
+
+| Event | Bank | QuickBooks | Gmail / Calendar |
 |---|---|---|---|
-| **Operating Checking** | Checking (primary) | $40,000 | **≈ $23,000** (engineered for the payroll-shortfall beat) |
-| **Reserve Savings** | Savings | $20,000 | ≈ $20,138 (interest only) |
-
-The $40,000 is the account's *opening* balance six months ago; gentle monthly
-drawdown + current-cycle one-offs land Operating at exactly **$23,000** by the
-horizon (verified by `paywhere-mcp-api`'s `npm test`). That sets up a believable
-small shortfall against Friday's ≈ $23,730 of obligations.
-
-## Date model (6 months, ending the most recent Sunday)
-
-The canonical dataset uses only **M-5…M-1 month tokens** and **W-1 weekday
-tokens** for posted rows — all of which always resolve on/before the horizon —
-so the posted-row set (and the closing balances) is **identical every day of the
-week** (Mon–Sat of the constant-horizon window; it rolls on the next Sunday).
-Due dates use `W+0:Fri(+N)` and shift with the run day by design. Full token
-grammar lives in the header of `src/demo/dates.ts`.
-
-- **M-5 … M-1** — five standard recurring months.
-- **Current cycle (W-1)** — last complete week; the demo surface (freshest
-  receipts, the unrecognized vendor, the one-off drains).
-
----
-
-## Clients (QBO customers) — standard month ≈ $25,200
-
-| Client | Pays by | Monthly | Personality |
-|---|---|---|---|
-| Thames Fintech Ltd | Wire | $6,400 | prompt |
-| Zurich Dynamics AG | Wire | $7,200 | prompt |
-| Alderbrook Ventures LLC | ACH-style | $4,800 | **slow — the overdue-AR payer** |
-| Mitsui Digital KK | Wire | $4,200 | **partial — two $2,100 halves** |
-| Hallsten & Berg AB | ACH-style | $2,600 | **the unrecorded "phantom" credit** |
-
-Wire receipts seed as `DomesticWire` deposits with `inboundWireData`; ACH-style
-credits seed as `Transfer` deposits with an `ACH CR <CLIENT>` statement
-description (the mock bank can't post ACH *deposits*).
-
-## Workers (contractors) — pay = bill ÷ 1.3
-
-| Worker | Placed at | Monthly pay | Rail |
-|---|---|---|---|
-| Priya Raman | Thames | $4,920 | ACH |
-| Marcus Webb | Alderbrook | $3,690 | ACH |
-| Elena Sorokina | Zurich | $5,540 | Wire |
-| Devon Okafor | Mitsui | $3,230 | Stablecoin |
-
-Monthly contractor run total = **$17,380** (the recurring Friday obligation in
-beat #5). Seeded as historical monthly bank debits (the "old processor"
-baseline) and as paid QBO bills against worker-vendors.
-
-**Pay-and-bill weekly hours** (phase-2 B; last week, whole-dollar hours×rate,
-bill = pay×1.3 exactly), seeded as QBO **time-activities**:
-
-| Worker | Hours | Pay rate | Weekly pay | Bill rate | Weekly bill |
-|---|---|---|---|---|---|
-| Priya Raman | 40 | $40 | $1,600 | $52 | $2,080 |
-| Marcus Webb | 36 | $30 | $1,080 | $39 | $1,404 |
-| Elena Sorokina | 40 | $60 | $2,400 | $78 | $3,120 |
-| Devon Okafor | 32 | $50 | $1,600 | $65 | $2,080 |
-
-## Vendors (AP) — standard month
-
-ACH: AWS $760 · Gusto biweekly $3,600 (×2 = $7,200/mo) · Google Workspace $150 ·
-Slack $120 · HubSpot $360 · Grant Henderson CPAs $470 · DigitalOcean $200.
-Wire: **Sutter Hill Properties** rent $2,100 + $45 wire fee.
-
-All vendors + the ACH/Wire workers + the ACH/Wire commission payees are
-**seeded as saved payees at seed time**, so a pay step passes only the payee's
-**name** (`recipientId`) + amount and the bank resolves the bank details. The
-match is forgiving on minor name variations (suffix/spacing/case); the payee
-name is the same name that appears on the QuickBooks vendor/worker record.
-
-## Commission map (server-side; phase-2 C)
-
-| Client | Rate | Payee | Rail | Commission (full month) |
-|---|---|---|---|---|
-| Thames Fintech | 5% | Jane Doe Referrals | ACH | $320 |
-| Alderbrook | 5% | Jane Doe Referrals | ACH | $240 |
-| Zurich Dynamics | 10% | Acme Sales Partners LLC | Wire | $720 |
-| Mitsui Digital | 10% | CryptoConsult DAO | Stablecoin | $420 (half: $210) |
-| Hallsten & Berg | — | — | — | **deliberately absent → "skipped, not in register"** |
-
-All gross × rate are whole dollars by design.
-
----
-
-## The six Phase-1 beats (what each one shows)
-
-1. **Show balances** — Operating ≈ $23,000, Reserve ≈ $20,138.
-2. **Categorize spending (6 months)** — reads the bank; contractor labor, payroll
-   (Gusto), rent, cloud/SaaS, the NorthPeak charge.
-3. **Investigate + reconcile NorthPeak** — ONE distinctive ACH debit of
-   **$1,280**, dated `W-1:Tue`, with a deliberately cryptic statement line
-   `ACH DEBIT NPA*ENRICH 8002231` (a processor passthrough — neither the vendor
-   name nor anything that auto-matches the books; `8002231` echoes contract
-   NP-2231). `get_transaction_detail` returns only a sparse breadcrumb — the
-   invoice reference `NP-INV-4471`, nothing about who or why — so the agent
-   **searches Gmail** for that invoice and finds it: NorthPeak Analytics LLC,
-   "Data enrichment subscription — annual, billed in arrears (contract #NP-2231)",
-   and that it **auto-renewed at a higher rate ($1,200 → $1,280)**, signed by
-   M. Webb 11 months ago.
-   **Reconciliation (narrate-only):** the matching QBO bill `PWD-BILL-0601` is
-   still the OLD **$1,200** rate and is **OPEN/unpaid** — the bank payment never
-   matched (wrong amount + unrecognizable descriptor). The agent explains the
-   fix — update the bill to $1,280 and record a bill payment against this
-   charge — **without performing it**: the shared demo books are read-only
-   (they reseed server-side daily), so the write-back is narrated as what
-   would happen outside a demo. (The bill's due date is `W+0:Fri+7`, out of
-   the beat-4 window, so it never appears in "pay bills due this week"; the
-   discrepancy stays on the books all demo — by design.)
-4. **Pay bills due this week (ACH + Wire, saved payees)** —
-   overdue ≈ **$1,840** (DigitalOcean $300 ACH due `W-1:Mon`, Sutter Hill $560
-   **wire** due `EOM-1`, Grant Henderson $980 ACH due `W-1:Fri`) + due-this-week
-   ≈ **$910** (AWS $760 + Google Workspace $150, both ACH due `W+0:Fri`).
-5. **Payroll shortfall** — Operating closes ≈ $23,000 at seed; after the beat-4
-   bills clear (~$2,750) it sits at ≈ **$20,250**. Friday obligations ≈
-   Gusto $3,600 + contractor cycle $17,380 = **$20,980** → a believable ~$730
-   shortfall. Collectible AR =
-   Alderbrook $4,800 + Mitsui half $2,100 = **$6,900** comfortably covers the gap
-   → the natural move is "chase Alderbrook," **not raid the Reserve**. **Hallsten's
-   $2,600 `W-1:Mon` bank credit is unrecorded in QBO (phantom) and must be excluded
-   from collectible AR.**
-   - **Mid-demo:** the presenter posts Alderbrook's live $4,800 deposit via
-     `deposit_to_mock_account`, then "check again."
-6. **Move money (closer)** — once payroll is secured, a modest **checking →
-   savings** sweep (~$3,000): after Alderbrook, Operating ≈ $25,050 → ≈ $22,050,
-   still clearing the ≈ $20,980 Friday payroll run. Placed AFTER the payroll beat
-   on purpose — an earlier savings→checking transfer would erase the shortfall;
-   moving surplus INTO the Reserve reinforces "the Reserve is for saving, not a
-   payroll backstop."
-
-## Reconciliation (standing discrepancies — keeps month-end-prep honest)
-
-- **NorthPeak amount mismatch (beat #3):** the bank auto-debited the **renewed
-  $1,280** annual rate under a cryptic descriptor, but QBO bill `PWD-BILL-0601`
-  is still the **old $1,200** and **open/unpaid** (the payment never matched).
-  This is the reconciliation the agent demonstrates by **narration**: it
-  explains the fix (update the bill to $1,280 and record the payment) without
-  writing it — the shared books are read-only. Because it's an open bill, it
-  adds **$1,200 to open AP** — so QBO **open AP seeds at $3,950** ($2,750
-  due-this-week + the $1,200 NorthPeak item) and stays there. It is dated out
-  of the beat-4 window, so the pay-bills ($2,750) and payroll beats are
-  unaffected.
-- **Interest credit (a):** a small current-week Reserve interest credit
-  ($13.40) in the bank with **no QBO counterpart**.
-- **Wire fee (b):** a tiny promo wire fee ($1.20) in the bank that QBO books as
-  $0.00.
-- The **Hallsten $2,600 phantom** is a deliberate, *large* discrepancy
-  (received in bank, not recorded in QBO) — the bookkeeping beat, not "drama."
-
-Per month: invoiced = payments received = bank client credits; bills paid = bank
-debits. The current cycle is intentionally incomplete in QBO (Alderbrook open,
-Hallsten unrecorded), which is the demo surface.
-
-## Bank vs books scope (a documented compromise)
-
-The **bank** carries a full **6 months** (so "categorize spending" is rich); the
-**books** carry the current cycle in full plus `QBO_HISTORY_MONTHS` (2) recent
-matched months — enough for month-end-prep, business-pulse, open AR/AP, and the
-discrepancies — to keep the daily server-side books reseed within a sane number
-of QBO API calls. See `paywhere-mcp/DEMO-COMPROMISES.md`. Bump
-`QBO_HISTORY_MONTHS` (on the QBO demo deployment) for deeper books.
-
----
+| Agreement invoice paid | ACH CR / check deposit / merchant settlement | Invoice → Payment → Deposit | — |
+| Project milestone | WIRE IN + $15 fee | Invoice + Payment + Deposit | Contract email; milestone on the calendar |
+| Payroll run | GUSTO NET PAY + GUSTO TAX | Journal entry | Payroll-summary email; payday on the calendar |
+| Sales tax | Friday TRANSFER TO TAX RESERVE; 20th DEPT OF REVENUE debits from the reserve | Tax lines → liability accounts; Transfer; remittance Purchase | 20th deadline + Friday sweep events |
+| Owner estimates / distributions | IRS debit; owner transfer, from Operating | Equity draws | Quarterly estimate dates |
+| Vendor bill paid | ACH DEBIT / WIRE OUT | Bill → BillPayment | Vendor invoice email |
+| Debit-card purchase | POS DEBIT | Purchase (≈ 5% recent ones missing) | — |
+| Referral fee | ACH DEBIT on the 10th | Bill with per-customer memos | Agreement + monthly statement emails |
+| Merchant settlement | INTUIT PYMT SOLN DEPOSIT (net) | Deposit (gross − fee; 3 recent missing the fee) | — |
+| Subscription | RECURRING DEBIT | Purchase | Renewal email |
+| Vehicle | — | Estimates, mileage in payroll JEs | Quote, term sheet, insurance emails; dealer appointment |
 
 ## Verification
 
-`paywhere-mcp/paywhere-mcp-api` ships `npm test`
-(`scripts/verify-demo.mjs`): the date engine against the worked example
-(clamps, weekend roll-backs, drops, same-week determinism) and dataset
-reconciliation (Operating closes at exactly $23,000 on many run dates, Reserve
-≈ $20k, deposits precede withdrawals, posted rows byte-identical across the
-week). Run it after any number change here.
+`paywhere-mcp-api` ships `npm test` (`scripts/verify-demo.mjs`): the world
+closes deterministically within a week, answer-key balances equal the running
+sums, deposits precede withdrawals per account, the operating balance never
+goes negative, the fixture deep-equals `buildWorld(fixture.dateModel)` in
+both repos, and the reserve/tax invariants hold. `/demo-setup`'s readback
+asserts the same closings through the connector.
+
+## Frozen: Meridian Staffing (D9)
+
+The previous world (Meridian Staffing & Advisory, six months, one payroll
+squeeze) and the `pay-and-bill` / `pay-commissions` skills are kept for
+reference and not maintained; its books are no longer reseeded. The old
+generator is `paywhere-mcp-api/src/demo/legacy/meridianBankDataset.ts`.

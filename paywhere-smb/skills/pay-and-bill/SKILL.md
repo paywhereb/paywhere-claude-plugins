@@ -1,19 +1,18 @@
 ---
 name: pay-and-bill
-version: 0.3.0
+version: 1.0.0
 description: >
-  Runs the hours-to-cash cycle for a staffing firm: reads last period's worker
-  hours from QuickBooks time-activities, aggregates per worker and per client,
-  presents the client invoices (narrating the QuickBooks invoicing that would
-  happen outside a demo — the demo books are read-only), pays each worker over
-  their Paywhere rail (ACH / Wire / Stablecoin) in one batch, narrates the
-  Bill + Bill Payment booking per worker, and reconciles against the bank.
-  Worker rates and rails come from the QuickBooks vendor records; a pay step
-  passes the worker's name (recipientId) + amount and the bank resolves the
-  saved payee. Dedupes on the bank side via the PWD-PB markers carried in each
-  payment's description, so re-runs are surfaced. Use when the owner says
-  "bill clients for hours," "invoice the hours," "pay my contractors," "pay
-  the workers," or "run the pay-and-bill cycle."
+  (Staffing vertical, frozen — D9. Not part of the Nick's HVAC demo and not
+  maintained; kept for reference against the retired Meridian Staffing
+  world. Predates the propose-only approval path: on the demo deployment the
+  payment tools STAGE a /confirm proposal instead of executing — see
+  ../_shared/APPROVAL.md.) Hours-to-cash cycle for a staffing firm: reads a
+  period's worker hours from QuickBooks time-activities, presents each
+  client's billing (invoicing narrated, books read-only), pays workers over
+  their Paywhere rail in one batch by saved-payee name, narrates the Bill +
+  Bill Payment booking, reconciles against the bank, dedupes on PWD-PB
+  markers. Trigger phrases: "bill clients for hours," "invoice the hours,"
+  "pay my contractors," "run the pay-and-bill cycle."
 ---
 
 # Pay and Bill

@@ -1,30 +1,28 @@
 ---
 name: month-end-prep
+version: 1.0.0
 description: >
-  Walks an SMB owner through month-end close: reconciles QuickBooks against
-  Paywhere bank lines (the actual cash movement out of every connected
-  account), flags uncategorized transactions, suspicious duplicates, and
-  missing receipts, then writes a plain-English P&L narrative and exports a
-  close packet (xlsx + one-page PDF). Use when the user says "close the
-  month," "month-end," "reconcile," "what's missing," "P&L," or asks why
-  revenue or margin changed this month.
+  Month-end close for an owner-operated business: reconciles the QuickBooks
+  register against the bank lines of every account, matches merchant
+  settlements gross-to-net (the bank deposit is net of fees; the books'
+  Deposit is gross with a fee line), catches deposits whose merchant fee was
+  never posted, finds debit-card purchases that never made it into the
+  books, surfaces refunds and failed autopays, flags uncategorized and
+  duplicate entries, then writes a plain-English P&L narrative and a close
+  packet (xlsx + one-page PDF) into the working folder. Reads only; every
+  bookkeeping fix is narrated, never performed. Use when the owner says
+  "close the month," "month-end," "reconcile," "what's missing in the
+  books," "P&L," or asks why revenue or margin changed this month.
 ---
 
 # Month End Prep
 
-## Quick start
-
-Connect QuickBooks and Paywhere, then say "let's close the month." Claude
-walks you through each step of the checklist, pausing for your input at each
-gate before moving forward.
-
-If a connector is missing, Claude falls back to asking for a CSV export — it won't
-silently skip a step.
-
-## Workflow
-
-Work through these steps in order. Each step has a completion state; don't advance
-until the current step is settled.
+Classical bank reconciliation plus the three things a service business with
+a merchant account gets wrong every month: settlements land **net**, some
+deposits are booked **gross** without the fee line, and a slice of card
+purchases never reach the books. The bank is the evidence; the books are
+what gets corrected. The demo books are read-only, so every fix is narrated
+as the two-line correction a bookkeeper would make.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1 (subject = the step's name, e.g. "Step 1 — Agree on the target
@@ -32,170 +30,144 @@ month"), then `TaskUpdate` it to `in_progress` when you begin that step and
 `completed` when it's done. This is what drives Cowork's visible progress
 display — it does not happen unless you do it explicitly.
 
-### Step 1 — Agree on the target month
+## Step 1 — Agree on the target month
 
-Ask the user which month to close. Default to the prior calendar month if they don't
-specify. Confirm before pulling any data.
+Default: the prior calendar month, resolved from the actual date. Confirm in
+one line before pulling.
 
-### Step 2 — Pull QuickBooks P&L and transaction register
+## Step 2 — Books: P&L and register
 
-Fetch:
-- Profit & Loss report for the target month (revenue, COGS, gross margin, operating
-  expenses, net income)
-- Transaction register: every income and expense line item
+`get_profit_and_loss` for the month; the register from `search_invoices`,
+`search_payments`, `search_deposits`, `search_bills`, `search_bill_payments`,
+`search_purchases`, `search_transfers`, `search_journal_entries`,
+`search_credit_memos`. Flag **uncategorized** lines (see
+`reference/quickbooks-reconcile.md`) and list them; do not advance with open
+ones unless the owner says "skip for now".
 
-Flag immediately:
-- **Uncategorized transactions** — any line with category "Uncategorized" or blank
-- **Ask Questions / Needs Review** — QB's own flag
+## Step 3 — Bank: every account, the whole month
 
-Present the count ("14 transactions need a category") and list them for the user to
-classify before proceeding. Don't advance with open uncategorized items unless the
-user explicitly says "skip for now."
+`list_accounts` → for each account `query_transactions {dateFrom, dateTo,
+status: ["posted"]}` (slice by half-month if `truncated`). Pending rows at
+month end go in an `IN_TRANSIT` bucket. Descriptor conventions are in
+`reference/paywhere-bank-lines.md`.
 
-See [reference/quickbooks-reconcile.md](reference/quickbooks-reconcile.md) for field
-mappings and API notes.
+## Step 4 — Reconcile (the matching pass)
 
-### Step 3 — Reconcile Paywhere bank lines against QuickBooks
+Walk bank lines against the register: amount within $0.50, date ±2 days,
+same sign → **RECONCILED**; else `DATE_MISMATCH`, `MISSING_IN_QB`,
+`MISSING_IN_BANK`. Then run the three checks below **before** reporting the
+gaps — they explain most of them.
 
-This is classical bank reconciliation: every line that hit the bank should
-map to a book entry, and every book entry that claims to have hit the bank
-should be findable on a real statement.
+### 4a. Merchant settlements, gross to net
 
-For each Paywhere account returned by `list_accounts`, call
-`get_account_transactions` for the target month. Then walk each Paywhere
-line against the QuickBooks transaction register:
+A merchant deposit at the bank (`INTUIT PYMT SOLN DEPOSIT`-style, one per
+settlement day) is **net** of processing fees. The books' Deposit
+(`search_deposits`) groups that day's card/pay-by-link payments from
+Undeposited Funds at **gross** and carries a **negative fee line** to the
+merchant-fee expense account. Match on date ±2 (T+1 card, T+2 ACH) and
+`bank amount == deposit gross + fee line` (fee line is negative). A match
+is one reconciled row even though the two amounts differ; show gross, fee,
+net.
 
-- **Match** — amount and date agree within ±2 days, signs align (Paywhere
-  credit ↔ QB deposit, Paywhere debit ↔ QB expense) → mark as reconciled
-- **Difference < $0.50** — rounding/fee; note but don't flag
-- **Difference ≥ $0.50** — flag with the delta amount and both source lines
-- **Paywhere line exists, no QB entry** — flag as "missing in QuickBooks"
-  (typical cause: bank-side activity the bookkeeper hasn't posted yet,
-  e.g. interest credit, bank fee)
-- **QB entry exists, no Paywhere line** — flag as "missing in Paywhere"
-  (typical cause: a check that hasn't cleared yet, or a deposit posted to
-  QB ahead of the bank)
+### 4b. Unposted fees
 
-Pending wires and ACH show up via `get_wire_payment_status` /
-`get_ach_payment_status` — include them in the unreconciled bucket with an
-expected-settle date so the owner knows what to expect after the month
-rolls.
+A books' Deposit **without** a fee line whose gross exceeds the bank deposit
+by a plausible fee — 1–4% of gross plus a few cents per payment — is a
+**fee not posted**. List each: deposit ref, books gross, bank net,
+difference. The correction (narrated): add the negative merchant-fee line
+for the difference so the Deposit equals the bank; the P&L picks up the fee.
+Sum the differences — this is the month's unbooked merchant expense.
 
-See [reference/paywhere-bank-lines.md](reference/paywhere-bank-lines.md) for
-the Paywhere transaction shape and counterparty-extraction heuristics.
+### 4c. Unrecorded card purchases
 
-### Step 4 — Detect suspicious duplicates
+Bank `POS DEBIT` / `RECURRING DEBIT` rows with no `search_purchases` match
+(amount ±$0.50, date ±2) are **not in books**. List them with the descriptor
+stem and the expense account a prior purchase for the same stem used, if
+any. Recurring ones may also be a `../subscription-audit` finding.
 
-Scan the transaction register for likely duplicate charges or deposits. Flag a
-transaction as a suspicious duplicate when **all three** match:
-- Same amount (within $0.01)
-- Same vendor or customer name
-- Posted within 5 calendar days of each other
+### 4d. Refunds and failed autopays
 
-Present flagged pairs to the user. They decide whether each is legitimate (e.g., a
-recurring weekly subscription) or a real duplicate to void.
+- A bank **debit** with a refund/card-return descriptor, or a books
+  `RefundReceipt` / `CreditMemo`, is a refund — match it to the credit memo,
+  not to a deposit (see `reference/gotchas.md`).
+- A recurring customer payment that is present in prior months and absent
+  this month (no bank credit, no books payment, invoice still open) is a
+  **failed autopay** candidate: name the customer and the open invoice; the
+  follow-up is `../invoice-chase`.
 
-See [reference/gotchas.md](reference/gotchas.md) for common false-positive patterns
-and how to distinguish them.
+## Step 5 — Duplicates
 
-### Step 5 — Receipts check (Desktop connector)
+Same amount (±$0.01), same counterparty, within 5 days, distinct `TxnID` →
+suspicious duplicate. Present pairs; the owner decides.
 
-If the Desktop connector is available, scan the receipts folder (ask the user for the
-path; default `~/Documents/Receipts`) for the target month.
+## Step 6 — Receipts
 
-For each expense transaction in QuickBooks above $25 with no attached document:
-- Check for a matching receipt file (match by amount ± $0.50 and date within 3 days)
-- **Matched** → note as "receipt on file"
-- **Not matched** → flag as "missing receipt"
+Books expenses above $75 with no attachment: list them and ask the owner
+which have receipts. Do not skip silently; do not go looking on the owner's
+machine.
 
-List missing receipts. The user can supply the file or mark as "receipt not required"
-(e.g., a recurring auto-pay with no receipt).
-
-If Desktop connector is not available, ask the user to confirm which expenses they have
-receipts for — don't silently skip this step.
-
-### Step 6 — Owner sign-off gate
-
-Present a summary before going further:
+## Step 7 — Owner sign-off gate
 
 ```
-Uncategorized transactions:  X of X resolved
-Settlement discrepancies:    X flagged, X resolved
-Suspicious duplicates:       X flagged, X cleared
-Missing receipts:            X outstanding
+Uncategorized:            X of X resolved
+Settlement matches:       X matched gross→net · X fees not posted (${total})
+Unrecorded card purchases: X (${total})
+Refunds / failed autopay: X
+Missing in books / bank:  X / X
+Suspicious duplicates:    X flagged, X cleared
+Missing receipts:         X outstanding
 ```
 
-Ask: "Ready to write the P&L summary and export the close packet?"
+Ask: "Ready to write the P&L summary and export the close packet?" **Do not
+proceed without explicit confirmation.** Every open flag is acknowledged or
+explicitly deferred (deferred items go to the Action Items sheet).
 
-**Do not proceed to Steps 7–8 without explicit confirmation.**
+## Step 8 — P&L narrative
 
-### Step 7 — Write the P&L narrative
+150–250 words, plain English: headline, revenue drivers (customers,
+categories; note concentration), gross margin, expense lines that moved >10%,
+bottom line, watch list. Include one sentence on cash vs profit if the bank
+balance moved differently from net income (hand off to `../cash-bridge` for
+the full bridge). See `reference/examples/pl-narrative.md`.
 
-Write a plain-English summary of the month — the kind an owner would share with their
-spouse or accountant, not a CFO memo. Aim for 150–250 words.
+## Step 9 — Export the close packet
 
-Structure:
-1. **Headline** — one sentence: "March came in at $X net, up/down Y% from February."
-2. **Revenue** — what drove the number; name products, services, or customers if
-   the data shows concentration.
-3. **Gross margin** — whether it held, rose, or compressed, and the main reason why.
-4. **Key expenses** — any line that moved more than 10% MoM or is outside the normal
-   range; one sentence each.
-5. **Bottom line** — net income vs. prior month; ask if they have a target to compare.
-6. **Watch list** — 1–3 things to monitor next month.
+Write into the working folder:
 
-Avoid jargon; define anything that isn't plain English ("MoM" = month over month).
+- `close/close-packet-YYYY-MM.xlsx` — sheets `P&L`, `Reconciliation`
+  (with the gross/fee/net columns for settlements), `Settlement Fees`,
+  `Unrecorded Purchases`, `Action Items` — layout in
+  `reference/close-packet-format.md`.
+- `close/close-packet-YYYY-MM-summary.pdf` — one page.
 
-See [reference/examples/pl-narrative.md](reference/examples/pl-narrative.md) for a
-worked example.
+Confirm the paths. Nothing is emailed; if the owner wants it sent to the
+accountant, create a Gmail **draft** with the files attached (never send).
 
-### Step 8 — Export the close packet
+## Narrate, never write
 
-Produce two files:
-
-**`close-packet-[YYYY-MM].xlsx`** — three sheets:
-- `P&L` — the QuickBooks P&L data, formatted
-- `Reconciliation` — matched and flagged transactions side by side
-- `Action Items` — any outstanding flags (uncategorized, missing receipts, etc.)
-
-**`close-packet-[YYYY-MM]-summary.pdf`** — one page:
-- Month and business name at the top
-- Key figures (revenue, gross margin %, net income)
-- The P&L narrative from Step 7
-- Count of open action items, if any
-
-Save both to the Desktop (or a path the user specifies). Confirm the file locations.
-
-See [reference/close-packet-format.md](reference/close-packet-format.md) for column
-specs and PDF layout details.
+The demo QuickBooks connector is read-only (the shared books reseed daily).
+For each correction say what would be booked outside a demo — "add a
+−$71.56 Merchant Fees line to Deposit 1043", "record a $38.20 Purchase to
+Vehicle:Fuel for the 14th" — and move on. Never claim a fix was made.
 
 ## Approval gates
 
-- **Never run reconciliation on a month that has been filed.** Confirm the books are
-  still open before pulling data.
-- **Never void or modify a QuickBooks transaction directly.** Surface flags; the owner
-  makes changes in QuickBooks.
-- **Always pause at Step 6** before producing outputs. Unresolved flags must be
-  acknowledged or explicitly skipped.
+- Never reconcile a month the owner says has been filed.
+- Never void, modify or create a QuickBooks transaction.
+- Always pause at Step 7.
+- No money moves from here; anything to pay is `../pay-bills`.
 
 ## Graceful degradation
 
-| Missing connector | Fallback |
+| Missing | Fallback |
 |---|---|
-| QuickBooks | Ask for a QB export CSV (P&L + transaction detail) |
-| Paywhere | Ask for a CSV export from the Paywhere dashboard (transactions for the target month, per account) |
-| Desktop (receipts) | Ask the user to confirm receipt status for each flagged expense |
+| quickbooks | Ask for a register + P&L CSV export; run the bank-side checks (4c, 4d) regardless. |
+| Paywhere | Ask for a per-account CSV export of the month; settlement checks (4a/4b) still run against it. |
 
 ## Reference files
 
-- [reference/quickbooks-reconcile.md](reference/quickbooks-reconcile.md) — QB field
-  mappings, API pagination, common data issues
-- [reference/paywhere-bank-lines.md](reference/paywhere-bank-lines.md) —
-  Paywhere transaction shape, signed-amount semantics, counterparty
-  extraction heuristics
-- [reference/close-packet-format.md](reference/close-packet-format.md) — xlsx column
-  specs, PDF layout, file naming convention
-- [reference/gotchas.md](reference/gotchas.md) — duplicate false positives, split
-  transactions, partial-month edge cases
-- [reference/examples/pl-narrative.md](reference/examples/pl-narrative.md) — worked
-  P&L narrative example
+- `reference/paywhere-bank-lines.md` — descriptor conventions per rail, settlement matching, counterparty extraction
+- `reference/quickbooks-reconcile.md` — books fields, uncategorized rules, split transactions
+- `reference/close-packet-format.md` — xlsx sheets and PDF layout
+- `reference/gotchas.md` — refunds vs deposits, splits vs duplicates, fee lines, the sign-off gate
+- `reference/examples/pl-narrative.md` — worked narrative

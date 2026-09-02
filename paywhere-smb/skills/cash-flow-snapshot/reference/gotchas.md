@@ -1,67 +1,29 @@
 # Gotchas — cash-flow-snapshot
 
-Known edge cases and connector failure modes. 2–5 entries, Good/Bad format.
+## 1. Counting the reserve or savings as cash
+**Bad:** summing all three balances as the opening position.
+**Good:** Operating only. The Tax Reserve holds money the business owes the state; Business Savings is the owner's cushion. Say both are excluded, every run.
 
----
+## 2. Timing AR by due date instead of behavior
+**Bad:** placing an invoice's cash in its due-date week.
+**Good:** due date + the customer's mean lag from 12 months of paid invoices. A routinely-late payer's invoice lands two or three weeks later than the books suggest; that is often the whole minimum-balance story.
 
-## 1. QuickBooks AR aging includes invoices already collected
+## 3. Double-counting a received-but-unbooked credit
+**Bad:** an invoice still open in the books whose check already cleared the bank appears both in the opening balance and in week-1 inflows.
+**Good:** match recent bank credits (`query_transactions direction: "credit"`, 14 days) to open invoices on amount + counterparty stem; drop matched invoices from inflows and note them for the bookkeeper.
 
-**Bad:** Including fully-paid invoices from the AR aging report inflates inflow
-projections. QuickBooks sometimes shows $0-balance invoices in aging exports.
+## 4. Modeling bills at the owner's habit instead of the due date
+**Bad:** pulling a bill forward because the owner "always pays that one early."
+**Good:** model at due date and annotate the habit. The gap between the two is the `pay on due date` lever.
 
-**Good:** Filter AR rows to `balance_due > 0` before computing inflows. If the
-connector doesn't expose balance_due, cross-reference against Paywhere credits
-(`get_account_transactions` with positive `amount` in the same window as the
-invoice due date) and subtract any matching deposit from the invoice total
-before including it.
+## 5. Payroll from the books instead of the bank
+**Bad:** reading payroll from journal entries only, missing the split between net and tax debits and the actual debit day.
+**Good:** the bank's processor debits show the real cadence and total; the books confirm the components.
 
----
+## 6. Calendar events with no amount
+**Bad:** silently skipping them, or inventing a figure.
+**Good:** list them under "dated, unquantified" so the owner can supply the number; they become owner-stated lines.
 
-## 2. Pending Paywhere transactions are not the same as settled cash
-
-**Bad:** Treating pending Paywhere debits/credits as already settled. ACH
-receipts can take 1–3 business days to clear; an in-flight wire may show up
-as pending until the same day it lands. Counting them as settled inflows
-produces overconfident cash timing.
-
-**Good:** When pulling `get_account_transactions`, separate settled lines
-from pending ones (the upstream payload exposes status — pending wires
-through `get_wire_payment_status`, pending ACH through
-`get_ach_payment_status`). Apply expected clearing windows: ACH 1–3 business
-days, wire same-day, stablecoin receipt minutes-to-hours.
-
----
-
-## 3. CSV column names are inconsistent across accounting exports
-
-**Bad:** Requiring exact column names like "Date", "Amount", "Type". QuickBooks
-CSV exports use "Transaction Date", "Amount", "Transaction Type". Wave uses
-"Date", "Amount", "Account Type". Rigid parsing fails silently.
-
-**Good:** Fuzzy-match column headers (date → transaction date → txn date;
-amount → debit/credit; type → category → account type). Show the header row
-to the user and confirm mapping before computing — one question beats a silent
-wrong forecast.
-
----
-
-## 4. Fixed costs hidden in one-off AP entries
-
-**Bad:** Only pulling recurring line items labeled as "recurring" in QuickBooks.
-Many SMBs don't tag fixed costs consistently — rent may appear as a one-off
-vendor bill each month.
-
-**Good:** Look for AP entries that appear in 3+ consecutive months with the same
-vendor and similar amount (±10%). Treat these as recurring fixed costs in the
-forecast. Surface the list to the user: "I'm treating these as fixed monthly
-costs — does that look right?"
-
----
-
-## 5. Confidence band formula breaks when mean payment lag is zero
-
-**Bad:** Dividing stddev by a mean lag of 0 (e.g. customers who pay
-immediately by wire) produces a divide-by-zero error or an infinite band.
-
-**Good:** If mean lag ≤ 1 day, set band_pct to 5% (low variance, near-immediate
-settlement). Don't attempt the division.
+## 7. `query_transactions` truncation
+**Bad:** aggregating over a window that returns `truncated: true`.
+**Good:** narrow to one account or a shorter window and re-query; 3 accounts × 12 months normally fits under the scan cap.

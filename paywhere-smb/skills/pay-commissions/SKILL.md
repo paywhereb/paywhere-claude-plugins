@@ -1,17 +1,17 @@
 ---
 name: pay-commissions
-version: 0.4.0
+version: 1.0.0
 description: >
-  Pays sales commissions on payments your business actually received, across
-  all three Paywhere rails (ACH, Wire, Stablecoin). Uses the business's
-  commission map (client → rate → payee → rail), matches Paywhere bank credits
-  to QuickBooks customer payments, computes each commission, dedupes against
-  already-paid runs via the COMM- marker each disbursement carries at the
-  bank, and — only after you approve — disburses the whole batch in a single
-  make_batch_payment call, narrating the Bill + Bill Payment booking that
-  would happen in QuickBooks outside a demo (the demo books are read-only).
-  Use when the owner says "pay commissions," "run commissions for last week,"
-  "pay my reps," or asks who is owed commission.
+  (Staffing vertical, frozen — D9. Not part of the Nick's HVAC demo and not
+  maintained; kept for reference against the retired Meridian Staffing
+  world. Predates the propose-only approval path: on the demo deployment the
+  payment tools STAGE a /confirm proposal instead of executing — see
+  ../_shared/APPROVAL.md.) Pays sales commissions on payments actually
+  received across ACH / wire / stablecoin from a commission map (client →
+  rate → payee → rail), matching bank credits to QuickBooks customer
+  payments, deduping on COMM- markers, one batch after approval, Bill + Bill
+  Payment booking narrated. Trigger phrases: "pay commissions," "run
+  commissions for last week," "pay my reps," "who is owed commission."
 ---
 
 # Pay Commissions

@@ -1,13 +1,27 @@
 ---
 name: friday-brief
-description: Delivers the Friday end-of-week pulse — revenue vs prior week, top sellers, wins and watches. Accepts optional lookback window of 7 or 14 days.
+version: 1.0.0
+description: >
+  The Friday end-of-week pulse: cash actually collected this week vs last
+  (bank), booked revenue vs prior week (books), top and bottom services or
+  customers, wins, and watches — including this week's merchant settlements
+  that do not match the books gross-to-net, fee lines the bookkeeper did not
+  post, debit-card purchases not yet recorded, and whether this week's
+  sales-tax sweep is staged. Reads only; saves the brief to the working
+  folder. Accepts an optional lookback of 7 or 14 days. Use when the owner
+  says "end of week," "how'd we do this week," "Friday recap," or "Friday
+  brief."
 allowed-tools: Read, WebFetch, Bash
 ---
 
-Run the Friday wins-and-watches briefing. Pull the numbers, surface what matters, and give the owner a clean end-of-week picture.
+Run the Friday wins-and-watches briefing. Pull the numbers, surface what
+matters, give the owner a clean end-of-week picture. Nothing here moves
+money or writes to the books; the sweep and any drafts are other skills.
 
 Parse arguments:
 - `--lookback` (default: `7d`) — `7d` for one week or `14d` for a two-week rolling comparison
+
+Resolve "this week" from the actual current date (Monday through today).
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1 (subject = the step's name, e.g. "Step 1 — Revenue pulse"), then
@@ -17,24 +31,45 @@ does not happen unless you do it explicitly.
 
 ## Step 1 — Revenue pulse
 
-Using the `business-pulse` skill workflow:
+Using the `business-pulse` skill's data map:
 
-1. Pull QuickBooks revenue and Paywhere inflows (`get_account_transactions`, positive `amount`) for the lookback period.
-2. Calculate week-over-week revenue delta.
-3. Surface top 3 revenue sources (product / customer / channel) ranked by contribution, using QuickBooks product/service line items.
+1. **Cash in** — Paywhere `query_transactions {direction: "credit", dateFrom:
+   <lookback start>}` on the operating account; the same window one period
+   earlier for the delta. Label it "collected", distinct from booked.
+2. **Booked revenue** — quickbooks `get_profit_and_loss` for the window vs the
+   prior window (or `search_invoices` by date when the window is sub-month).
+3. Top 3 revenue sources (service line, customer or job class) by contribution.
 
 ## Step 2 — Sales breakdown
 
-1. List the top 5 selling products/services by volume and revenue.
-2. List the bottom 3 (anything that moved less than expected vs. prior period).
-3. Flag any items with a sudden spike or drop (>20% change).
+1. Top 5 services/customers by revenue this period.
+2. Bottom 3 (moved less than expected vs the prior period).
+3. Anything with a >20% swing.
 
-## Step 3 — Wins and watches summary
+## Step 3 — Bank-vs-books checks for the week (the watches the bank supplies)
 
-Format the output as:
+Run the three `month-end-prep` checks scoped to this week (method in
+[`../month-end-prep/SKILL.md`](../month-end-prep/SKILL.md)):
+
+- **Gross-to-net settlement matching** — each merchant settlement in the bank
+  (`INTUIT PYMT SOLN DEPOSIT`, net) vs the QBO deposit it should match
+  (gross − fee line). Unmatched or short → a watch with the difference.
+- **Unposted fee lines** — a QBO deposit whose net equals the bank credit
+  plus a fee-sized gap, with no negative "Merchant Fees" line → name it.
+- **Unrecorded card purchases** — `POS DEBIT` rows this week with no QBO
+  purchase (amount ± $0.50, ± 3 days) → count and total.
+
+Plus the **tax line**: sales tax inside this week's received payments (the
+[`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md) method) and whether a
+`TRANSFER TO TAX RESERVE` credit or a staged sweep exists for this week. If
+neither, the watch is "Friday sweep not staged — run the tax sweep".
+
+## Step 4 — Wins and watches summary
 
 ```
 Friday Brief — {date}
+
+Collected this week: ${amount} ({+/-}X% vs last week)   ·   Booked: ${amount} ({+/-}Y%)
 
 WINS
 • {win 1}
@@ -42,21 +77,23 @@ WINS
 • {win 3}
 
 WATCHES
-• {watch 1} — {recommended action}
-• {watch 2} — {recommended action}
-
-Revenue this week: ${amount} ({+/-}X% vs last week)
+• {settlement/fee/unrecorded-card item} — {recommended action: e.g. "have the bookkeeper post the fee line"}
+• {tax sweep this week ${x} — staged / not staged → run the tax sweep}
+• {other watch} — {recommended action}
 ```
+
+Save the brief as `briefs/friday-YYYY-MM-DD.md` in the working folder and say
+where it went.
 
 ## Connector failures
 
-Run with whatever is connected — this command degrades gracefully. If QuickBooks is missing, skip booked revenue and note "QuickBooks not connected — revenue data from Paywhere inflows only." If Paywhere is missing, skip cash inflows and note it. If neither is connected, stop and tell the owner: "No revenue sources connected. Connect QuickBooks or Paywhere to run the Friday brief."
+Run with whatever is connected. QuickBooks missing → collected-cash only,
+skip the bank-vs-books checks and say so. Paywhere missing → booked revenue
+only, no checks. Neither → stop: "No revenue sources connected."
 
 ## Approval gates
 
-- **Never send or post this brief automatically.** Always display it for the owner to review first.
-- **Never auto-cancel or modify anything.** Surface the data and recommendations only.
-
-## Output
-
-End with the formatted brief and ask the owner: "Want me to email this to yourself or save it to your drive?"
+- **Never send or post this brief.** Display it, save the file.
+- **Never stage or move anything from here.** The sweep is `tax-sweep-agent`
+  / `tax-reserve-check`; drafts are `invoice-chase`.
+- **Never write to QuickBooks** — the fee-line and purchase fixes are narrated.

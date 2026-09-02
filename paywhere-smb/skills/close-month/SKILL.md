@@ -1,14 +1,26 @@
 ---
 name: close-month
-description: Closes the month — reconciles QB vs payment processors, flags gaps, writes P&L narrative, exports close packet. Accepts optional month and save-to arguments.
+version: 1.0.0
+description: >
+  Closes the month: reconciles every bank account against the books, matches
+  merchant settlements GROSS-TO-NET (bank net vs QuickBooks deposit gross
+  minus the fee line), finds deposits whose fee line the bookkeeper never
+  posted, finds debit-card purchases not recorded in the books, flags gaps
+  and duplicates, writes the P&L narrative and exports the close packet to
+  the working folder. Narrates every bookkeeping fix (demo books are
+  read-only). Accepts optional month argument. Use when the owner says
+  "close the books," "close the month," "month-end," "reconcile," or "what's
+  missing from the books."
 allowed-tools: Read, WebFetch, Bash
 ---
 
-Run the month-end close workflow. Reconcile, flag gaps, narrate the P&L, and export the close packet for the owner's records (and their accountant).
+Run the month-end close workflow — the command wrapper for the
+[`../month-end-prep`](../month-end-prep/SKILL.md) skill. Reconcile, flag
+gaps, narrate the P&L, export the close packet. Nothing here writes to
+QuickBooks or moves money.
 
 Parse arguments:
-- `--month` (default: previous calendar month) — `YYYY-MM` format
-- `--save-to` (default `files`) — `files` (Google Drive), `desktop` (local), or `both`
+- `--month` (default: previous calendar month, from the actual current date) — `YYYY-MM`
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1 (subject = the step's name, e.g. "Step 1 — Reconcile"), then
@@ -16,71 +28,82 @@ Step 1 (subject = the step's name, e.g. "Step 1 — Reconcile"), then
 when it's done. This is what drives Cowork's visible progress display — it
 does not happen unless you do it explicitly.
 
-## Step 1 — Reconcile
+## Step 1 — Reconcile (month-end-prep)
 
-Trigger the `month-end-prep` skill workflow:
+Trigger the `month-end-prep` workflow for the target month:
 
-1. Pull all QuickBooks transactions for the target month.
-2. Pull every Paywhere account (`list_accounts`) and call `get_account_transactions` per account for the same month.
-3. Match QB entries to Paywhere bank lines by amount + date (±2 days) + sign.
-4. Surface three gap categories:
-   - **Missing in QuickBooks** — Paywhere shows a bank line with no corresponding QB entry (interest credit, bank fee, deposit not yet posted)
-   - **Missing in Paywhere** — QB shows a transaction with no bank line yet (outstanding check, deposit in transit)
-   - **Variance lines** — matched but amount differs (fees posted as their own Paywhere line; reconciles separately)
+1. Pull the QuickBooks register for the month (invoices, payments, deposits,
+   bills, bill payments, purchases, transfers, journal entries).
+2. Pull every Paywhere account (`list_accounts`) and `query_transactions`
+   per account for the month (`dateFrom`/`dateTo`; slice if `truncated`).
+3. Match by amount + date (±2 days) + sign. Surface:
+   - **Missing in QuickBooks** — a bank line with no book entry (interest,
+     bank fee, a check deposited but not applied, an unrecorded card purchase).
+   - **Missing in the bank** — a book entry with no bank line (uncleared
+     check, deposit in transit).
+   - **Variance lines** — matched but amounts differ.
 
-## Step 2 — Flag suspicious entries
+## Step 2 — The three settlement checks (by name)
 
-Surface in the same report:
-- **Uncategorized transactions** — QB entries with no category
-- **Suspicious duplicates** — same amount, same vendor, within 3 days
-- **Missing receipts** — QB entries above $75 with no attachment
+1. **Gross-to-net settlement matching** — every merchant settlement in the
+   bank (`INTUIT PYMT SOLN DEPOSIT`, net of fees) against the QBO Deposit
+   that groups the same card/check payments: bank net must equal deposit
+   gross plus the negative "Merchant Fees" line.
+2. **Unposted fee lines** — a deposit whose gross equals the bank credit plus
+   a fee-sized gap and which has **no** fee line: list each with the
+   difference; the fix (narrated, not performed) is adding the negative fee
+   line to that deposit.
+3. **Unrecorded card purchases** — `POS DEBIT` / `RECURRING DEBIT` rows with no
+   QBO Purchase (amount ± $0.50, ± 3 days): list each with descriptor and
+   amount; the fix (narrated) is recording the purchase to the right expense
+   account.
 
-For each, recommend an action: categorize as X, delete duplicate, attach receipt from inbox.
+Also: refunds (`RETURN` / negative settlement rows) vs QBO RefundReceipts,
+and the sales-tax transfers/remittances vs QBO Transfers/Purchases against
+the liability accounts.
 
-Wait for owner to triage flagged items before generating the narrative. Do not auto-categorize or auto-delete.
+## Step 3 — Flag suspicious entries
 
-## Step 3 — P&L narrative
+Uncategorized transactions; duplicates (same amount, same counterparty,
+within 3 days — a monthly subscription is not a duplicate); expenses above
+$75 with no receipt. Recommend an action per item. Wait for the owner to
+triage before the narrative. Do not auto-categorize or delete anything.
 
-After triage, generate a plain-English P&L narrative:
+## Step 4 — P&L narrative
 
 ```
-{Month YYYY} closed at ${revenue} revenue ({+/-}{X}% vs prior month).
-Top driver: {category/customer}. Biggest swing: {category} {direction} ${amount}
-because {reason inferred from transactions}.
-
-Margin: {X}% ({+/-}Y pts vs prior). {Cost-side commentary}.
-
-Three notable items:
-1. ...
-2. ...
-3. ...
+{Month YYYY} closed at ${revenue} revenue ({+/-}{X}% vs prior month); cash collected ${collected}.
+Top driver: {class/customer}. Biggest swing: {line} {direction} ${amount} because {reason}.
+Margin: {X}% ({+/-}Y pts). {Cost commentary}.
+Three notable items: 1. … 2. … 3. …
+Bank vs books: {n} settlements short ${x} (fee lines missing), {m} card purchases unrecorded ${y}, {k} other gaps.
 ```
 
-Numbers come from QB; the *why* comes from cross-referencing top transactions, vendor names, and prior-month deltas.
+## Step 5 — Export the close packet
 
-## Step 4 — Export the close packet
+Write to `close/` in the working folder:
 
-Generate two files:
+1. `close/close-packet-{YYYY-MM}.xlsx` — tabs `Reconciliation` (match table,
+   gap rows highlighted), `Settlements` (gross / fee / net / bank / difference
+   per settlement), `Flagged`, `P&L` (with prior-month delta), `Trial Balance`.
+2. `close/close-packet-{YYYY-MM}.pdf` — one-page summary: narrative, top-line
+   numbers, gap counts.
 
-1. **`close-packet-{YYYY-MM}.xlsx`** — multi-tab workbook:
-   - `Reconciliation` — QB ↔ Paywhere bank-line match table with gap rows highlighted
-   - `Flagged` — uncategorized / duplicates / missing receipts
-   - `P&L` — formatted income statement with prior-month delta column
-   - `Trial Balance` — accounts + ending balances
-2. **`close-packet-{YYYY-MM}.pdf`** — one-page summary: P&L narrative + top-line numbers + gap count
-
-Save both to the chosen `--save-to` location. Filename format: `close-packet-YYYY-MM.xlsx` (e.g. for the month being closed).
+Confirm the paths.
 
 ## Connector failures
 
-If QuickBooks is unreachable, stop — reconciliation requires QB as the books-side source of truth. If Paywhere is unreachable, fall back to CSV upload (the owner exports transactions per account from the Paywhere dashboard) and note "Paywhere connector unavailable — reconciling against CSV." If both QB and Paywhere are unreachable, stop and ask the owner to reconnect.
+QuickBooks unreachable → stop. Paywhere unreachable → ask for a per-account
+CSV export and note "reconciling against CSV". Both → stop.
 
 ## Approval gates
 
-- **Never auto-fix flagged items.** Always show the gap, recommend an action, wait for the owner.
-- **Never delete duplicates without explicit confirmation.** Show both records side-by-side.
-- **Saving the packet is auto** — it goes to the owner's own drive.
+- **Never fix flagged items in QuickBooks** — the demo books are read-only and
+  the write-back is the bookkeeper's; narrate the exact correction.
+- **Never delete duplicates**; show both records.
+- **Always pause after Step 3** before the narrative and export.
 
 ## Output
 
-End the run with a one-paragraph recap: revenue, margin, gap count remaining (if any), file paths to the saved packet. If gaps were not all resolved, list them so the owner can revisit.
+One-paragraph recap: revenue, collected, margin, settlement gaps, unrecorded
+purchases, remaining gaps, file paths.

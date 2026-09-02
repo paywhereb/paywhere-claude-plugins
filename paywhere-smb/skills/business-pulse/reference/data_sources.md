@@ -1,53 +1,43 @@
-# Data Sources
+# Data sources
 
-Exact mapping from each pulse section to the MCP tool that produces it. **Dispatch all calls in a single parallel batch** — do not pull serially.
+Fire everything in one parallel batch. Resolve dates from the actual current date.
 
-## Cash & Finance (Paywhere + QuickBooks)
-
-Cash position comes from Paywhere (real bank, real-time). The bookkeeping
-layer — MTD revenue, AR, AP — comes from QuickBooks.
+## Bank (Paywhere) — the facts only the bank knows
 
 | Metric | Tool | Notes |
 |---|---|---|
-| Core balance per account | Paywhere `list_accounts` → `get_account_balance` | One row per account (operating, reserve); sum for the headline number |
-| Pending balance per account | Paywhere `get_account_balance` | Include separately so the owner sees what's still clearing |
-| 7-day inflow / outflow | Paywhere `get_account_transactions` | Sum positive `amount` (inflow) and negative `amount` (outflow) over the last 7 days; compare to prior 7 |
-| Pending wires | Paywhere `get_wire_payment_status` | List any wire still pending past the same-day window with counterparty + amount |
-| Pending ACH | Paywhere `get_ach_payment_status` | List any ACH still pending past 3 business days with counterparty + amount |
-| MTD revenue | QuickBooks `profit-loss-quickbooks-account` | Current month vs. prior month |
-| Outstanding receivables | QuickBooks invoice list | Filter to open/unpaid |
-| AR aging | QuickBooks invoice list | Group by days since due: 0–30, 31–60, 61+ |
-| Overdue invoices | QuickBooks invoice list | Filter to due_date > 30 days past; name customer + amount + days overdue |
+| Accounts and roles | `list_accounts` | Operating = primary checking; Tax Reserve = savings whose name mentions tax/reserve; Business Savings = the other savings. Never hardcode numbers. |
+| Balances | `get_account_balance` per account | Report each; only Operating feeds "true available". |
+| 12-month money in / out | `query_transactions {aggregate: true, groupBy: "month", dateFrom: <today − 12 months>}` | One aggregate per month per account; sum across accounts for the business, or filter to Operating. 3 accounts × 12 months is inside the 4,000-row scan cap. |
+| Pending authorizations | `query_transactions {status: ["pending"]}` | Sum absolute amounts; list descriptors. |
+| Last sales-tax remittance | `query_transactions {direction: "debit", descriptionContains: "DEPT OF REVENUE", limit: 3}` | The most recent date is the start of the "collected, not yet remitted" window. |
+| Friday sweeps | `query_transactions {descriptionContains: "TAX RESERVE", dateFrom: <8 weeks ago>}` | Credits into the reserve; a missing Friday is a skipped sweep. |
+| Payroll pattern | `query_transactions {direction: "debit", descriptionContains: "GUSTO", dateFrom: <8 weeks ago>}` | Two most recent runs → next run estimate (net + tax lines). Use the processor name the bank rows actually carry. |
+| Enrichment on an odd row | `get_transaction_detail` | May be `null`; do not depend on it. |
 
-**QB state handling**: if any QB call returns an error, empty response, or
-"not connected" state, mark the affected metric "n/a — QuickBooks
-unavailable" and continue. Do not retry. If Paywhere is connected, Cash
-still produces a useful number from Paywhere alone.
+## Books (quickbooks, read-only)
 
-**Paywhere state handling**: if `list_accounts` returns no accounts or the
-call errors, mark Cash as "n/a — Paywhere unavailable" and fall back to
-the QB cash account if available. Do not retry.
+| Metric | Tool |
+|---|---|
+| Revenue trend | `get_profit_and_loss` (trailing 3 months, by month; a year-ago month if asked) |
+| Open AR / aging | `get_aged_receivables`, `search_invoices` (open balance > 0) |
+| Payments received since last remittance | `search_payments {dateFrom}` — needed for the reserve shortfall |
+| Open AP | `get_aged_payables`, `search_bills` (open) |
+| Vendor early-pay history | `search_bill_payments` + `search_bills` (12 months) — only if the #1-issue candidate needs it; otherwise leave to `ap-timing` |
 
-## Watch List (Gmail)
+## Calendar (google calendar, read)
 
-| Metric | Tool | Notes |
-|---|---|---|
-| Urgent threads | `search_threads` | Query: `is:important OR is:starred` in last 7 days |
-| Customer escalations | `search_threads` | Query: terms like "escalation," "complaint," "cancel," "refund," "urgent" in last 7 days |
-| Time-sensitive requests | `search_threads` | Query: `is:unread` + keywords like "deadline," "ASAP," "today" |
+`list_events` next 14 days. Relevant: payroll Friday, the 20th remittance, quarterly estimate dates, insurance renewals, dealer/bank appointments, project milestones. Read only; no invites from this skill.
 
-**Gmail fallback**: if the Gmail call errors (auth flaky — this is a known issue), skip Watch List silently and add "Gmail unavailable" to the appendix. Do not surface the error in the pulse body.
+## Mail (gmail, read)
 
-## Risks scan
+`search_threads` — `is:unread newer_than:7d` plus customer-name queries for the overdue customers found in AR. Read only; drafts belong to `invoice-chase`.
 
-Run these alongside the metric pulls — don't wait for metrics to finish first.
+## Fallbacks
 
-| Risk | Source | Trigger condition |
-|---|---|---|
-| Overdue AR | QuickBooks invoices | due_date > 30 days past, unpaid |
-| Urgent Gmail threads | Gmail | `is:important` or escalation keywords |
-| Pending money movement | Paywhere | Wire pending past same-day window or ACH pending past 3 business days, > $500 |
-
-## Parallelization
-
-All of the above should fire in a single tool-call batch. A complete pulse is typically 6–10 parallel calls across Paywhere, QuickBooks, and Gmail. If one errors, the rest proceed normally and the failed source appears in "Sources unavailable" at the bottom of the pulse.
+| Missing | Effect |
+|---|---|
+| Paywhere | No true-available, no in/out, no pending; say so up top and run a books-only pulse. |
+| quickbooks | Bank-only pulse: balances, in/out, pending, sweep history; AR/AP "n/a — QuickBooks unavailable". |
+| google calendar | Skip the obligations overlay; note it. |
+| gmail | Skip the watch list; note it. |

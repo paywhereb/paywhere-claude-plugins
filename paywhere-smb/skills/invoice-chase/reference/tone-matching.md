@@ -1,26 +1,17 @@
-# Tone Matching
+# Tone matching
 
-Scoring logic and email tone guidelines for invoice-chase.
+Profiles come from `../../ar-health/reference/profiles.md` (derived from 12 months of invoice-to-payment lags; ≥ 3 paid invoices to classify).
 
-## Scoring
+## Profile → tone
 
-Score each customer using QuickBooks payment history for the last 12 months. Require a minimum of 3 invoices to score; fewer than 3 defaults to `occasionally-late`.
-
-| Score | Criteria |
-|---|---|
-| `good-payer` | Paid on time or early in ≥ 75% of invoices |
-| `occasionally-late` | Paid late in 25–50% of invoices, or fewer than 3 invoices on record |
-| `repeat-late` | Paid late in > 50% of invoices |
-
-"On time" means payment received on or before the invoice due date.
-
-## Tone by score
-
-| Score | Tone | Character |
+| Profile | Tone | Character |
 |---|---|---|
-| `good-payer` | Gentle | Friendly, assumes oversight. Opens with grace. |
-| `occasionally-late` | Neutral | Professional, no judgment. Factual follow-up. |
-| `repeat-late` | Firm | Direct, states a deadline. No warmth, no accusation. |
+| prompt | Gentle | Friendly, assumes oversight, opens with grace |
+| occasionally very late | Neutral | Professional, factual, no judgment |
+| insufficient history | Neutral | Same as above |
+| routinely late | Firm | Direct, names a date, no warmth, no accusation |
+| delinquent then cured | Firm | Direct; reference the payment plan if one existed |
+| retainage | — | Do not chase before the contractual release date; after it, Neutral and cite the contract term |
 
 ## Subject lines
 
@@ -28,17 +19,18 @@ Score each customer using QuickBooks payment history for the last 12 months. Req
 - Neutral: `Following up: Invoice #[N] — $[amount] past due`
 - Firm: `Past due notice: Invoice #[N] — $[amount] ([X] days overdue)`
 
-## Body structure (all tones)
+## Body (all tones)
 
-Every reminder includes: invoice number(s), total amount due, original due date, days overdue, and payment link or instructions.
+Invoice number(s), total due, original due date, days overdue, how to pay (the method this customer normally uses — ACH, check, card link). One call to action.
 
-Tone-specific additions:
-- **Gentle**: one acknowledgment sentence ("I know things get busy")
-- **Neutral**: none — facts only
-- **Firm**: one deadline sentence ("Please remit by [date]")
+- Gentle adds one acknowledgment sentence.
+- Neutral adds nothing.
+- Firm adds one deadline sentence ("Please remit by [date]").
 
-One call to action per email. Never two.
+## Consolidation
 
-## Consolidation rule
+Multiple overdue invoices for one customer → one email listing each (number, amount, due date) and the combined total. Tone follows the customer's profile, not the oldest invoice.
 
-If a customer has multiple overdue invoices, combine into one email. List each invoice (number, amount, due date), then state the combined total. Use the customer's score, not the most overdue invoice's score.
+## Never
+
+Never mention another customer, never threaten collections or legal action, never quote the payment-profile label to the customer.

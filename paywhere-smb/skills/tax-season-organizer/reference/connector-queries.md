@@ -68,7 +68,7 @@ payouts to wallets the owner controls.
 
 ---
 
-## Desktop / CSV fallback
+## CSV fallback (owner-uploaded export)
 
 If any connector is unavailable, ask the user to:
 1. Export a P&L from QuickBooks as CSV (Reports → Profit & Loss → Export)

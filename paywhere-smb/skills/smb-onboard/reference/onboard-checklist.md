@@ -7,7 +7,7 @@ Ask one at a time. Wait for the full answer before moving on. One follow-up is f
 1. **Industry and business type.** "What kind of business do you run? Give me the one-liner."
 2. **Team size.** "How many people work with you, including yourself?"
 3. **Top three headaches.** "What are your three biggest headaches right now — the things that eat your time or keep you up at night?"
-4. **Tools already in use.** "Which tools do you already use day-to-day? Things like QuickBooks, Paywhere, Gmail, Google Drive…"
+4. **Tools already in use.** "Which tools do you already use day-to-day? Things like QuickBooks, Paywhere, Gmail, Google Calendar…"
 5. **Preferred cadence.** "How would you like me to check in — daily, weekly, or only when you ask?"
 
 If the owner is short on time, compress to questions 1, 3, and 4 — those three feed the most downstream skills.
@@ -20,10 +20,11 @@ Map the owner's stated headache to the best two connectors to link first.
 
 | Primary headache | First connector | Second connector | Prove-value recipe |
 |---|---|---|---|
-| Cash flow / invoicing | Paywhere | QuickBooks | `cash-flow-snapshot` |
+| Cash flow / invoicing | Paywhere | QuickBooks | `business-pulse` |
 | Making payroll | Paywhere | QuickBooks | `plan-payroll` |
 | Month-end close / reconciliation | QuickBooks | Paywhere | `close-month` |
-| Paying reps / commissions | Paywhere | QuickBooks | `pay-commissions` (needs Google Drive too) |
+| Paying vendors on time (not early) | QuickBooks | Paywhere | `ap-timing` → `pay-bills` |
+| Sales tax / "how much is really mine" | Paywhere | QuickBooks | `tax-reserve-check` |
 | Taxes | QuickBooks | Paywhere | `tax-prep` |
 | Chasing unpaid invoices | QuickBooks | Gmail | `invoice-chase` |
 | General / unsure | Paywhere | QuickBooks | `cash-flow-snapshot` |
@@ -35,7 +36,7 @@ If the owner names a connector not in this table, add it as the second connector
 - **Paywhere** — Pull your cash position across accounts, see settled ACH/wire/stablecoin movement in real time, and make payments without leaving chat.
 - **QuickBooks** — Read your books: AR, AP, P&L, customer payments, and the transaction register that month-end close reconciles against Paywhere.
 - **Gmail** — Draft invoice reminders and scan threads for anything urgent.
-- **Google Drive** — Host the commission register and save close packets and QBR exports.
+- **Google Calendar** — Read payroll Fridays, tax deadlines and appointments so forecasts and briefs carry dated obligations.
 
 ---
 
@@ -46,7 +47,7 @@ Run the prove-value recipe immediately after the **first** connector is live —
 1. Paywhere or QuickBooks → `cash-flow-snapshot`
 2. QuickBooks + Paywhere → `business-pulse` (one-page financial snapshot)
 3. Gmail → search for unread invoice-related emails, surface top 3
-4. Google Drive only → confirm Drive is readable (`list_recent_files`) — it powers `/pay-and-bill` hour-report notes and close-packet exports
+4. Google Calendar → `list_events` for the next 14 days, surface the dated obligations
 
 **QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first. On the shared **read-only demo connector** that update tool does not exist — note the missing profile info and run the recipe anyway; the seeded demo company is already complete.
 

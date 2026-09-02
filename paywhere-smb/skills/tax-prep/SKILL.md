@@ -1,16 +1,33 @@
 ---
 name: tax-prep
-description: Prepares tax-season materials — quarterly estimated tax calculation or year-end 1099 prep — and produces an accountant handoff packet. Accepts optional mode and year arguments.
-allowed-tools: Read, WebFetch, Bash
+version: 1.0.0
+description: >
+  Prepares owner income-tax materials for the accountant — the quarterly
+  estimated-tax calculation from YTD net income, or year-end 1099-NEC prep
+  from vendor payments cross-checked against bank ACH/wire debits — as a
+  handoff packet, not tax advice. Sales tax is NOT here: for the reserve
+  balance, collected-not-remitted, the 20th remittance, missed sweeps and the
+  catch-up transfer use tax-reserve-check. Accepts optional mode and year
+  arguments. Use when the owner says "tax stuff," "estimated taxes," "what do
+  I owe the IRS this quarter," "1099s," "year-end tax prep," or "my
+  accountant needs…".
 ---
 
-Run the tax prep workflow using the `tax-season-organizer` skill. Act immediately — the user typed /tax-prep, so skip the discovery phase.
+> **For sales tax** (reserve balance, collected-not-remitted, the 20th
+> remittance, missed Friday sweeps, the catch-up transfer) use
+> [`../tax-reserve-check`](../tax-reserve-check/SKILL.md). This skill is for
+> the owner's income-tax estimates and 1099s.
+
+Run the tax prep workflow using the `tax-season-organizer` skill. Act
+immediately — the owner asked for tax prep, so skip discovery.
 
 Parse arguments:
-- `--mode` (default: infer from date — Q1-Q3 defaults to `quarterly`, Q4/Jan defaults to `both`) — `quarterly` for estimated tax payment, `1099` for year-end 1099-NEC prep, `both` for combined
-- `--year` (default: current year)
+- `--mode` (default: infer from date — Q1–Q3 → `quarterly`, Oct–Jan →
+  `both`) — `quarterly`, `1099`, or `both`
+- `--year` (default: current year, resolved from the actual date)
 
-**Framing:** Open every deliverable with "Prepared for review by your accountant — not tax advice."
+**Framing:** open every deliverable with "Prepared for review by your
+accountant — not tax advice."
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1 (subject = the step's name, e.g. "Step 1 — Determine mode"), then
@@ -20,35 +37,51 @@ does not happen unless you do it explicitly.
 
 ## Step 1 — Determine mode
 
-If `--mode` was not provided:
-1. Check the current date. If Oct–Jan, default to `both`. Otherwise default to `quarterly`.
-2. Confirm with the owner: "Based on the time of year, I'll prepare [mode]. Want me to do something different?"
+If `--mode` was not given, infer from the current date and confirm in one
+line: "Based on the time of year I'll prepare {mode} — want something
+different?"
 
-## Step 2 — Quarterly estimated tax (if mode includes quarterly)
+## Step 2 — Quarterly estimate (mode includes quarterly)
 
-1. Pull YTD Profit & Loss from QuickBooks (Jan 1 through last completed quarter).
-2. If QuickBooks is not connected, ask the user to paste net income or upload a CSV.
-3. Ask: "How much have you already paid in estimated taxes this year?"
-4. Calculate: SE tax, adjusted net income, federal income tax estimate (default 22% bracket), quarterly payment due.
-5. State every assumption explicitly — bracket, business type, exclusions.
-6. Deliver the formatted estimate with the due date for the current quarter.
+1. `get_profit_and_loss` YTD (Jan 1 → last completed quarter). If QuickBooks
+   is not connected, ask for net income or a CSV.
+2. **Payments already made this year come from the bank**: `query_transactions`
+   on Operating, `direction: "debit"`, `descriptionContains: "IRS"` (or
+   `EFTPS` / `USATAXPYMT`), `dateFrom: Jan 1`. Confirm the list with the
+   owner; if Paywhere is not connected, ask.
+3. Calculate per `tax-season-organizer/reference/calculation-assumptions.md`
+   (entity type matters — an S-corp owner on payroll has withholding, not
+   SE tax on wages; state the assumption).
+4. Note the funding source plainly: **owner estimates are paid from
+   Operating and are not covered by the sales-tax reserve** — the reserve
+   holds sales tax only. Show the next due date (from the calendar if
+   present) and the effect on true available cash.
+5. Deliver the estimate with every assumption listed.
 
-## Step 3 — Year-end 1099 prep (if mode includes 1099)
+## Step 3 — 1099 prep (mode includes 1099)
 
-1. Pull contractor/vendor payments from QuickBooks (vendor records or a Transaction List by Vendor CSV).
-2. If Paywhere is connected, also pull ACH/wire outflows for the tax year as a cross-check — flag any counterparty that received recurring payments but has no QB vendor record.
-3. Aggregate by payee across sources. Flag likely duplicates for human review — never auto-merge.
-4. Apply the $600 threshold. Flag near-threshold payees ($400–$599).
-5. Check W-9 status in QuickBooks for each flagged payee.
-6. Deliver the 1099-NEC candidate list with missing W-9 action items and a Paywhere reconciliation note for any contractor payment found only in the bank.
+1. `search_vendors` + `search_bill_payments` / `search_purchases` for the
+   year → payments per vendor for services; flag `is1099` vendors.
+2. Bank cross-check: `query_transactions {direction: "debit", dateFrom: Jan 1}`
+   for ACH / wire debits to counterparties with no vendor record (subcontractors
+   paid by wire and never booked are the classic miss).
+3. Aggregate by payee; flag likely duplicates for review, never auto-merge.
+4. Apply the $600 threshold; flag $400–$599 as near-threshold; note that
+   corporations are usually exempt (accountant confirms).
+5. W-9 status per flagged payee from the vendor record.
+6. Deliver the candidate list, the missing-W-9 list and the bank-only payees.
 
-## Approval gates
+## Guardrails
 
-- **Not tax advice.** State this in every output header.
-- **State every assumption.** Bracket, business type, excluded deductions — give the accountant the levers.
-- **Don't merge payees automatically.** Flag duplicates for human review.
-- **Don't file anything.** Output is prep material only.
+- **Not tax advice** — in every header.
+- **State every assumption** — bracket, entity type, exclusions.
+- **Never merge payees automatically.** **Never file anything.**
+- **Never move money.** If the owner wants to pay the estimate, hand off to
+  `../pay-bills` (it stages a proposal for passkey approval on the bank's
+  page); this skill only computes.
 
 ## Output
 
-End with a next-steps checklist for the accountant: missing W-9s to collect, assumptions to verify, deadlines to hit.
+Files go to the working folder (`tax/estimate-{YYYY}-Q{n}.md`,
+`tax/1099-prep-{YYYY}.md`). End with the accountant's checklist: W-9s to
+collect, assumptions to verify, deadlines.

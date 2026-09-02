@@ -49,11 +49,14 @@ credit memo exists in QB.
 
 ---
 
-## Gotcha: Treating a Paywhere fee line as part of the parent transaction
+## Gotcha: Treating a wire fee line as part of the parent transaction
 
-**Why it matters:** Paywhere posts wire and ACH fees as their own debit
-lines with `type: "fee"`. They are not deducted from the parent inflow or
-outflow. Subtracting them produces phantom discrepancies.
+**Why it matters:** the bank posts wire fees as their own debit lines (the
+descriptor names the fee; there is no fee `type`). They are not deducted
+from the parent inflow or outflow. Subtracting them produces phantom
+discrepancies. **Merchant settlements are the opposite case**: the fee IS
+netted inside the deposit, and the books carry it as a negative line on the
+Deposit — see `paywhere-bank-lines.md`.
 
 ### ✗ Bad
 
@@ -66,9 +69,29 @@ itself reconciles 1:1 against QB; the fee line reconciles against the QB
 
 ### ✓ Good
 
-Match `type: "fee"` lines independently — usually to a "Bank Fees" or
-"Wire Fees" GL category in QuickBooks. Do not subtract them from the
-parent transaction's amount when comparing against QB.
+Match fee-descriptor lines independently — usually to a "Bank Charges" GL
+category. Do not subtract them from the parent transaction's amount when
+comparing against the books.
+
+---
+
+## Gotcha: Flagging a gross→net settlement match as a discrepancy
+
+**Why it matters:** the books' Deposit for a settlement day is gross of
+processing fees with a negative fee line; the bank credit is net. The two
+amounts differ by design.
+
+### ✗ Bad
+
+> Discrepancy: bank deposit $2,398.44, books Deposit $2,470.00 — delta
+> $71.56. Flagged.
+
+### ✓ Good
+
+Compare `gross + feeLine` with the bank amount. If a fee line exists and
+the sum matches, the row is RECONCILED (show gross / fee / net). If there is
+**no** fee line and the gap is a plausible fee, it is FEE_NOT_POSTED — the
+finding is the missing line, not a bad deposit.
 
 ---
 

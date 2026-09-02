@@ -1,3 +1,5 @@
+> **Example only.** Names and amounts are illustrative; every real draft is filled from live QuickBooks data.
+
 # Firm Reminder — Repeat Late Payer Example
 
 **Scenario:** Smith LLC, $450 invoice, 47 days past due. Paid late in 3 of last 4 invoices.
