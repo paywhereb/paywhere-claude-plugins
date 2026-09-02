@@ -78,7 +78,7 @@ before running it. Trigger phrases are examples.
 | Skill | What it does | Just say… | Needs |
 |---|---|---|---|
 | **business-pulse** | One page: three balances, **true available cash** (Operating − reserve shortfall − pending), 12 months in vs out, revenue trend, AR/AP, this week's obligations, the #1 issue. Doubles as the Monday brief. | "how is my business doing", "snapshot", "Monday brief", "catch me up" | any (degrades) |
-| **cash-bridge** | Profit → cash: ΔAR, distributions, owner taxes, reserve sweeps, equipment, early vendor payments, reconciled to what actually cleared. | "QuickBooks says I made money, why is my cash lower", "where did the profit go" | Paywhere + QBO |
+| **cash-bridge** | Profit → cash: ΔAR, distributions, owner taxes, reserve sweeps, equipment, early vendor payments, reconciled to what actually cleared. | "QuickBooks says I made money, why is my cash lower", "why doesn't my bank balance move with my profit", "where did the profit go" | Paywhere + QBO |
 | **ar-health** | Aging, payment-behavior profiles from 12 months of lags, DSO trend, cash-impact ranking, received-but-unbooked detection. | "who owes me money", "who pays late", "what's my DSO" | Paywhere + QBO |
 | **ap-timing** | Bills due, per-vendor early-payment history, pay-when-due recommendations (hold / pay now / defer) and the effect on the minimum balance. | "what's due this week", "am I paying anyone early" | Paywhere + QBO |
 | **tax-reserve-check** | Sales tax collected on received payments vs the Tax Reserve vs the 20th; missed Friday sweeps; true available; proposes the catch-up transfer. | "how much of my balance is actually mine", "what do I owe on the 20th" | Paywhere + QBO |
@@ -98,7 +98,7 @@ before running it. Trigger phrases are examples.
 |---|---|---|---|
 | **cash-flow-snapshot** | 13-week direct-method forecast (reserve excluded), minimum-balance week, reserve to keep, strongest/weakest months; reads the calendar for dated obligations. | "13-week forecast", "minimum balance", "runway" | Paywhere + QBO (+ Calendar) |
 | **what-if** | Levers over the forecast: revenue −10%, biggest customer +30 days, hire, lose an agreement, collect faster, stop paying early, van, LOC; best combination. | "what if revenue drops 10%…" | Paywhere + QBO |
-| **big-purchase-decision** | The van: quotes from Gmail, appointment from Calendar, historical lows, forecast, mileage offset → cash vs finance, safest month, second-vehicle verdict. | "can I afford the van", "cash or finance" | Paywhere + QBO + Gmail + Calendar |
+| **big-purchase-decision** | The van: quotes from Gmail, appointment from Calendar, historical lows, forecast, mileage offset → cash vs finance, safest month, second-vehicle verdict. | "can I afford to buy a van this week for $58,500", "can I afford a $X purchase", "should I pay cash or finance", "when is the safest month to buy" | Paywhere + QBO + Gmail + Calendar |
 | **credit-readiness** | Working-capital gap, months short, LOC/card sizing, "would a LOC have helped"; writes the bank package (PDF + xlsx). | "what should I bring to the bank", "how much credit" | Paywhere + QBO |
 | **month-heads-up** | Next 30 days from the 13-week engine; two things to watch. | "what does next month look like" | Paywhere + QBO |
 

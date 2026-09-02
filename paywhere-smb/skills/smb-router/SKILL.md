@@ -1,6 +1,6 @@
 ---
 name: smb-router
-version: 1.0.0
+version: 1.0.1
 description: >
   The front door to the Paywhere SMB plugin. Listens to what the owner needs
   — vague or specific — and routes to the single best skill: pulse, cash
@@ -46,7 +46,7 @@ the short form:
 | Owner says something like… | Route to |
 |---|---|
 | "How is my business doing?" / "snapshot" / "Monday brief" / "catch me up" / "what's coming in vs going out" | `business-pulse` |
-| "QuickBooks says I made money, why is my cash lower?" / "profit vs cash" / "where did the profit go" | `cash-bridge` |
+| "QuickBooks says I made money, why is my cash lower?" / "why doesn't my bank balance move with my profit" / "profit vs cash" / "where did the profit go" | `cash-bridge` |
 | "How'd we do this week" / "Friday recap" | `friday-brief` |
 | "Quarterly review" / "QBR" / "most profitable customers" / "expenses growing faster than revenue" / "best referral sources" | `quarterly-review` |
 
@@ -78,7 +78,7 @@ the short form:
 **Decisions and planning**
 | | |
 |---|---|
-| "Can I afford the van / truck / equipment?" / "cash or finance?" / "when should I buy" / "a second one?" | `big-purchase-decision` |
+| "Can I afford to buy a van this week for $58,500?" / "can I afford a $X purchase" / "can I afford the van / truck / equipment?" / "should I pay cash or finance?" / "when is the safest month to buy" / "a second one?" — any yes/no with a purchase, an amount and a time | `big-purchase-decision` |
 | "What should I bring to the bank?" / "line of credit" / "how much credit" / "when am I most likely short" | `credit-readiness` |
 | "13-week forecast" / "minimum balance" / "strongest and weakest months" / "runway" / "cash crunch" | `cash-flow-snapshot` |
 | "What if revenue drops 10%…" / "what if X pays 30 days late" / "what if I hire a tech" / "stop paying early" | `what-if` |

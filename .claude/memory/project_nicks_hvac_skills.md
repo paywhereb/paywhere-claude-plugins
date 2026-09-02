@@ -1,0 +1,15 @@
+---
+name: project_nicks_hvac_skills
+description: paywhere-smb 1.x = the Nick's HVAC demo plugin — how the skills, conventions and answer key fit together (branch nicks-hvac/skills).
+metadata:
+  type: project
+---
+
+**paywhere-smb 1.0.x is the Nick's HVAC demo** (blueprint: `paywhere-mcp/docs/plans/nicks-hvac-demo-blueprint.md`; run-of-show: `demo/SCENARIOS.md`; persona: `paywhere-smb/DATASET.md`).
+
+- **Skills are business-agnostic and read live data.** No skill hardcodes a Nick's number; DATASET.md is reference only. The numbers a presenter should hear come from the **answer key in paywhere-mcp**: `buildWorld(dateModel).answerKey` (`paywhere-mcp-api/src/demo/world/`), the per-date fixture `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`, and the `answerKeySummary` subset that `seed_demo_world` / `get_demo_world` return (`balances, trueAvailable, tax, ar, ap, payroll, subscriptions.monthlyTotal, liveSurface, counts` — NOT `settlements`, `van`, `cashBridge`, `lows`, `whatIf`, `forecast13w`). Cite paths, not figures, in docs; verify any cited path exists in the generated JSON.
+- **Generator facts that trip people up:** Operating opening is calibrated per window so the 12-month low is exactly $14,000 (not a fixed 38,000; Tax Reserve 3,200 / Savings 12,000 are fixed). `liveSurface.overdueInvoices` is sorted by days late, so `[0]` is not the largest — use `ar.largestOverdue`. `ap.dueThisWeek` can carry a generated bill beyond the three staged ones. The St. Anselm #4471 check is the $520 agreement invoiced at $590.01. Distributions $9k on the 25th of Feb/May/Aug/Nov; owner estimates $6,500 on Jan/Apr/Jun/Sep 15. The cash bridge runs in both directions (August cash rises more than profit) — beat 1.2 is worded neutrally.
+- **Beat 1.8 is Brett's #1 priority:** "Can I afford to buy a van this week for $58,500?" must trigger `big-purchase-decision`, answer yes/no in the first two sentences (13-week min − price vs payroll+bills cushion; reserve and savings excluded), and put the financing question in every call's `intent` so the FI Intents screen shows `financing_debt` (classifier regex: loan|lease|financ|line of credit|debt) — described in `reference/method.md`, not as a canned string.
+- **Conventions live in `_shared/`:** propose → `/confirm/<id>/<nonce>` → passkey is `_shared/APPROVAL.md` (never `transfer_funds`; transfers are `{rail:"transfer"}` batch items); unattended behaviour (sessionType scheduled, stable taskId, write-file dedupe, drafts only) is `_shared/AUTONOMY.md`. Agent skills repeat the load-bearing sentences inline because skills load one at a time.
+- **Nested `skills/` dirs ARE loaded** (recursive walk), so the frozen Meridian staffing skills (`pay-and-bill`, `pay-commissions`) stay in place with a "frozen / not maintained" prefix in their description rather than being moved out.
+- Any change bumps the changed skill's `version:`, plus `paywhere-smb/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` in sync; package with `./scripts/package.sh paywhere-smb` → `dist/paywhere-smb-<v>.plugin`.

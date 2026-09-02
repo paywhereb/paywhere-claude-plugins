@@ -9,11 +9,16 @@ troubleshooting: [`presenter-kit.md`](presenter-kit.md). The blueprint is
 
 **How to read the answer key.** `/demo-setup` prints `answerKeySummary`; its
 paths are the `AnswerKey` shape in
-`paywhere-mcp-api/src/demo/world/types.ts`. Every "you should see" below
-names the path. Numbers roll with the date model, so read them from the
-setup report, not from this file. The **fixed** figures (opening balances,
-agreement amounts, the staged live-surface amounts such as the largest
-overdue invoice and the bills due this week) are in DATASET.md.
+`paywhere-mcp-api/src/demo/world/types.ts`, and the full key for a demo date
+is `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`
+(`answer-key-2026-09-02.json` for the September 2026 run). Every "you should
+see" below names the path. Numbers roll with the date model, so read them
+from the setup report or the fixture, not from this file. The **fixed**
+figures — agreement amounts and the staged live-surface amounts: Westport
+**$7,200** overdue, Trane **$11,400** to hold, bills due this week Johnstone
+**$6,850** / Voltage **$2,150** / Ironclad **$1,900**, the St. Anselm **$520**
+agreement check **#4471**, the Angi **$349** debit — are in DATASET.md. Every
+other figure in this file is marked ≈ and is the September 2026 value.
 
 **Voice.** Acts 1–3 are the owner talking to their finance agent in Claude
 Cowork. Only `/demo-setup` and the injects are presenter commands. Every
@@ -92,20 +97,27 @@ How is my business doing?
 You should see: three balances; **true available cash = Operating − reserve
 shortfall − pending** (`trueAvailable`); 12 months of money in vs out with
 best/worst months (`strongestMonths`, `weakestMonths`); the #1 issue — the
-largest overdue invoice from a routinely-late customer
-(`ar.largestOverdue`, `liveSurface.overdueInvoices[0]`) and/or the equipment
-bill about to be paid early (`liveSurface.earlyPayTemptation`). FI:
+largest overdue invoice from a routinely-late customer (`ar.largestOverdue`,
+`ar.chaseOrder[0]`; note `liveSurface.overdueInvoices` is sorted by days
+late, so its `[0]` is a smaller, older invoice) and/or the equipment bill
+about to be paid early (`liveSurface.earlyPayTemptation`). FI:
 `cash_flow_management` intent.
 
 ### 1.2 — Profit to cash
 ```
-QuickBooks says I made $9k last month. Why is my cash lower?
+QuickBooks says I made about $14k in August. Why doesn't my bank balance move with my profit?
 ```
-(Use the net-income figure the pulse or the books show for last month if it
-differs.) You should see the bridge: net income → ΔAR, owner distribution,
-owner estimated taxes, sweeps to the Tax Reserve, equipment/stocking, early
-vendor payments → operating cash change (`cashBridge.*`, `cashBridge.drivers`).
-**What actually cleared and when.**
+(Swap in the last complete month and `cashBridge.netIncome` rounded — the
+prompt is deliberately neutral about direction: for a September demo August
+cash rose by **more** than profit because the summer receivables were
+collected; in a slow month it falls while profitable. The skill answers
+either way.) You should see the bridge: `cashBridge.netIncome` → `deltaAR`
+(negative in September = prior months' invoices collected), `distributions`
+($9k quarterly, Aug 25), `ownerTaxes`, `taxSweepsToReserve`,
+`equipmentAndStocking`, `earlyVendorPayments` → `operatingCashChange`, with
+the top drivers named (`cashBridge.drivers`) and the line "that cash was
+earned in June–July; it swings back when invoicing rises". **What actually
+cleared and when.**
 
 ### 1.3 — Who owes me
 ```
@@ -123,9 +135,11 @@ deposited this week but not yet applied in the books
 ```
 What's due this week, and am I paying anyone early?
 ```
-You should see: bills due within 7 days with rails (`ap.dueThisWeek`), the
-equipment bill **held** to its due date with the vendor's early-payment
-history in days and dollars (`ap.holdCandidates`, `ap.earlyPaymentPattern`).
+You should see: bills due within 7 days with rails (`ap.dueThisWeek` — the
+three staged bills plus any generated bill that falls due in the window, a
+smaller Trane bill in September), the equipment bill **held** to its due
+date with the vendor's early-payment history in days and dollars
+(`ap.holdCandidates[0]` = Trane $11,400, `ap.earlyPaymentPattern`).
 Then:
 ```
 Pay the bills due this week
@@ -140,8 +154,9 @@ the batch awaiting → approved.
 Am I good for payroll Friday?
 ```
 You should see: the equation (available − reserve shortfall − obligations
-through Friday + 7 days) with the payroll estimate from the bank's processor
-debits (`payroll.estimatedTotal`, `payroll.headroomAfterPayroll`); if tight,
+through Friday + 7 days) with the payroll date and estimate from the bank's
+processor debits (`payroll.nextPayDate`, `payroll.estimatedTotal` ≈ $11.1k,
+`payroll.headroomAfterPayroll`); if tight,
 "collect X" ranked first, never "raid the reserve". **Live posting** — now
 inject (below) and paste:
 ```
@@ -154,9 +169,11 @@ You should see the headroom move by exactly the injected amount.
 How much of my balance is actually mine?
 ```
 You should see: sales tax collected on **received** payments since the last
-remittance, by state (`tax.collectedNotRemitted`), the Tax Reserve balance,
-the **shortfall** (`tax.shortfall`), the two missed Fridays
-(`tax.missedSweeps`), the 20th (`tax.nextRemittance`), and a proposed
+remittance, by state (`tax.collectedNotRemitted`), the Tax Reserve balance
+(`tax.reserveBalance`), the **shortfall** (`tax.shortfall`, ≈ $2.8k in
+September), the missed Fridays (`tax.missedSweeps` — the last two are this
+month's; the three Oct–Nov ones are the history), the 20th
+(`tax.nextRemittance`), and a proposed
 catch-up transfer Operating → Tax Reserve staged as a batch **transfer**
 line with a `/confirm` link. **The reserve balance is a bank fact.** FI:
 `tax_compliance`.
@@ -175,29 +192,61 @@ duplicate seat — and the monthly total (`subscriptions.items`,
 `subscriptions.monthlyTotal`). **12 months of descriptors.** FI:
 `spend_analysis`.
 
-### 1.8 — The van → what to bring the bank
+### 1.8 — The van → what to bring the bank (the #1 beat)
+
+Paste exactly this first — a plain yes/no with an amount and a time. It must
+route to `big-purchase-decision`, and the first two sentences of the reply
+must be the verdict:
 ```
-Can I afford the van? Cash or finance? When? And a second one?
+Can I afford to buy a van this week for $58,500?
 ```
-You should see: the quote, term sheet and insurance quote pulled from Gmail
-and the dealer appointment from Calendar; historical lows and their causes
-(`lows`); cash vs financed monthly impact net of the mileage offset
-(`van.*`); safest months (`van.safestPurchaseMonths`), risky months
-(`van.riskyMonths`), the second-van verdict (`van.secondVanVerdict`).
-**Historical minimums, seasonality of cash.** Then:
+You should see, up front: **"Not in cash this week — yes, financed."** A
+$58,500 cash purchase drops the 13-week minimum to
+`van.cashPurchaseMinBalanceAfter` (`forecast13w.minBalance.amount` − 58,500,
+≈ $11k in September), below the payroll-plus-bills cushion, with the Tax
+Reserve and Business Savings excluded from spendable cash; financed at the
+term sheet's terms it fits (`van.recommendation`). Then the support: the
+quote, term sheet and insurance quote from Gmail and the dealer appointment
+from Calendar; historical lows and their causes (`lows[]` — the Jan–Feb
+collision is the year's minimum at $14,000); the monthly payment
+(`van.financing.monthlyPayment` = $989.22) net of insurance, fuel and the
+mileage offset (`van.netMonthlyCashImpact`). **Historical minimums,
+seasonality of cash.** Follow-ups, one at a time:
+```
+Cash or finance?
+```
+```
+When is the safest month?
+```
+→ `van.safestPurchaseMonths` / `van.riskyMonths` (Aug/Mar/Jun vs Jan/Jul/Dec
+in September), each risky month with its collision named.
+```
+What about a second van before next summer?
+```
+→ `van.secondVanVerdict`: defer unless collections improve, Trane/Ferguson
+are paid on due date, or the bank extends a line of credit — each quantified
+from `whatIf[]`.
 ```
 What should I bring to the bank?
 ```
-You should see: working-capital gap, months short, LOC and card sizing, and
-the package written to the working folder (`bank/credit-readiness-<date>.pdf`
-+ `.xlsx`). FI: **`financing_debt` intent rises — a warm loan lead.**
+→ `credit-readiness`: working-capital gap, months short, LOC and card sizing,
+and the package written to the working folder
+(`bank/credit-readiness-<date>.pdf` + `.xlsx`).
+
+**FI seat (paywhere-admin → Intents):** the `intent` on every call in this
+beat names the financing question ("evaluating a $58,500 van purchase and
+whether to finance it or use a line of credit"), so the Intents screen shows
+**`financing_debt` rising** during the beat — the CRO's warm loan lead. If it
+stays flat, the skill's calls did not carry the financing words; see
+`big-purchase-decision/reference/method.md`, "Intent wording".
 
 ### 1.9 — What-ifs
 ```
 What if revenue drops 10%? What if Westport pays 30 days late? What if I hire a tech? What if I stop paying vendors early?
 ```
 You should see: a lever table over the 13-week forecast with Δ minimum
-balance per lever and the best combination (`whatIf[]`,
+balance per lever and the best combination (`whatIf[]` — seven levers
+including "Van financed", each with `deltaMinBalance13w`;
 `forecast13w.minBalance`).
 
 ---
@@ -275,8 +324,10 @@ Walk, in order:
 
 1. **Intents** — category mix over the session: `cash_flow_management`,
    `accounts_receivable`, `tax_compliance`, `spend_analysis`, and the
-   `financing_debt` spike from 1.8. Filter `sessionType: scheduled` to show
-   the 3.1/3.5 runs.
+   **`financing_debt` spike from 1.8** (the classifier keys on loan / lease /
+   financ- / line of credit / debt in the `intent` text — the van beat's
+   calls carry those words). Filter `sessionType: scheduled` to show the
+   3.1/3.5 runs.
 2. **Connections** — the demo owner's consent grant to Claude; the bare
    connector session from 1.0.
 3. **Money Movement** — the batches from 1.0, 1.4, 1.6, 3.1, 3.5: staged →
@@ -332,6 +383,8 @@ Pending card authorizations cannot be injected (posted rows only).
 - [ ] paywhere-admin open on Intents with the demo business filter.
 - [ ] Never-send safeguards in place (presenter-kit.md): Gmail send/reply/forward denied in the client; outbound restricted on the mailbox.
 - [ ] Every Act 1 prompt pasted once this week; the router picked the intended skill (dispatch is not covered by the eval).
+- [ ] 1.8 specifically: "Can I afford to buy a van this week for $58,500?" reached `big-purchase-decision`, the verdict was in the first two sentences, and Intents showed `financing_debt` move.
+- [ ] 1.2 wording updated to last month's `cashBridge.netIncome`; the reply bridged the real direction.
 - [ ] Inject prompts tested once, then `/demo-setup` re-run.
 - [ ] Say-out-loud lines rehearsed: the bank-only fact per beat; "nothing moves from chat".
 

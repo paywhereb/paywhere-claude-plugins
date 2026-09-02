@@ -24,6 +24,22 @@ Where the numbers come from:
 - **Blueprint:** `paywhere-mcp/docs/plans/nicks-hvac-demo-blueprint.md` §3 is
   the authoritative narrative; this file is the short form.
 
+**Where the numbers live.** For a given demo date the full answer key is
+checked into paywhere-mcp as
+`paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`
+(`answer-key-2026-09-02.json` for the September 2026 run — being
+generated); regenerate one with
+`buildWorld(computeDateModel("<today>")).answerKey`. At demo time
+`seed_demo_world` / `get_demo_world` return `answerKeySummary`, a subset
+with the same paths (`balances`, `trueAvailable`, `tax.{reserveBalance,
+collectedNotRemitted, shortfall, missedSweeps, nextRemittance}`,
+`ar.{aging, largestOverdue, unbookedReceipt, chaseOrder}`,
+`ap.{dueThisWeek, earlyPaymentPattern, holdCandidates}`,
+`payroll.{nextPayDate, estimatedTotal, headroomAfterPayroll}`,
+`subscriptions.monthlyTotal`, `liveSurface`, `counts`). Everything else
+(`monthly`, `lows`, `cashBridge`, `forecast13w`, `van`, `whatIf`,
+`settlements`, `referrals`, `profitability`) is in the full key only.
+
 > Setup: `/demo-setup` reads the books' `dateModel` (`get_demo_dates`),
 > starts the async bank seed (`seed_demo_world`), polls `get_demo_world` to
 > completion (≈ 4–6 min for ≈ 1,000 rows), reads the world back through the
@@ -78,9 +94,10 @@ equipment suppliers on net 30 (**paid 12–18 days early Sep–Apr, on the due
 date May–Aug** — the discoverable AP-timing habit), subcontractors paid on
 receipt (one by wire), Gusto debits (net pay + taxes biweekly, monthly fee),
 rent and utilities, insurance (GL annual in January, WC and auto monthly),
-≈ $1,230/month of software and subscriptions (including a lead-gen
-subscription with zero attributed jobs, an orphaned design-tool seat and a
-duplicate seat), marketing, a CPA, fuel on a debit card, three referral
+≈ $1,380/month of recurring software, telecom and service debits — 11
+descriptors, `subscriptions.items`, including phones, internet and uniforms
+alongside the software (a lead-gen subscription with zero attributed jobs,
+an orphaned design-tool seat and a duplicate seat are the flags), marketing, a CPA, fuel on a debit card, three referral
 partners paid on the 10th, and the tax authorities. **Every vendor,
 subcontractor, partner and tax authority is a saved payee** (ACH for all;
 wire details as well for the crane subcontractor and one equipment
@@ -105,18 +122,33 @@ the reserve.
 **Seasonality and stress periods (calendar-pinned):** index Jan 1.05 · Feb
 0.85 · Mar 0.80 · Apr 0.85 · May 0.95 · Jun 1.20 · Jul 1.35 · Aug 1.30 ·
 Sep 1.00 · Oct 0.80 · Nov 0.85 · Dec 1.00, ±8% deterministic jitter. Four
-stress periods: **A** slow receivables (Oct–Nov), **B** poor AP timing (Apr,
-equipment paid early before project receipts), **C** the timing collision
-(mid-January: annual insurance + owner estimate + December sales tax +
-payroll + a parts statement before a large replacement invoice pays — the
-year's minimum), **D** seasonal investment (May stocking + a recovery
-machine + OT ramp). Nick is never insolvent; the reserve is never raided.
+stress periods, all present in every 12-month window: **A** slow
+receivables (Oct–Nov), **B** poor AP timing (Apr, equipment paid early
+before project receipts), **C** the timing collision (Jan–Feb: the Hartford
+annual premium + Q4 owner estimate + December sales tax + payroll + a parts
+statement before Metro Auto and Westport pay), **D** seasonal investment
+(May–early June stocking + a recovery machine + OT ramp). Operating cash
+oscillates ≈ $14k–$80k across the year; **which low is the twelve-month
+minimum depends on the window** (`lows[]`, with the period letter and the
+mechanism) — for a September demo it is mid-February (C) at exactly
+$14,000. Nick is never insolvent; the reserve is never raided.
+
+**Profit vs cash runs both ways.** In the slow months cash falls while the
+P&L is positive; in the month after the summer peak cash rises by *more*
+than profit because June–July receivables are collected (`cashBridge.deltaAR`
+negative). For a September demo the bridge month is August:
+`cashBridge.netIncome` ≈ +$15k, `operatingCashChange` ≈ +$41k. Beat 1.2 is
+worded neutrally for that reason (see `demo/SCENARIOS.md`).
 
 **The vehicle decision:** a cargo van quote, a lender term sheet and an
 insurance quote in Gmail; the dealer appointment on the calendar; the
 mileage-reimbursement offset in payroll. The data supports: one van,
-financed, bought Aug–Oct is comfortable; a second before next summer is not
-without better collections, no early payments, or a line of credit.
+financed, is comfortable; paying cash pushes the 13-week minimum below the
+payroll cushion (`van.cashPurchaseMinBalanceAfter`); the safest and risky
+months are computed from month-end closes (`van.safestPurchaseMonths`,
+`van.riskyMonths` — Aug/Mar/Jun vs Jan/Jul/Dec for a September 2026 start);
+a second before next summer is not without better collections, no early
+payments, or a line of credit (`van.secondVanVerdict`).
 
 **Growth:** H2 ≈ +11% vs H1 (three new agreements, the January price
 increase, more summer replacements, OT up), ≈ $60k of open estimates.
@@ -127,18 +159,22 @@ increase, more summer replacements, OT up), ≈ $60k of open estimates.
 
 | Item | Value |
 |---|---|
-| Opening balances (12 months ago) | Operating Checking $38,000 · Tax Reserve $3,200 · Business Savings $12,000 |
+| Opening balances (12 months ago) | Tax Reserve **$3,200** and Business Savings **$12,000** are fixed. Operating Checking is **calibrated per window** so the twelve-month chronological low is exactly **$14,000** (`OPERATING_OPENING_BASE` 38,000 shifted by the window's uncalibrated minimum, rounded to $100 — ≈ $44,200 for a 2026-09-02 start); read the actual opening from the world's `accounts[]`, never assume 38,000 |
 | Business Savings | $250/month sweep + interest; never touched |
+| Owner calendar | Quarterly distributions **$9,000** on the 25th of Feb / May / Aug / Nov · owner estimated taxes **$6,500** on Jan 15 / Apr 15 / Jun 15 / Sep 15 (from Operating; `tax.ownerEstimates`) · The Hartford GL annual **$4,800** on Jan 13 |
 | Agreements (monthly) | Westport Commons $2,400 · Fairway Medical Plaza $1,900 · Overland Park Office Suites $1,600 · Metro Auto Group $1,250 · Riverside Tap House $1,050 · Blue Line Fitness $780 · Crossroads Brewing $690 · Prairie Ridge Dental $650 · Sunflower Childcare $560 (from March) · St. Anselm $520 · Union Hill Apartments $460 (from August) · Liberty Storage $440 (from April) · Heartland Vet $380 |
-| Staged live surface | Westport Commons **$7,200, 18 days late** (largest overdue) · Trane Supply **$11,400 due in 18 days** (the early-payment temptation → hold) · bills due this week: Johnstone Supply **$6,850** (ACH), Voltage Electric **$2,150** (ACH), Ironclad Crane & Rigging **$1,900** (wire) · St. Anselm check **#4471 $520** deposited this week, not yet applied in the books · Angi Leads **$349** recurring debit (zero attributed jobs) |
-| Reserve on the live surface | ≈ $1,450 short (the last two Friday sweeps missed) — the exact figure is `tax.shortfall` |
-| Van | $58,500 all-in; finance option $10,000 down, 8.25%, 60 months (≈ $989/mo); +$165 insurance, +$320 fuel/maintenance; mileage offset ≈ $825/mo |
+| Staged live surface (horizon-relative) | Westport Commons **$7,200** (`ar.largestOverdue`; due horizon − 17 days, so ≈ 18–20 days late by demo day — the largest amount, not `liveSurface.overdueInvoices[0]`, which is sorted by days late) · Trane Supply **$11,400** due horizon + 18 days (≈ 15 days from a midweek `today`; the early-payment temptation → `ap.holdCandidates[0]`) · bills due this week: Johnstone Supply **$6,850** (ACH), Voltage Electric **$2,150** (ACH), Ironclad Crane & Rigging **$1,900** (wire) — `ap.dueThisWeek` may also carry a generated bill that falls due in the window (Trane $3,860 on 2026-09-06 for the September run) · St. Anselm check **#4471** deposited this week, not yet applied in the books — the **$520** agreement, invoiced at **$590.01** with the January +4% renewal and KS tax (`ar.unbookedReceipt.amount`) · Angi Leads **$349** recurring debit (zero attributed jobs) · 2 pending card authorizations (`liveSurface.pendingAuthorizations`) · 3 merchant settlements booked at gross (`liveSurface.unreconciledSettlements`) |
+| Reserve on the live surface | short by the last two Friday sweeps — `tax.shortfall` (≈ $2.8k for the September 2026 run, not a fixed figure); `tax.missedSweeps` also lists the three Oct–Nov Fridays skipped in the cash-tight stretch |
+| Van | $58,500 all-in; finance option $10,000 down on $48,500 at 8.25%, 60 months → **$989.22/mo** (`van.financing.monthlyPayment`); +$165 insurance, +$320 fuel/maintenance (`van.addedMonthlyCost` 485); mileage offset $825/mo → `van.netMonthlyCashImpact` ≈ $316 |
+| What-if levers | 7 (`whatIf[]`): revenue −10%, largest customer pays 30 days late, hire a third tech, lose the largest agreement, collect 15 days faster, stop paying vendors early, van financed (989/mo + running costs) |
 | Bank fees | Service charge $25/mo; wires $30 out / $15 in |
 | Merchant fees | 2.99% + $0.30 card; 1% capped at $10 ACH; netted from settlements |
 | Engineered imperfections | three recent merchant settlements booked at gross (fee line missing: $71.56, $58.10, $102.30 short at the bank); one duplicate card charge refunded ($650); one failed card autopay; ≈ 5% of recent debit-card rows unrecorded in the books; one referral fee paid on an uncollected retainage invoice |
 
 Everything else — balances at demo time, monthly totals, DSO, aging, the
-bridge, the forecast, the lows — is generated and lands in the answer key.
+bridge, the forecast, the lows, the payroll estimate (≈ $11,148 next run for
+September 2026), the true-available figure — is generated and lands in the
+answer key. Quote paths, not numbers, when writing a beat.
 
 ## Bank accounts (mock bank)
 

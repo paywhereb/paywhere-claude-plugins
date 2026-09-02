@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 1.0.0
+version: 1.0.1
 description: >
   Builds the presenter's own Nick's HVAC demo bank world on the Paywhere
   connector's demo-seeder tools (present only on demo deployments):
@@ -165,10 +165,17 @@ From the responses (never from memory), report:
   - `tax.reserveBalance`, `tax.collectedNotRemitted.total`, `tax.shortfall`,
     `tax.missedSweeps`, `tax.nextRemittance` — beat 1.6 / 3.5
   - `ar.largestOverdue` and `ar.unbookedReceipt` — beats 1.1, 1.3
-  - `ap.dueThisWeek` (with rails) and `ap.holdCandidates` — beat 1.4
+  - `ap.dueThisWeek` (with rails) and `ap.holdCandidates` — beat 1.4. The
+    list is the three staged bills plus any generated bill whose due date
+    falls in the window (e.g. a smaller Trane bill); read it, do not assume
+    three lines.
   - `payroll.nextPayDate`, `payroll.estimatedTotal`, `payroll.headroomAfterPayroll` — beat 1.5
   - `subscriptions.monthlyTotal` — beat 1.7
   - `liveSurface` (the staged items) and `counts` (rows, payees, enrichment)
+  - The summary is a subset (`balances`, `trueAvailable`, `tax`, `ar`, `ap`,
+    `payroll`, `subscriptions.monthlyTotal`, `liveSurface`, `counts`); the
+    full key for a given date lives in paywhere-mcp at
+    `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`.
 - **Readback checks:** balances ✓, payees ✓ (count + the two rails),
   enrichment ✓, unbooked check ✓.
 - **Beats ready** (`beatsReady`) and the pointer: the run-of-show with exact

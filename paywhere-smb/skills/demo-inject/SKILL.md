@@ -1,6 +1,6 @@
 ---
 name: demo-inject
-version: 1.0.0
+version: 1.0.1
 description: >
   PRESENTER-ONLY, demo deployments only. Posts live "money just landed" or
   "payment bounced" events into the presenter's own mock-bank world with the
@@ -39,8 +39,12 @@ world; the next balance or AR check sees the change. To undo, re-run
 
 `get_demo_world` → `answerKeySummary` (when present) supplies the numbers:
 `ar.largestOverdue {customer, amount, invoiceRef}`,
-`liveSurface.overdueInvoices[]`, `liveSurface.unbookedCheck`,
-`liveSurface.billsDueThisWeek[]`, `settlements.failedAutopay`, `trueAvailable`.
+`liveSurface.overdueInvoices[]` (sorted by days past due — the largest
+amount is `ar.largestOverdue`, not `[0]`), `liveSurface.unbookedCheck`,
+`liveSurface.billsDueThisWeek[]`, `trueAvailable`. The summary does **not**
+carry `settlements.*`; the failed-autopay customer and amount
+(`settlements.failedAutopay` in the full key) are read from the books
+instead — `search_invoices` for that customer's current agreement invoice.
 If the summary is absent, read the same facts through the owner's tools
 (`get_aged_receivables` for the largest overdue) or ask the presenter for
 the amount. **Never invent an amount.**
@@ -107,7 +111,9 @@ reversing a failed card autopay.
 
 Changes: `trueAvailable` falls by the amount; the customer's current
 agreement invoice is now effectively unpaid even if the books show a
-payment (narrate the reversal); `settlements.failedAutopay` gains a live row.
+payment (narrate the reversal). The full answer key's
+`settlements.failedAutopay` records the seeded failure; the injected one is
+visible only at the bank.
 
 Owner follow-up:
 ```

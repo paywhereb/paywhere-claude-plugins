@@ -20,9 +20,10 @@ Install `paywhere-smb`, connect the connectors, and run:
 ```
 
 That builds **your own** bank world for the **Nick's HVAC LLC** persona
-(three accounts: Operating Checking opens $38,000, Tax Reserve $3,200,
-Business Savings $12,000; 12 months + the current month; ≈ 1,000 rows;
-≈ 30 saved payees; enrichment):
+(three accounts: Operating Checking opens at a per-window calibrated figure
+so the year's low is exactly $14,000 — ≈ $44k for a September start; Tax
+Reserve opens $3,200 and Business Savings $12,000; 12 months + the current
+month; ≈ 1,000 rows; ≈ 30 saved payees; enrichment):
 
 1. Preflight — the seeder tools are present on the Paywhere connector;
    `get_demo_dates` (quickbooks, read-only) returns the standing books'

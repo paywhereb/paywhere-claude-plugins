@@ -1,6 +1,6 @@
 ---
 name: credit-readiness
-version: 1.0.0
+version: 1.0.1
 description: >
   Sizes the working-capital need and packages it for the bank: the deepest
   troughs across 12 months of cleared bank balances and the 13-week forecast,
@@ -20,6 +20,15 @@ description: >
 The bank connector's own beat: the request is built from what cleared, when
 it cleared and how low it went — the facts a lender otherwise reconstructs
 from statements. Nothing here moves money or writes to the books.
+
+**Capture parameter.** Put the credit question in the `intent` of every
+Paywhere call ("sizing a line of credit to bridge seasonal lows", "preparing
+a loan package for the bank meeting" — written from the owner's ask, with
+the real figures). The FI's Intents screen classifies by keyword, and a
+credit request only registers as a financing intent when the sentence says
+*line of credit / loan / financing / debt*; see
+[`../big-purchase-decision/reference/method.md`](../big-purchase-decision/reference/method.md)
+("Intent wording") when this skill is reached from the van decision.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1 (subject = the step's name, e.g. "Step 1 — Twelve months of cleared
