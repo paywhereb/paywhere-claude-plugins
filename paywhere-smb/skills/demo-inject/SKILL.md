@@ -1,16 +1,16 @@
 ---
 name: demo-inject
-version: 1.0.1
+version: 1.0.2
 description: >
   PRESENTER-ONLY, demo deployments only. Posts live "money just landed" or
   "payment bounced" events into the presenter's own mock-bank world with the
-  demo-seeder tools (`deposit_to_mock_account`, `withdraw_from_mock_account`)
-  so the next owner prompt sees them: simulate a late customer paying, an
-  emergency-call card settlement, a failed autopay. Reads the amounts from
-  the live answer key; never hardcodes them. Not an owner skill. Use when
-  the presenter says "inject a deposit," "simulate <customer> paying,"
-  "simulate Westport paying," "post a demo deposit," "make the autopay
-  fail," "demo inject," or "live inject."
+  demo-seeder tools (deposit_to_mock_account, withdraw_from_mock_account) so
+  the next owner prompt sees them: simulate a late customer paying, an
+  emergency-call card settlement, a failed autopay. Reads the amounts from the
+  live answer key; never hardcodes them. Not an owner skill. Use when the
+  presenter says "inject a deposit," "simulate a customer paying," "simulate
+  Westport paying," "post a demo deposit," "make the autopay fail," "demo
+  inject," or "live inject."
 ---
 
 # Demo Inject (presenter)

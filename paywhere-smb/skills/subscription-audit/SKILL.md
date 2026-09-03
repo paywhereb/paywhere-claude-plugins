@@ -1,19 +1,19 @@
 ---
 name: subscription-audit
-version: 1.0.0
+version: 1.0.1
 description: >
   Finds every recurring debit in 12 months of bank descriptors — no
   counterparty field needed — normalizes the statement text, groups it into
   vendors, totals the monthly run-rate, and flags what deserves a look:
   zero-attribution lead-gen or marketing spend (no customer traces to it),
-  orphaned subscriptions (no vendor record, nobody claims it), duplicate
-  seats or overlapping tools, and price creep. Also answers the single-row
-  question "what is this debit?" with bank enrichment, the books' vendor and
-  any renewal email. Read-only; cancels nothing. Use when the owner says
-  "what's this $349 ANGI LEADS debit" (or "what's this <amount> <descriptor>
+  orphaned subscriptions (no vendor record, nobody claims it), duplicate seats
+  or overlapping tools, and price creep. Also answers the single-row question
+  "what is this debit?" with bank enrichment, the books' vendor and any
+  renewal email. Read-only; cancels nothing. Use when the owner says "what's
+  this $349 ANGI LEADS debit" (or any "what's this [amount] [descriptor]
   debit," "what is this charge"), "what subscriptions am I paying," "what
-  recurring charges do I have," "what am I paying for every month," or
-  "find recurring debits."
+  recurring charges do I have," "what am I paying for every month," or "find
+  recurring debits."
 ---
 
 # Subscription Audit

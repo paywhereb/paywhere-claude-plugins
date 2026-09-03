@@ -1,24 +1,21 @@
 ---
 name: big-purchase-decision
-version: 1.0.2
+version: 1.0.3
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit — the simple yes/no
-  first, then the full decision: pulls the dealer quote, lender term sheet
-  and insurance quote from Gmail and the dealer appointment from Google
-  Calendar, derives the year's operating lows from 12 months of bank data,
-  runs the 13-week forecast, nets the mileage-reimbursement offset from
-  payroll, and answers cash vs finance, the safest purchase month, the
-  down-payment scenario and whether a second vehicle fits — then hands
-  "what to bring the bank" to credit-readiness. Read-only. Use when the
-  owner says "can I afford to buy a van this week for $X," "can I afford a
-  $X purchase," "can I afford the van," "can I afford a new truck," "can I
-  afford new equipment," "can I buy a van right now / next month," "should
-  I pay cash or finance," "cash or finance," "when is the safest month to
-  buy," "when should I buy the van," "should I buy a second van," "what if
-  I put $10k down," or "what should I bring to the bank." Any yes/no
-  question that names a purchase, an amount and a time ("this week," "right
-  now," "next month") belongs here.
+  first, then the full decision: pulls the dealer quote, lender term sheet and
+  insurance quote from Gmail and the dealer appointment from Google Calendar,
+  derives the year's operating lows from 12 months of bank data, runs the
+  13-week forecast, nets the mileage-reimbursement offset from payroll, and
+  answers cash vs finance, the safest purchase month, the down-payment
+  scenario and whether a second vehicle fits; hands "what to bring the bank"
+  to credit-readiness. Read-only. Use when the owner says "can I afford to buy
+  a van this week for $X," "can I afford the van / a new truck / new
+  equipment," "can I buy a van right now or next month," "cash or finance,"
+  "when is the safest month to buy," "should I buy a second van," "what if I
+  put $10k down," or "what should I bring to the bank." Any yes/no question
+  naming a purchase, an amount and a time belongs here.
 ---
 
 # Big Purchase Decision
