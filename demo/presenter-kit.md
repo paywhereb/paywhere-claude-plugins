@@ -30,7 +30,12 @@ same `dateModel`; run `--check` in the demo week.
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
 ./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.10.plugin
+                                         #   and dist/paywhere-smb-1.0.10-poc.plugin (Paywhere → PoC stack)
 ```
+
+Rehearsing against a PoC deployment instead of demo.dev? Side-load the
+`-poc` file; it differs only in the Paywhere connector URL (set
+`PAYWHERE_POC_URL` before packaging if the PoC has another hostname).
 
 In Cowork, **create a project for the demo first** and paste
 [`cowork-project-prompt.md`](cowork-project-prompt.md) into the project's

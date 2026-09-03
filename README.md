@@ -44,8 +44,15 @@ file picker:
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
 ./scripts/package.sh paywhere-smb
-# → dist/paywhere-smb-<version>.plugin
+# → dist/paywhere-smb-<version>.plugin        (Paywhere → demo.dev)
+# → dist/paywhere-smb-<version>-poc.plugin    (Paywhere → the PoC stack)
 ```
+
+The `-poc` archive is the same plugin with the Paywhere connector URL in
+`.mcp.json` swapped for the PoC stack (default
+`https://paywhere-mock-mcp.poc.dev.paywhere.com/mcp`; override with
+`PAYWHERE_POC_URL=…`). Side-load that one to rehearse against a PoC
+deployment without editing the committed manifest.
 
 > Always build fresh with `package.sh` — the archives checked into
 > `dist/` lag the current plugin versions (stale at 0.3.1 while the

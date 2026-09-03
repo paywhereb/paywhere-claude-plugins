@@ -36,6 +36,7 @@ bare Paywhere connector, no skills).
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
 ./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.10.plugin
+                                         #   and dist/paywhere-smb-1.0.10-poc.plugin (Paywhere → PoC stack)
 ```
 
 In Cowork, use the "side-load a plugin file" picker and select the `.plugin`
