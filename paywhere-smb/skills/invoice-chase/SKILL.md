@@ -1,6 +1,6 @@
 ---
 name: invoice-chase
-version: 1.0.2
+version: 1.0.3
 description: >
   Turns overdue receivables into action: ranks open invoices by cash impact ×
   lateness using each customer's derived payment profile (see ar-health),
@@ -29,8 +29,8 @@ User: "who owes me money and who do I call first?"
 → Bank credits since the oldest open invoice → received-but-unbooked items EXCLUDED
 → Rank collectible invoices by cash impact × lateness
 → Draft one Gmail reminder per customer for the top set (tone by profile)
-→ Show the table + full drafts → owner approves the SET → create_draft each
-→ Report: drafts created (in Gmail), excluded items with bank evidence
+→ create_draft each reminder, then show the table + every draft in full
+→ Report: drafts created (in Gmail Drafts, for the owner to edit or delete), excluded items with bank evidence
 ```
 
 **Progress tracking:** call `TaskCreate` once per numbered step below before
@@ -85,19 +85,21 @@ progress display — it does not happen unless you do it explicitly.
    [`reference/examples/gentle-reminder.md`](reference/examples/gentle-reminder.md),
    [`reference/examples/firm-reminder.md`](reference/examples/firm-reminder.md).
 
-6. **Present and approve the set.** Summary table first (rows from live data):
+6. **Create the drafts, then present the set.** A draft is inert — nothing
+   reaches a customer until the owner presses Send in Gmail — so create them
+   first and let the owner review them where they will send them. Gmail
+   `create_draft` for each reminder (to the customer's AR contact, subject
+   per the tone rules). Never send. Then the summary table (rows from live data):
 
    | # | Customer | Open | Days late | Profile | Tone | Action |
    |---|---|---|---|---|---|---|
    | 1 | _customer_ | $7,200 | 18 | routinely late | firm | Gmail draft |
    | — | _customer_ | $520 | 9 | prompt | — | **excluded — check #… deposited {date}** |
 
-   Then every draft in full. Ask which drafts to create; the owner may trim
-   or reword. Changing the set restarts this step.
+   Then every draft in full, each labelled "in your Gmail Drafts". Offer to
+   reword, retone or delete any of them; the owner sends from Gmail.
 
-7. **Create the drafts.** Gmail `create_draft` for each approved reminder
-   (to the customer's AR contact, subject per the tone rules). Never send.
-   If the owner says "remind me to call X Thursday", `create_event` on the
+7. **Follow-ups.** If the owner says "remind me to call X Thursday", `create_event` on the
    calendar with **no attendees** — only when asked.
 
 8. **Report.** Drafts created (customer, amount, subject — "in your Gmail
@@ -107,8 +109,9 @@ progress display — it does not happen unless you do it explicitly.
 ## Approval gates
 
 - **Never send.** `create_draft` is the only Gmail write; the owner sends.
-- **Never create drafts before the owner approves the set.** One approval
-  covers one set.
+- **Drafts need no approval.** They are the review step: create them, name
+  them, and leave sending to the owner. Ask only when two invoices are
+  ambiguous or the contact is unknown.
 - **Never chase a received-but-unbooked invoice.** Exclude, evidence, narrate.
 - **Never chase a customer not in the books' AR.** No reminders from memory.
 - **Never write to QuickBooks.** Narrate the payment application.

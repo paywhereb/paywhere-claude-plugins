@@ -1,6 +1,6 @@
 ---
 name: big-purchase-decision
-version: 1.0.3
+version: 1.0.4
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit — the simple yes/no
@@ -91,13 +91,17 @@ them; if they gave neither, use the price from Step 2 and "this week".
 
 - `query_transactions {aggregate: true, groupBy: "month", dateFrom: <12
   months ago>}` on Operating → monthly net. Month-end balance = current
-  balance − net of every later month. Name the **two or three lowest
-  month-ends** with amounts, and the mechanism behind each from
+  balance − net of every later month. Rank the 12 month-end balances. The
+  **three highest** are the safest purchase months (name them by month, with
+  amounts); the **three lowest** are the risky months, and they are the ones
+  the second-van verdict must name. Name the mechanism behind each low from
   [`../cash-bridge`](../cash-bridge/SKILL.md) / [`../ap-timing`](../ap-timing/SKILL.md)
   (slow receivables, early vendor payments, a tax + insurance collision,
-  seasonal stocking). Name the strongest months too — that is the buying
-  window. Beyond 13 weeks, the same-month-last-year balance path scaled by
-  trailing growth stands in for the forecast.
+  seasonal stocking). The buying window comes from this ranking of where
+  cash has actually been, not from the forecast alone: the forecast says
+  whether the purchase clears the next 13 weeks, the ranking says which
+  months of the year it is safest in. Beyond 13 weeks, the same-month-last-year
+  balance path scaled by trailing growth stands in for the forecast.
 
 ## Step 4 — Offsets (books + payroll mail)
 
@@ -126,7 +130,9 @@ them; if they gave neither, use the price from Step 2 and "this week".
    Months that pass are "safe"; those that fail are named "risky" with the
    shortfall.
 5. **Second vehicle:** repeat 4 with both payment streams and both insurance
-   deltas; report the verdict and what would change it (faster collections,
+   deltas, and name the three lowest months from Step 3 as the period a
+   second payment stream would land on; report the verdict and what would
+   change it (faster collections,
    paying vendors on due date, a line of credit — quantified via
    [`../what-if`](../what-if/SKILL.md)).
 

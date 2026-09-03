@@ -1,12 +1,12 @@
 ---
 name: plan-payroll
-version: 1.0.2
+version: 1.0.3
 description: >
   Answers "am I good for payroll?" from the bank first: the live operating
   balance made reserve-aware (minus the sales-tax reserve shortfall and
   pending authorizations), the next payroll estimated from the processor's
   last two debits and corroborated by the payroll-summary email and the
-  payroll journal entries, every obligation due through payroll day + 7, and
+  payroll journal entries, every bill due on or before payroll day, and
   settlement detection so a customer whose money already landed is never
   chased. Shows the headroom equation, then ranked recovery options —
   collect named invoices (drafts), hold habitually-early bills, or a savings
@@ -38,7 +38,7 @@ User: "am I good for payroll Friday?"
 → list_accounts → Mode A. get_account_balance (operating, tax reserve, savings)
 → Reserve shortfall (true-available method) + pending → what is actually spendable
 → Next payroll: last two processor debits (net + tax rows) ⇄ payroll-summary email ⇄ journal entry
-→ Obligations through payroll date + 7: search_bills, calendar (remittance, estimates)
+→ Bills due on/before payroll date: search_bills; the week after listed separately (calendar: remittance, estimates)
 → Settlement detection: unrecorded bank credits × open invoices → landed vs outstanding
 → Verdict equation. If short: collect (drafts) · hold early-pay bills · top-up (staged, URL)
 → "check again" → re-pull balance + credits, say what changed
@@ -93,9 +93,9 @@ why (the bank for cash timing; the email for the upcoming run if it already
 exists). Overtime seasons make the last run a better guide than the average;
 say so when the two recent runs differ materially.
 
-### A3. Obligations through payroll date + 7
+### A3. Bills due on or before payroll date
 
-`search_bills` (open, due on/before payroll + 7 days, plus everything
+`search_bills` (open, due on/before the payroll date, plus everything
 overdue) with holds from
 [`../ap-timing/reference/early-payment-method.md`](../ap-timing/reference/early-payment-method.md)
 (a not-yet-due bill from a habitually-early vendor is **not** an obligation
@@ -142,9 +142,18 @@ Operating balance (cleared)                     $A
 − pending authorizations                         $P
 = spendable                                      $S
 − payroll (net + taxes) on <date>                $W    ← A2
-− other obligations through <date + 7>           $B    ← A3, confirmed
-= headroom / (shortfall)                         $S − $W − $B
+− bills due on/before <date>                     $B    ← A3, confirmed
+= headroom after payroll                         $S − $W − $B
+
+Next up (NOT in the headroom): {bills, estimates, remittance due in the 7 days after payroll, each dated}
 ```
+
+The headroom is what is left after payroll and the bills that fall due
+before it. Obligations that land in the week after payroll (a vendor bill
+due the following Thursday, the 15th estimate, the 20th remittance) are
+named and dated under "Next up" so the owner sees them coming, but they are
+not subtracted — they are paid from the cash that lands between now and
+then, and folding them in turns a clear yes into a muddled maybe.
 
 No unlanded inflow is counted in the verdict; outstanding AR is the recovery
 path. If short, rank the options:

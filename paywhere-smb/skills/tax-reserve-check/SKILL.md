@@ -1,6 +1,6 @@
 ---
 name: tax-reserve-check
-version: 1.0.2
+version: 1.0.3
 description: >
   Answers "how much of my balance is actually mine" for a business that
   collects sales tax: sales tax on payments RECEIVED since the last
@@ -97,8 +97,10 @@ today. If the reserve is short, say by how much and how many days remain.
 
 `query_transactions` on the Tax Reserve, `direction: "credit"`,
 `descriptionContains: "TAX RESERVE"` (the transfer-in stem), `dateFrom:
-<window start − 7 days>`. Build the list of Fridays in the window; a Friday
-with no incoming transfer is a **missed sweep**. For each sweep found,
+<today − 12 months>` — the whole year, not just the current remittance
+window: a sweep skipped last autumn is still a missed sweep, and the owner
+asked which Fridays, not which recent Fridays. Build the list of Fridays in
+those 12 months; a Friday with no incoming transfer is a **missed sweep**. For each sweep found,
 compare its amount with the tax inside that week's received payments (Step
 3 sliced Mon–Sun): a sweep that matches the week's *invoiced* tax instead of
 *received* tax is a "swept on invoiced, not received" note, not a miss.
