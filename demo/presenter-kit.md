@@ -34,8 +34,11 @@ cd paywhere-claude-plugins
 ```
 
 Rehearsing against a PoC deployment instead of demo.dev? Side-load the
-`-poc` file; it differs only in the Paywhere connector URL (set
-`PAYWHERE_POC_URL` before packaging if the PoC has another hostname).
+`-poc` file; its bank connector is named **Paywhere POC** and points at the
+PoC URL, so it installs beside the regular plugin (set `PAYWHERE_POC_URL`
+before packaging if the PoC has another hostname). Connect "Paywhere POC"
+as demo-nick; the skills only ever refer to "the Paywhere connector", so
+the name does not matter to them.
 
 In Cowork, **create a project for the demo first** and paste
 [`cowork-project-prompt.md`](cowork-project-prompt.md) into the project's

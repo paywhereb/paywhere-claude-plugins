@@ -19,9 +19,12 @@
 # When the plugin's .mcp.json points the Paywhere connector at the hosted demo
 # (PAYWHERE_DEMO_URL below), a third artifact is built as well:
 #   <plugin>-<version>-poc.plugin — the same contents with that one URL swapped for
-#                                   the PoC stack (PAYWHERE_POC_URL), so a PoC build
-#                                   can be side-loaded into Cowork without editing
-#                                   the committed manifest.
+#                                   the PoC stack (PAYWHERE_POC_URL) and the server
+#                                   renamed "Paywhere POC" (PAYWHERE_POC_NAME), so a PoC
+#                                   build can be side-loaded into Cowork next to the
+#                                   regular plugin (Desktop cannot remove a connector,
+#                                   and two servers with one name collide) without
+#                                   editing the committed manifest.
 # Override the PoC target per invocation:
 #   PAYWHERE_POC_URL=https://<name>.poc.dev.paywhere.com/mcp ./scripts/package.sh paywhere-smb
 
@@ -34,6 +37,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # <name>.poc.dev.paywhere.com).
 PAYWHERE_DEMO_URL="${PAYWHERE_DEMO_URL:-https://demo.dev.paywhere.com/mcp}"
 PAYWHERE_POC_URL="${PAYWHERE_POC_URL:-https://paywhere-mock-mcp.poc.dev.paywhere.com/mcp}"
+# The server key in the committed .mcp.json and the name the -poc variant gives it.
+PAYWHERE_SERVER_NAME="${PAYWHERE_SERVER_NAME:-Paywhere}"
+PAYWHERE_POC_NAME="${PAYWHERE_POC_NAME:-Paywhere POC}"
 
 if [[ $# -lt 1 || -z "${1:-}" ]]; then
   echo "usage: $(basename "$0") <plugin-name>" >&2
@@ -109,8 +115,12 @@ if [[ -f "$MCP_JSON" ]] && grep -qF "\"$PAYWHERE_DEMO_URL\"" "$MCP_JSON"; then
   STAGE="$(mktemp -d)"
   trap 'rm -rf "$STAGE"' EXIT
   cp -a "$PLUGIN_DIR/." "$STAGE/"
-  # Swap only the exact demo URL string; every other server entry is untouched.
-  sed -i.bak "s#\"$PAYWHERE_DEMO_URL\"#\"$PAYWHERE_POC_URL\"#" "$STAGE/.mcp.json"
+  # Swap only the exact demo URL string and rename the server key; every other
+  # server entry is untouched.
+  sed -i.bak \
+    -e "s#\"$PAYWHERE_DEMO_URL\"#\"$PAYWHERE_POC_URL\"#" \
+    -e "s#\"$PAYWHERE_SERVER_NAME\"[[:space:]]*:[[:space:]]*{#\"$PAYWHERE_POC_NAME\": {#" \
+    "$STAGE/.mcp.json"
   rm -f "$STAGE/.mcp.json.bak"
   (
     cd "$STAGE"
@@ -119,5 +129,5 @@ if [[ -f "$MCP_JSON" ]] && grep -qF "\"$PAYWHERE_DEMO_URL\"" "$MCP_JSON"; then
       -x '__MACOSX/*' \
       -x '*.swp'
   )
-  echo "  $POC_OUT  ($(stat -c%s "$POC_OUT" 2>/dev/null || stat -f%z "$POC_OUT") bytes)  Paywhere → $PAYWHERE_POC_URL"
+  echo "  $POC_OUT  ($(stat -c%s "$POC_OUT" 2>/dev/null || stat -f%z "$POC_OUT") bytes)  \"$PAYWHERE_POC_NAME\" → $PAYWHERE_POC_URL"
 fi
