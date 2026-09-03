@@ -1,6 +1,6 @@
 ---
 name: subscription-audit
-version: 1.0.1
+version: 1.0.2
 description: >
   Finds every recurring debit in 12 months of bank descriptors — no
   counterparty field needed — normalizes the statement text, groups it into
@@ -86,6 +86,25 @@ steps up once. Everything else is spend, not subscription — leave it out of
 the total but keep fuel/consumable stems in an appendix count so the owner
 sees the boundary.
 
+**Recurring is not the same as subscription.** Split the recurring stems
+into two classes and total them separately:
+
+- **Subscriptions** — the audit's headline total. Software and SaaS, phone
+  and internet, cloud storage, e-sign, website hosting, uniform and service
+  contracts, directory listings and fixed-fee lead-gen plans (an "Angi
+  Leads" or "Yelp" plan): anything on a plan that renews by itself and can
+  be cancelled with a click or a call.
+- **Other fixed monthly commitments** — listed for context, never inside
+  the subscription total. Rent, utilities, insurance premiums, the payroll
+  processor's fee, loan and lease payments, the accountant's retainer, bank
+  service charges, and pay-per-click ad spend (Google Ads) that recurs by
+  habit rather than by plan.
+
+When the owner asks "what subscriptions am I paying for in total," the
+answer is the subscription total, stated on its own line; give the
+fixed-commitments total as a second number, clearly labelled, never merged
+into the first.
+
 ## Step 4 — Enrich and flag
 
 For each recurring stem: latest amount, cadence, months seen, 12-month
@@ -110,9 +129,15 @@ Recurring charges — {date} (12 months of bank debits, Operating)
 |---|---|---|---|---|---|---|
 | … | … | monthly | 12 | … | yes / no | zero attribution |
 
-Monthly run-rate: ${total}   ·   Annualized: ${total × 12}
+Subscriptions — monthly run-rate: ${subs}   ·   Annualized: ${subs × 12}
 Cancel / review candidates: {n} items, ${x}/month (${y}/year)
   • {vendor} — {flag}: {one-line evidence}
+
+Other fixed monthly commitments (not subscriptions): ${fixed}/month
+| Vendor (stem) | Amount | Cadence | What it is |
+|---|---|---|---|
+| … | … | monthly | rent / utility / insurance / payroll fee / CPA / bank fee / ad spend |
+
 Not counted: {n} variable stems (fuel, consumables, saved-payee bills)
 ```
 
