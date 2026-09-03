@@ -5,7 +5,7 @@ Finance workflows for an owner-operated small business, run against your
 Calendar. Tell Claude what you need in plain English — "how is my business
 doing," "who do I call first," "am I good for payroll Friday," "how much of
 my balance is actually mine," "can I afford the van" — and the right skill
-runs. Version **1.0.7** covers the three A's:
+runs. Version **1.0.8** covers the three A's:
 
 | | What it is | In this plugin |
 |---|---|---|
@@ -35,7 +35,7 @@ bare Paywhere connector, no skills).
 ```bash
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
-./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.7.plugin
+./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.8.plugin
 ```
 
 In Cowork, use the "side-load a plugin file" picker and select the `.plugin`
@@ -101,7 +101,6 @@ before running it. Trigger phrases are examples.
 | **what-if** | Levers over the forecast: revenue −10%, biggest customer +30 days, hire, lose an agreement, collect faster, stop paying early, van, LOC; best combination. | "what if revenue drops 10%…" | Paywhere + QBO |
 | **big-purchase-decision** | The van: quotes from Gmail, appointment from Calendar, historical lows, forecast, mileage offset → cash vs finance, safest month, second-vehicle verdict. | "can I afford to buy a van this week for $58,500", "can I afford a $X purchase", "should I pay cash or finance", "when is the safest month to buy" | Paywhere + QBO + Gmail + Calendar |
 | **credit-readiness** | Working-capital gap, months short, LOC/card sizing, "would a LOC have helped"; writes the bank package (PDF + xlsx). | "what should I bring to the bank", "how much credit" | Paywhere + QBO |
-| **month-heads-up** | Next 30 days from the 13-week engine; two things to watch. | "what does next month look like" | Paywhere + QBO |
 
 ### Build
 
@@ -123,10 +122,9 @@ gracefully, and never execute or send.
 
 | Skill | Just say… |
 |---|---|
-| **close-month** → **month-end-prep** | "close the books", "reconcile" — now with gross-to-net settlement matching, unposted fee detection, unrecorded card purchases |
-| **friday-brief** | "Friday recap", "how'd we do this week" |
+| **month-end-prep** | "close the books", "reconcile" — gross-to-net settlement matching, unposted fee detection, unrecorded card purchases |
 | **quarterly-review** | "QBR", "most profitable customers", "are expenses growing faster than revenue" |
-| **tax-prep** → **tax-season-organizer** | "estimated taxes", "1099s" (owner income tax; sales tax lives in `tax-reserve-check`) |
+| **tax-season-organizer** | "estimated taxes", "1099s" (owner income tax; sales tax lives in `tax-reserve-check`) |
 | **smb-onboard** / **smb-router** / **conventions** | "set me up" / "what can you do" / "how do approvals work" |
 
 ### Demo setup (hosted sandbox only)
@@ -148,11 +146,15 @@ instructions, connect the sandbox connectors, run `/demo-setup` (≈ 5 minutes),
 then walk [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md). The same skills run
 on real accounts; what they surface depends entirely on the data present.
 
-### Frozen (D9)
+### Removed in 1.0.8
 
-`pay-and-bill` and `pay-commissions` belong to the retired Meridian Staffing
-world. They remain for reference, are not maintained, and predate the
-propose-only approval path.
+Six skills left the package so Cowork has fewer, sharper descriptions to
+choose from (a plain "show my balances" had been matching a reserve check):
+`pay-and-bill` and `pay-commissions` (the retired Meridian Staffing vertical,
+D9), `tax-prep` and `close-month` (older duplicates of `tax-season-organizer`
+and `month-end-prep`), `friday-brief` and `month-heads-up` (overlaps of
+`business-pulse` and `cash-flow-snapshot`). All six are in git history before
+1.0.8.
 
 ## How it works
 

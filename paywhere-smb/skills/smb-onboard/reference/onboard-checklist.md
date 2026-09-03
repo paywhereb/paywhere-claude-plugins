@@ -22,10 +22,10 @@ Map the owner's stated headache to the best two connectors to link first.
 |---|---|---|---|
 | Cash flow / invoicing | Paywhere | QuickBooks | `business-pulse` |
 | Making payroll | Paywhere | QuickBooks | `plan-payroll` |
-| Month-end close / reconciliation | QuickBooks | Paywhere | `close-month` |
+| Month-end close / reconciliation | QuickBooks | Paywhere | `month-end-prep` |
 | Paying vendors on time (not early) | QuickBooks | Paywhere | `ap-timing` → `pay-bills` |
 | Sales tax / "how much is really mine" | Paywhere | QuickBooks | `tax-reserve-check` |
-| Taxes | QuickBooks | Paywhere | `tax-prep` |
+| Taxes | QuickBooks | Paywhere | `tax-season-organizer` (income) / `tax-reserve-check` (sales) |
 | Chasing unpaid invoices | QuickBooks | Gmail | `invoice-chase` |
 | General / unsure | Paywhere | QuickBooks | `cash-flow-snapshot` |
 

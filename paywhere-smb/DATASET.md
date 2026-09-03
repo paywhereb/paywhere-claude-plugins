@@ -222,6 +222,7 @@ asserts the same closings through the connector.
 ## Frozen: Meridian Staffing (D9)
 
 The previous world (Meridian Staffing & Advisory, six months, one payroll
-squeeze) and the `pay-and-bill` / `pay-commissions` skills are kept for
-reference and not maintained; its books are no longer reseeded. The old
+squeeze) is kept for reference and not maintained; its books are no longer
+reseeded, and its `pay-and-bill` / `pay-commissions` skills left the plugin
+package in 1.0.8 (git history before that). The old
 generator is `paywhere-mcp-api/src/demo/legacy/meridianBankDataset.ts`.

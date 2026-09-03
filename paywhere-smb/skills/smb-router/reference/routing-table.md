@@ -23,4 +23,4 @@ Typical owner phrasings and the skill whose description carries the matching tri
 | "/demo-setup" (presenter, hosted sandbox only) | `demo-setup` | "set up the demo" |
 | "<customer> just paid" (presenter, hosted sandbox only) | `demo-inject` | "simulate <customer> paying" |
 
-Other common asks: "13-week forecast" → `cash-flow-snapshot`; "close the books" → `close-month`; "Friday recap" → `friday-brief`; "QBR" / "most profitable customers" → `quarterly-review`; "estimated taxes" / "1099s" → `tax-prep`; "how do approvals work" → `conventions`.
+Other common asks: "13-week forecast" → `cash-flow-snapshot`; "close the books" → `month-end-prep`; "Friday recap" / "how'd we do this week" → `business-pulse`; "QBR" / "most profitable customers" → `quarterly-review`; "estimated taxes" / "1099s" → `tax-season-organizer`; "how do approvals work" → `conventions`.

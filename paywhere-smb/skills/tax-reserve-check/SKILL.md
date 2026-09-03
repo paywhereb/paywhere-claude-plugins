@@ -182,4 +182,4 @@ Nothing has moved until you approve this on the bank's page.
 - `reference/method.md` — formulas, pro-rating, descriptor stems to look for, the Friday test
 - `../business-pulse/reference/true-available.md` — the short form
 - `../tax-sweep-agent/SKILL.md` — the scheduled Friday version of Step 3 + Step 7
-- `../tax-prep/SKILL.md` — owner income-tax estimates and 1099s (not sales tax)
+- `../tax-season-organizer/SKILL.md` — owner income-tax estimates and 1099s (not sales tax)

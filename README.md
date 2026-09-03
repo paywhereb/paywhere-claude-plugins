@@ -270,7 +270,7 @@ the config schema and field reference.
 
 See [`demo/seed.md`](demo/seed.md) for instructions on standing up a
 QuickBooks Online sandbox company + a seeded Paywhere mock-dev
-environment for end-to-end demos of `/close-month`, `/plan-payroll`, and
+environment for end-to-end demos of `/month-end-prep`, `/plan-payroll`, and
 `/monday-brief`.
 
 ## Provenance

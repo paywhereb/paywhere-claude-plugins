@@ -15,8 +15,9 @@ Everything below this line is the **previous** demo, kept for reference.
 
 # Staffing vertical (frozen, D9) — Meridian Staffing & Advisory
 
-> **Frozen 2026-09-02.** The Meridian world, `pay-and-bill` and
-> `pay-commissions` are no longer reseeded or maintained. The script is kept
+> **Frozen 2026-09-02; skills removed 2026-09-03.** The Meridian world is no
+> longer reseeded or maintained, and `pay-and-bill` / `pay-commissions` left
+> the plugin package in 1.0.8 (git history before that). The script is kept
 > verbatim so the beats can be revived against a spare sandbox company. Note
 > that its money steps predate the propose-only approval path: on the current
 > demo deployment the payment tools stage a `/confirm` proposal instead of

@@ -47,7 +47,7 @@ the short form:
 |---|---|
 | "How is my business doing?" / "snapshot" / "Monday brief" / "catch me up" / "what's coming in vs going out" | `business-pulse` |
 | "QuickBooks says I made money, why is my cash lower?" / "why doesn't my bank balance move with my profit" / "profit vs cash" / "where did the profit go" | `cash-bridge` |
-| "How'd we do this week" / "Friday recap" | `friday-brief` |
+| "How'd we do this week" / "Friday recap" | `business-pulse` (weekly framing) |
 | "Quarterly review" / "QBR" / "most profitable customers" / "expenses growing faster than revenue" / "best referral sources" | `quarterly-review` |
 
 **Money owed to me**
@@ -68,7 +68,7 @@ the short form:
 |---|---|
 | "How much of my balance is actually mine?" / "reserved for taxes" / "what do I owe on the 20th" / "did I miss a sweep" | `tax-reserve-check` |
 | "Run the Friday tax sweep" / "sweep this week's sales tax" | `tax-sweep-agent` |
-| "Estimated taxes" / "1099s" / "accountant needs…" (owner income tax, not sales tax) | `tax-prep` |
+| "Estimated taxes" / "1099s" / "accountant needs…" (owner income tax, not sales tax) | `tax-season-organizer` |
 
 **Spending**
 | | |
@@ -82,7 +82,7 @@ the short form:
 | "What should I bring to the bank?" / "line of credit" / "how much credit" / "when am I most likely short" | `credit-readiness` |
 | "13-week forecast" / "minimum balance" / "strongest and weakest months" / "runway" / "cash crunch" | `cash-flow-snapshot` |
 | "What if revenue drops 10%…" / "what if X pays 30 days late" / "what if I hire a tech" / "stop paying early" | `what-if` |
-| "What does next month look like" / "next 30 days" | `month-heads-up` |
+| "What does next month look like" / "next 30 days" | `cash-flow-snapshot` (first 4–5 weeks) |
 
 **Build me something (application)**
 | | |
@@ -99,7 +99,7 @@ the short form:
 **Books**
 | | |
 |---|---|
-| "Close the books" / "month-end" / "reconcile" | `close-month` (→ `month-end-prep`) |
+| "Close the books" / "month-end" / "reconcile" | `month-end-prep` |
 
 **Getting started / presenter tools**
 | | |
@@ -108,10 +108,9 @@ the short form:
 | "Set up the demo" / "reset the demo" (presenter) | `demo-setup` |
 | "Inject a deposit" / "simulate a customer paying" (presenter) | `demo-inject` |
 
-Not routed: `pay-and-bill` and `pay-commissions` are the frozen staffing
-vertical (D9) — mention them only if the owner explicitly asks about
-contractor hours billing or sales commissions, and say they are not
-maintained.
+Not in this plugin: contractor hours billing and sales commissions (the
+retired staffing vertical, D9). If the owner asks, say so plainly and offer
+the nearest thing — `pay-bills` for paying a contractor by saved payee.
 
 ## Step 3 — Recommend one thing
 
@@ -148,14 +147,14 @@ that is missing, say so first and offer the closest fallback. Requirements:
 
 | Skill | Required | Optional |
 |---|---|---|
-| business-pulse, friday-brief | — (degrades) | Paywhere, quickbooks, google calendar, gmail |
+| business-pulse | — (degrades) | Paywhere, quickbooks, google calendar, gmail |
 | cash-bridge, ar-health, ap-timing, subscription-audit, tax-reserve-check | Paywhere + quickbooks | gmail, google calendar |
 | invoice-chase | quickbooks + Paywhere | gmail (drafts) |
 | pay-bills, plan-payroll, tax-sweep-agent, daily-cash-brief | Paywhere + quickbooks | gmail, google calendar |
-| cash-flow-snapshot, what-if, month-heads-up | Paywhere + quickbooks | google calendar |
+| cash-flow-snapshot, what-if | Paywhere + quickbooks | google calendar |
 | big-purchase-decision | Paywhere + quickbooks | gmail (quotes), google calendar (appointment) |
 | credit-readiness, build-cash-dashboard | Paywhere + quickbooks | google calendar |
-| close-month / month-end-prep, quarterly-review, tax-prep | quickbooks + Paywhere | — |
+| month-end-prep, quarterly-review, tax-season-organizer | quickbooks + Paywhere | — |
 | demo-setup, demo-inject | Paywhere (a deployment that carries the seeder tools) + quickbooks | — |
 
 ## Step 7 — Tiebreakers and no match
