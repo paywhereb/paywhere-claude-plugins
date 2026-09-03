@@ -323,6 +323,12 @@ Reserve **transfer** with the `/confirm` link (`tax.lastSweep` after
 approval). This is Nick's manual Friday habit, automated and still approved
 by him.
 
+> **Presenter note.** The demo bank posts nothing after the most recent
+> Sunday, so on any weekday "this week's received payments" is empty and the
+> sweep is a correct but dull **$0**. Before this beat, run `/demo-inject`
+> ("simulate Westport paying") so a payment lands this week; the sweep then
+> has real tax to stage. The first live eval confirmed the $0 path behaves.
+
 ### Not scheduled in this build (see "Not in this build")
 
 3.2 `ar-chase-agent` (Mon 8am), 3.3 `tax-remittance-agent` (18th), 3.4
