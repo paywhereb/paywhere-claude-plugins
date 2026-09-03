@@ -1,6 +1,7 @@
 ---
 name: demo-setup
-version: 1.0.1
+version: 1.0.2
+disable-model-invocation: true
 description: >
   Builds the presenter's own Nick's HVAC demo bank world on the Paywhere
   connector's demo-seeder tools (present only on demo deployments):

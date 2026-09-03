@@ -1,6 +1,6 @@
 ---
 name: cash-flow-snapshot
-version: 1.0.0
+version: 1.0.1
 description: >
   The forecast engine: a 13-week direct-method cash forecast built from the
   bank and the books — opening Operating balance (Tax Reserve and Business
@@ -14,7 +14,8 @@ description: >
   Use when the owner says "13-week cash forecast," "forecast my cash,"
   "30/60/90-day cash flow," "what's my minimum balance," "how much reserve
   should I keep," "strongest and weakest months," "cash crunch," "runway,"
-  or "will I run short."
+  or "will I run short." NOT for "what's my balance" or "how much cash do I
+  have" — answer those from list_accounts, no forecast.
 ---
 
 # Cash Flow Snapshot (13-week direct method)

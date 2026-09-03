@@ -29,7 +29,7 @@ same `dateModel`; run `--check` in the demo week.
 ```bash
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
-./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.6.plugin
+./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.7.plugin
 ```
 
 In Cowork, **create a project for the demo first** and paste
@@ -92,7 +92,7 @@ day's demo drafts.
 1. Morning: confirm the QBO reseed ran (`get_demo_dates` → `seeded: true`,
    `seededAt` today). Run `seed-google.mjs --check`.
 2. Open the demo Cowork project (instructions = `cowork-project-prompt.md`;
-   plugin 1.0.6 side-loaded; four connectors signed in as demo-nick).
+   plugin 1.0.7 side-loaded; four connectors signed in as demo-nick).
 3. `/demo-setup` (≈ 5 min). Record credentials. Check the four readback ✓.
 4. Sign the bare-connector window in with the new bank user.
 5. Pre-run Act 3 (`Run my morning cash brief`, `Run the Friday tax sweep`)
@@ -113,7 +113,7 @@ day's demo drafts.
 | A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch | Readback catches it; re-run `/demo-setup` |
 | `/confirm` link 404 | Nonce dropped after `?` or copied partially, or proposal expired | Copy the full path form `/confirm/<id>/<nonce>`; re-stage if expired |
 | Money tool returns `{ error: "…no proposal store (stdio mode)…" }` | Running against a local stdio server | Use the HTTP demo deployment |
-| Skill "executed" or says "paid ✓" | Stale skill text | You are on an old plugin version; rebuild + side-load 1.0.6 |
+| Skill "executed" or says "paid ✓" | Stale skill text | You are on an old plugin version; rebuild + side-load 1.0.7 |
 | Intents shows no `financing_debt` move during 1.8 | Project prompt missing — the skills no longer word the `intent` field | Check the Cowork project's instructions carry `cowork-project-prompt.md` (§Tool fields) |
 | Gmail draft shows up as sent | Client denies not applied | Stop; check §4 layers; Workspace restriction should have bounced it |
 | Scheduled task did not fire | Cowork must be open; local schedule | Pre-run before the meeting; in the room show the schedule and the file |

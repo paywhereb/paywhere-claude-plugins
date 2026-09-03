@@ -1,6 +1,7 @@
 ---
 name: demo-inject
-version: 1.0.2
+version: 1.0.3
+disable-model-invocation: true
 description: >
   PRESENTER-ONLY, demo deployments only. Posts live "money just landed" or
   "payment bounced" events into the presenter's own mock-bank world with the

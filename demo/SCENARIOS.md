@@ -38,7 +38,7 @@ The bank's page is where the approval happens."*
    (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
    signed in as **demo-nick@paywhere.com** for the Google pair
    ([`presenter-kit.md`](presenter-kit.md) §1).
-3. Side-load `dist/paywhere-smb-1.0.6.plugin` (presenter-kit §2).
+3. Side-load `dist/paywhere-smb-1.0.7.plugin` (presenter-kit §2).
 4. Then, in the project:
 
 ```
@@ -393,7 +393,7 @@ Pending card authorizations cannot be injected (posted rows only).
 
 ## Rehearsal checklist
 
-- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.6 side-loaded.
+- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.7 side-loaded.
 - [ ] `/demo-setup` completed; readback ✓ ×4; credentials recorded; `dateModelSource: "provided"`.
 - [ ] Gmail (`demo-nick@paywhere.com`) and Calendar connected in Cowork; the Google seed ran this week (`seed-google.mjs --check`).
 - [ ] Bare-connector session (1.0) signed in on a second window with the same bank user.

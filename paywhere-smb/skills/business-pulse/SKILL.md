@@ -1,6 +1,6 @@
 ---
 name: business-pulse
-version: 1.0.1
+version: 1.0.2
 description: >
   One-page pulse for an owner-operated business: the three bank balances,
   TRUE AVAILABLE CASH (operating minus the sales-tax reserve shortfall minus
@@ -12,7 +12,8 @@ description: >
   connected. Use when the owner says "how is my business doing," "how's the
   business doing," "how are we doing," "give me a snapshot," "Monday brief,"
   "weekly check-in," "catch me up," "what am I missing," or "what's coming
-  in vs going out."
+  in vs going out." NOT for "show my balances" or any single-number
+  question — answer those directly from one tool call, no skill.
 ---
 
 # Business Pulse

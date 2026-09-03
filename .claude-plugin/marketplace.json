@@ -9,7 +9,7 @@
       "name": "paywhere-smb",
       "source": "./paywhere-smb",
       "description": "Small-business finance workflows (business pulse + true available cash, cash bridge, AR health / invoice chase, pay-when-due bill pay, reserve-aware payroll, sales-tax reserve check + Friday sweep, subscription audit, big-purchase + credit readiness, 13-week forecast + what-ifs, cash dashboard + Excel model, scheduled daily brief and tax-sweep agents) against Paywhere + QuickBooks + Gmail + Google Calendar. Payments stage as proposals approved on the bank's /confirm page. Includes /demo-setup.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "category": "finance",
       "tags": [
         "smb",

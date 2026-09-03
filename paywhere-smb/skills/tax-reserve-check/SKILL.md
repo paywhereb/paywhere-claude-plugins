@@ -1,6 +1,6 @@
 ---
 name: tax-reserve-check
-version: 1.0.4
+version: 1.0.5
 description: >
   Answers "how much of my balance is actually mine" for a business that
   collects sales tax: sales tax on payments RECEIVED since the last
@@ -12,7 +12,9 @@ description: >
   bank's /confirm page. Not tax advice. Use when the owner says "how much of
   my balance is actually mine," "how much of my cash is really mine," "what's
   reserved for taxes," "is my tax reserve enough," "am I holding enough for
-  sales tax," "what do I owe on the 20th," or "did I miss a tax sweep."
+  sales tax," "what do I owe on the 20th," or "did I miss a tax sweep." NOT
+  for "show my balances" or "what's my balance" — those are one list_accounts
+  call and a two-sentence answer, no skill.
 ---
 
 # Tax Reserve Check

@@ -1,6 +1,7 @@
 ---
 name: pay-commissions
-version: 1.0.2
+version: 1.0.3
+disable-model-invocation: true
 description: >
   (Staffing vertical, frozen — D9. Not maintained; kept for reference
   against the retired Meridian Staffing world. Predates the propose-only

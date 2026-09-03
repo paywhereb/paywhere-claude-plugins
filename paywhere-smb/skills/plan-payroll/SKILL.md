@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 1.0.3
+version: 1.0.4
 description: >
   Answers "am I good for payroll?" from the bank first: the live operating
   balance made reserve-aware (minus the sales-tax reserve shortfall and
@@ -14,7 +14,8 @@ description: >
   again" re-run when money lands mid-conversation. Falls back to a labeled
   forecast without the bank. Use when the owner says "am I good for payroll
   Friday," "can I make payroll," "will payroll clear," "am I good for
-  payroll," or "is payroll covered."
+  payroll," or "is payroll covered." NOT for "when is payroll" or "what was
+  the last payroll" — those are a calendar or one bank query, no skill.
 ---
 
 # Plan Payroll

@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.3
+version: 1.0.4
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar, writes `briefs/YYYY-MM-DD.md` (three
@@ -13,8 +13,9 @@ description: >
   bills) for the owner to approve on the bank's /confirm page with a passkey.
   Proposes, never executes; drafts only; degrades gracefully. Use when the
   owner says "run my morning cash brief," "daily cash brief," "morning
-  brief," "what's my cash this morning," or schedules "every weekday at 7:30
-  run my morning cash brief."
+  brief," or schedules "every weekday at 7:30 run my morning cash brief."
+  NOT for "what's my cash" or "show my balances" asked in conversation —
+  those get a direct answer, not a brief.
 ---
 
 # Daily Cash Brief (agent)
