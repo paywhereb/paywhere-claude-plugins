@@ -45,15 +45,19 @@ everything the agent proposed.
 
 1. **Build the full set first.** Collect every line (bills, transfers) before
    calling any money tool. One batch, one URL.
-2. **Interactive runs: an in-chat check is fine, not a gate on money.** Show
-   the table (payee, amount, rail, from-account, why) and ask "stage these?"
-   Staging is reversible (the owner can decline on the confirm page or
-   cancel), so do not make the owner say "yes, pay these" twice — the
-   passkey is the real approval. **Unattended runs skip the in-chat check**:
-   there is nobody to answer; stage what the skill defines and surface the URL
-   (see [`AUTONOMY.md`](AUTONOMY.md)).
-3. **Optionally `dryRun: true` first** when a line might fail validation
-   (unknown payee, wrong rail). A dry run validates without staging.
+2. **Stage in the same turn you present the set — do not ask "stage these?".**
+   A staged proposal is inert; the owner reviews it on the bank's confirm page
+   and the passkey there is the one approval, so an in-chat "yes, pay these"
+   is a second confirmation for nothing. The owner sees two steps in total:
+   the table with its approval link, then the bank's page. Ask before staging
+   only when the skill cannot decide alone: a possible duplicate, or a payee
+   with no saved rail. If the owner trims the set afterwards, stage a fresh
+   batch; the old one expires unused. Unattended runs stage what the skill
+   defines and surface the URL (see [`AUTONOMY.md`](AUTONOMY.md)).
+3. **No dry run in the normal flow.** A rejected batch comes back as
+   `{ error, invalid_items[] }` naming the line and the reason; fix that line
+   and re-submit once. `dryRun: true` exists for the rare case of a brand-new
+   inline payee whose details the owner just dictated.
 4. **Stage with ONE `make_batch_payment`.** Pay saved payees **by name**
    (`recipientId` = the payee's name; `list_saved_payees` tells you the rail).
    Transfers use the `transfer` rail with **exact, unmasked** account numbers

@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.4
+version: 1.0.5
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar, writes `briefs/YYYY-MM-DD.md` (three
@@ -148,7 +148,7 @@ follows `../invoice-chase`, drafts only). Say that in the brief.
 
 Build the item list (transfer first, then ACH, then wire) and call
 `make_batch_payment` once with `sessionType: "scheduled"` and `taskId:
-"daily-cash-brief"`. Optionally `dryRun: true` first if any
+"daily-cash-brief"`. No dry run; a rejected line comes back named in `invalid_items` — fix and re-submit once, if any
 payee match is uncertain. From the response keep `confirmation_url`,
 `confirmation_title`, `total_amount`, `by_rail`, `lines[]`, `expires_at`.
 If the response is `{ error }`, record it in the brief and move on. If there

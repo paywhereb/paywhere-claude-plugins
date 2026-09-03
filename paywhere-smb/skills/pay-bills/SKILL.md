@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 1.0.3
+version: 1.0.4
 description: >
   Stages this week's vendor payments as ONE mixed-rail batch for the owner to
   approve on the bank's page: pulls open bills from QuickBooks, selects what is
@@ -38,9 +38,10 @@ User: "pay the bills due this week"
 → list_accounts + get_account_balance → operating balance, true available
 → list_saved_payees once → name → rail map (ACH / WIRE)
 → Duplicate check: query_transactions debits for each vendor+amount (today/this week)
-→ Show the table (pay / held / excluded) → "stage these?"
 → ONE make_batch_payment (ACH + wire lines, by payee name) → confirmation_url
-→ Print the URL + confirmation_title. Nothing has moved.
+→ Show the table (pay / held / excluded) AND the URL + confirmation_title in
+  the same reply. Two steps for the owner in total: read the table, approve
+  on the bank's page. No "stage these?", no dry run.
 → Narrate the QuickBooks Bill Payments that would follow approval
 ```
 
@@ -134,14 +135,18 @@ the same way.
 | _DocNumber_ | _equipment supplier_ | {date} | **held — due in 18** | $11,400.00 | — | usually paid 14 days early |
 
 Below: batch total, operating balance, true available, projected balance
-after approval, held list, excluded list with reasons. Ask **"stage these
-for approval?"** — this is a courtesy check, not the money gate; the passkey
-on the bank's page is the approval. Any change to the set → re-present.
+after approval, held list, excluded list with reasons. **Do not ask "stage
+these?"** — stage the batch (step 7) in the same turn and present the table
+together with the approval link. A staged proposal is inert: the owner's
+review happens on the bank's page, where the passkey is the one approval, and
+declining there costs nothing. The only questions this skill asks before
+staging are the two it cannot answer itself: a **possible duplicate**
+(step 5) and a payee with **no saved rail** (step 4). If the owner trims the
+set after seeing it, stage a fresh batch; the old proposal expires unused.
 
 ### 7. Stage — ONE `make_batch_payment`
 
-Optionally `dryRun: true` first when a line might fail (new payee, odd
-rail). Then one call with every approved line (`rail: "ach"` items with
+No dry run. One call with every line that survived steps 4–6 (`rail: "ach"` items with
 `recipientId`, `paymentAmount`, `paymentName` = "Bill {DocNumber} {vendor}";
 `rail: "wire"` items with `recipientId`, `amount`, `purposeOfWire`; any
 top-up as `rail: "transfer"` with exact unmasked account numbers from
@@ -149,9 +154,12 @@ top-up as `rail: "transfer"` with exact unmasked account numbers from
 [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md).
 
 Read back `confirmation_url`, `confirmation_title`, `total_amount`,
-`by_rail`, `lines[]`, `expires_at`. An `{ error }` (expired / sealed
-proposal, line cap) is reported in one line and re-staged fresh if the
-proposal expired. Never invent a URL.
+`by_rail`, `lines[]`, `expires_at`. A rejected batch comes back as
+`{ error, invalid_items[] }` naming the line and the reason (a payee name that
+did not resolve, a missing field): fix that line and re-submit the whole
+batch once — that is what a dry run would have told you, without the extra
+round trip. An `{ error }` for an expired or sealed proposal is reported in
+one line and the batch re-staged fresh. Never invent a URL.
 
 ### 8. Print the approval step
 
