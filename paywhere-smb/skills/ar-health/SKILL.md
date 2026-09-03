@@ -1,6 +1,6 @@
 ---
 name: ar-health
-version: 1.0.0
+version: 1.0.2
 description: >
   Receivables analysis from the books AND the bank: aging buckets, each
   customer's payment-behavior profile derived from 12 months of invoice-to-
@@ -98,10 +98,10 @@ card payment matches on gross − fee, not gross; do not force it.
 A match = **received, not booked**: the cash is already in the bank; the books
 still show the invoice open. Mark it so, quote the bank row (date, amount,
 descriptor, check number if present), **exclude it from collectible AR and from
-the chase list**, and narrate the books fix in one line: outside a demo the
-payment would be recorded against the invoice and deposited from Undeposited
-Funds; the demo books are read-only, so the item will reappear each run until
-the nightly reseed.
+the chase list**, and narrate the books fix in one line: the payment should
+be recorded against the invoice and deposited from Undeposited Funds; the
+QuickBooks connector is read-only, so the item will reappear each run until
+the bookkeeper applies it.
 
 Ambiguous (two open invoices share the amount) → show both, decide nothing.
 

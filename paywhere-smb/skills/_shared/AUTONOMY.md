@@ -28,14 +28,12 @@ these rules; an unattended run **must**.
 
 Every Paywhere tool (and any tool that accepts them) gets:
 
-- `sessionType: "scheduled"` — this is what the FI's Intents screen uses to
-  separate non-interactive activity. (The server records what you assert; it
-  cannot verify it. Say so if asked.)
+- `sessionType: "scheduled"` — tells the bank the call came from a scheduled
+  job rather than a person in the chat, so approvals route accordingly. (The
+  server records what you assert; it cannot verify it. Say so if asked.)
 - `taskId`: a stable id per schedule, e.g. `daily-cash-brief`,
-  `tax-sweep-agent`, `ar-chase-agent`. Same id every run so the FI can see
+  `tax-sweep-agent`, `ar-chase-agent`. Same id every run so the bank can see
   the series.
-- `intent`: one sentence, e.g. "Scheduled morning cash brief: check
-  balances, due bills and reserve shortfall."
 
 Interactive runs use `sessionType: "interactive"` (or omit it).
 
@@ -50,8 +48,7 @@ re-run that must regenerate is an owner's explicit ask, not a schedule.
 ## 4. Propose, never execute
 
 - The only money tools are `make_ach_payment` / `make_wire_payment` /
-  `make_batch_payment`; on the demo deployment they stage lines and return a
-  confirmation URL. See [`APPROVAL.md`](APPROVAL.md).
+  `make_batch_payment`; they stage lines and return a confirmation URL. See [`APPROVAL.md`](APPROVAL.md).
 - Internal transfers (reserve top-up, sweep, savings) are staged as
   `{rail: "transfer", fromAccountNumber, toAccountNumber, amount}` items in
   the same `make_batch_payment` call as any bills — **never `transfer_funds`**,
@@ -89,8 +86,7 @@ Gmail: `create_draft` (and the read tools `search_threads`, `get_thread`,
 `get_message`, `list_drafts`). Never `send_message`, `reply`, `forward`.
 Calendar: read tools (`list_events`, `search_events`, `get_event`);
 `create_event` only when the owner explicitly asked for a reminder, always
-without attendees. A demo never sends email; see the presenter kit for the
-other two layers of that rule.
+without attendees. This plugin never sends email.
 
 ## 7. Output shape (the run's chat/notification text)
 
@@ -103,8 +99,9 @@ Nothing has moved until you approve this on the bank's page.
 Needs you: <bullets>   |  Unavailable: <connectors>
 ```
 
-## 8. Rehearsal note
+## 8. Showing a run on request
 
-Cowork scheduled runs are hard to fire on cue in a meeting. Pre-run the
-schedules before the demo so the files and staged proposals exist; in the
-room, show the schedule, open the output file, open the URL, approve.
+Cowork scheduled runs fire only while the app is open. If the owner wants to
+see a run without waiting for the schedule, run the same prompt
+interactively: the output file and the staged proposal are identical, and
+the approval still happens on the bank's page.

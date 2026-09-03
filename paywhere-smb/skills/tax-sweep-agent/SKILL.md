@@ -1,6 +1,6 @@
 ---
 name: tax-sweep-agent
-version: 1.0.0
+version: 1.0.2
 description: >
   The Friday sales-tax sweep, automated (autonomous agent). Every Friday it
   totals the sales tax included in the payments RECEIVED this week (books
@@ -41,7 +41,8 @@ rules as they appear on its invoices; the accountant owns the return.
 | Schedule | `Every Friday at 4:00pm` |
 | Prompt | `Run the Friday tax sweep` |
 
-Cowork must be open for the run to fire. Pre-run before a demo.
+Cowork must be open for the run to fire. To see a run on demand, use the
+same prompt interactively.
 
 ## Why "received", not "invoiced"
 
@@ -66,8 +67,7 @@ Resolve today from the actual date. The week is **Monday through today**
 (normally Friday; on any other weekday, Monday through today, and say so).
 If `sweeps/YYYY-MM-DD.md` exists → "Today's sweep exists at
 sweeps/YYYY-MM-DD.md — skipping." and stop. Every Paywhere call carries
-`sessionType: "scheduled"`, `taskId: "tax-sweep-agent"`, `intent: "Friday
-sales-tax sweep: stage this week's received tax to the reserve."`
+`sessionType: "scheduled"` and `taskId: "tax-sweep-agent"`.
 
 ### 2. Pull
 
@@ -117,8 +117,7 @@ sales-tax sweep: stage this week's received tax to the reserve."`
                   "fromAccountNumber": "<Operating, unmasked>",
                   "toAccountNumber": "<Tax Reserve, unmasked>",
                   "amount": <this week's received tax> } ],
-  "sessionType": "scheduled", "taskId": "tax-sweep-agent",
-  "intent": "Friday sales-tax sweep: this week's received tax to the Tax Reserve." }
+  "sessionType": "scheduled", "taskId": "tax-sweep-agent" }
 ```
 
 Keep `confirmation_url`, `confirmation_title`, `expires_at`. If the amount
@@ -159,8 +158,8 @@ Nothing has moved until you approve this on the bank's page.
 Needs you: prior shortfall ${b} (tax-reserve-check); {unbooked credits} | Unavailable: {none}
 ```
 
-**What the FI sees:** a `scheduled` session in Intents under tax compliance,
-and an internal transfer waiting for a human in Money Movement.
+**What the bank sees:** a `scheduled` session and an internal transfer
+waiting for a human approval.
 
 ## Guardrails
 

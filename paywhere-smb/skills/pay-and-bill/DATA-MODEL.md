@@ -6,12 +6,12 @@ Three concerns, three homes — all in QuickBooks + Paywhere, no local files:
 |---|---|---|
 | (a) Who works where, at what rates, paid by which rail | **QBO worker vendors** | The vendor record carries the worker's client, BillRate, PayRate, and rail; the worker's name is the payee name |
 | (b) How many hours were actually worked | **QBO time-activities** | Evidence in the books. Hours are read, never invented |
-| (c) Bill and pay once and only once | **Bank-side markers** (`PWD-PB-…` in each payment's description) | The dedupe signal — the read-only demo books never record a run |
+| (c) Bill and pay once and only once | **Bank-side markers** (`PWD-PB-…` in each payment's description) | The dedupe signal — the read-only books never record a run |
 
-QuickBooks is **read** for the roster and the hours; the demo connector is
-**read-only** (the shared books reseed server-side daily), so the *client
+QuickBooks is **read** for the roster and the hours; the QuickBooks connector is
+**read-only**, so the *client
 invoices* (revenue) and the *worker cost* (a Bill + Bill Payment per worker
-per period) that would be written outside a demo are narrated, not created.
+per period) that would be written with write access are narrated, not created.
 Paywhere is the bank that actually pays the workers; the pay step passes the
 worker's **name** (`recipientId`) + amount, and the bank resolves it to the
 worker's saved payee.
@@ -39,9 +39,8 @@ fall back to the inline recipient block from their vendor record rather than
 erroring (see "Tool signatures"). Stablecoin never uses pay-by-name — it always
 uses the stablecoin payment flow.
 
-The demo world's concrete worker roster, rates, and rails are documented in
-[../../DATASET.md](../../DATASET.md) (seeded server-side in the shared books;
-the matching saved payees ride the caller's bank world via `/demo-setup`).
+The reference world's worker roster, rates, rails and saved payees are
+documented in [../../DATASET.md](../../DATASET.md).
 
 ## Hours — QBO time-activities
 
@@ -60,7 +59,7 @@ excluded; hours are never invented.
 - **Invoice (per client):** one invoice per client per period; one line per
   assigned worker — Qty = hours, Rate = `BillRate`, line amount =
   hours × BillRate. Use the QBO service items already on the books (e.g. the
-  demo world uses `Consulting Hours – Senior` and `Contract Staffing Hours` —
+  reference world uses `Consulting Hours – Senior` and `Contract Staffing Hours` —
   see [../../DATASET.md](../../DATASET.md)).
 - **Worker pay:** gross = hours × `PayRate`. Stablecoin adds a 1% rail fee on
   top (previewed via `make_batch_payment` `dryRun`).
@@ -69,7 +68,7 @@ excluded; hours are never invented.
   margin on revenue (a 30% markup on pay). Report it in the reconcile summary;
   a material deviation means an hours or rate mismatch worth investigating.
 
-  **Example only** (the demo world's last-week hours — use the live numbers):
+  **Example only** (the reference world's last-week hours — use the live numbers):
   Priya 40h @ $40 pay = $1,600 / @ $52 bill = $2,080; Marcus 36h @ $30 =
   $1,080 / @ $39 = $1,404; Elena 40h @ $60 = $2,400 / @ $78 = $3,120 (wire);
   Devon 32h @ $50 = $1,600 / @ $65 = $2,080 (stablecoin).
@@ -98,11 +97,11 @@ are set to the worker's bill marker when the batch is built, so
 every worker a prior run already paid (the dedupe check, before the gates)
 and `descriptionContains: "PWD-PB"` finds them again at reconcile time.
 Stablecoin items carry no description — match those by amount + date + type.
-The read-only demo books never record a run, so QBO carries no marker rows —
+The read-only books never record a run, so QBO carries no marker rows —
 don't search it for them.
 
 The invoice marker names the per-client invoice the narration describes;
-outside a demo both markers would also be written into QBO (DocNumber +
+with write access both markers would also be written into QBO (DocNumber +
 the start of `PrivateNote`):
 
 - Invoice `PrivateNote`: `PWD-PB-INV-{period}-{client-slug} — hours {PeriodStart}–{PeriodEnd}: {worker} {hours}h @ ${BillRate}` (one clause per worker line).
@@ -110,9 +109,9 @@ the start of `PrivateNote`):
 
 ## Tool signatures (verbatim)
 
-### QuickBooks fork — read-only on the demo connector
+### QuickBooks fork — read-only on the read-only connector
 
-The shared demo connector advertises **only read tools** (`get_*` /
+The read-only QuickBooks connector advertises **only read tools** (`get_*` /
 `search_*` / `read_*`); the create/update/delete tools do not exist there.
 
 - `search_invoices` — filters `DocNumber` and `PrivateNote` with `LIKE`
@@ -121,7 +120,7 @@ The shared demo connector advertises **only read tools** (`get_*` /
 - `search_customers` — clients, matched by DisplayName.
 - `search_vendors` — workers as vendors, matched by DisplayName.
 
-Outside a demo, the narrated writes would be `create_invoice` (accepts
+With write access, the narrated writes would be `create_invoice` (accepts
 `DocNumber` + `PrivateNote`), **`create-bill`** (HYPHEN — the fork's naming
 anomaly on bill/vendor CRUD) against the worker's vendor, and
 `create_bill_payment` from the QBO bank account representing Operating

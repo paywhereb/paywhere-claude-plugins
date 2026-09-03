@@ -26,9 +26,9 @@ can swap only the JSON.
 }
 ```
 
-Field names mirror the answer-key paths the presenter kit references
-(`balances`, `trueAvailable`, `tax.shortfall`, `ar.aging`) so a readback is
-easy; values always come from the live connectors.
+Field names are stable (`balances`, `trueAvailable`, `tax.shortfall`,
+`arAging`) so the daily brief can swap the JSON block without touching the
+layout; values always come from the live connectors.
 
 ## Rendering
 
@@ -54,5 +54,4 @@ easy; values always come from the live connectors.
 
 - Load anything from the network (fonts, chart libraries, CSS).
 - Put any value in the HTML that is not also in the JSON block.
-- Change field names between runs — the daily brief and the presenter kit
-  depend on them.
+- Change field names between runs — the daily brief depends on them.

@@ -1,6 +1,6 @@
 ---
 name: tax-reserve-check
-version: 1.0.0
+version: 1.0.2
 description: >
   Answers "how much of my balance is actually mine" for a business that
   collects sales tax: sales tax on payments RECEIVED since the last
@@ -126,8 +126,7 @@ If `shortfall > 0`:
 - Stage with ONE `make_batch_payment`:
   `{payments: [{rail: "transfer", fromAccountNumber: <Operating, exact unmasked
   from list_accounts>, toAccountNumber: <Tax Reserve, exact unmasked>, amount:
-  <shortfall>}], intent: "Catch up the sales-tax reserve after missed Friday
-  sweeps"}`.
+  <shortfall>}]}`.
 - Print `confirmation_title` and `confirmation_url` verbatim, then:
   *"Nothing has moved. Approve on the bank's page with your passkey; I can
   verify the transfer posted afterwards."* Never call `transfer_funds`.

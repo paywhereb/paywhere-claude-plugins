@@ -1,6 +1,6 @@
 {
   "name": "paywhere-smb",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Small-business finance workflows for an owner-operated company, run against your bank through the Paywhere connector plus QuickBooks (read-only in demos), Gmail (drafts only) and Google Calendar: business pulse and true available cash, profit-to-cash bridge, AR health and invoice chase, pay-when-due AP and one-batch bill pay, reserve-aware payroll, sales-tax reserve check and Friday sweep, subscription audit, big-purchase and credit-readiness analysis, a 13-week forecast with what-ifs, a cash dashboard + Excel model, and scheduled agents (daily cash brief, tax sweep). Every payment or transfer is staged as a proposal and approved on the bank's /confirm page with a passkey; nothing moves from chat. Includes /demo-setup for the hosted sandbox.",
   "author": {
     "name": "Paywhere",

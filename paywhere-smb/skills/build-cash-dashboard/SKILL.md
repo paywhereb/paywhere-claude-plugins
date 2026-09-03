@@ -1,6 +1,6 @@
 ---
 name: build-cash-dashboard
-version: 1.0.0
+version: 1.0.2
 description: >
   The application layer: writes a single self-contained HTML cash dashboard
   (three balances, true available cash, 13-week forecast chart, AR aging,

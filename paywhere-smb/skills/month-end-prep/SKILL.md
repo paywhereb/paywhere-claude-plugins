@@ -1,6 +1,6 @@
 ---
 name: month-end-prep
-version: 1.0.0
+version: 1.0.2
 description: >
   Month-end close for an owner-operated business: reconciles the QuickBooks
   register against the bank lines of every account, matches merchant
@@ -21,7 +21,7 @@ Classical bank reconciliation plus the three things a service business with
 a merchant account gets wrong every month: settlements land **net**, some
 deposits are booked **gross** without the fee line, and a slice of card
 purchases never reach the books. The bank is the evidence; the books are
-what gets corrected. The demo books are read-only, so every fix is narrated
+what gets corrected. The QuickBooks connector is read-only, so every fix is narrated
 as the two-line correction a bookkeeper would make.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
@@ -145,8 +145,8 @@ accountant, create a Gmail **draft** with the files attached (never send).
 
 ## Narrate, never write
 
-The demo QuickBooks connector is read-only (the shared books reseed daily).
-For each correction say what would be booked outside a demo — "add a
+The QuickBooks connector is read-only. For each correction say what would
+be booked — "add a
 −$71.56 Merchant Fees line to Deposit 1043", "record a $38.20 Purchase to
 Vehicle:Fuel for the 14th" — and move on. Never claim a fix was made.
 

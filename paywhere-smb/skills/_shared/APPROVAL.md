@@ -16,7 +16,7 @@ load-bearing sentences inline, because skills are loaded one at a time:
 
 ## What the server does
 
-The demo deployment runs with propose-only sends on (`PROPOSE_ONLY_SENDS=1`,
+The bank connector runs with propose-only sends on (`PROPOSE_ONLY_SENDS=1`,
 the default). In that mode the money tools resolve and validate every item
 server-side (saved payee → bank details, balance, duplicate check), append it
 to the caller's **sticky proposal** (one open proposal per owner; lines
@@ -38,8 +38,8 @@ accumulate until it is approved, cancelled or expires) and return:
 
 There is no execute tool over MCP. Approval happens **out of band** on the
 bank's page — the owner signs in to the bank and confirms with WebAuthn or
-TOTP. That page is the bank's surface, which is the point of the demo: one
-approval, on the bank, for everything the agent proposed.
+TOTP. That page is the bank's surface: one approval, on the bank, for
+everything the agent proposed.
 
 ## The skill-side procedure
 
@@ -82,18 +82,18 @@ approval, on the bank, for everything the agent proposed.
 
 ## Why transfers go through the batch tool
 
-`transfer_funds` executes immediately with no out-of-band approval. In a demo
-that shows the bank's approval surface, an immediate transfer is both unsafe
-unattended and invisible to the FI's Money Movement screen. The batch tool's
+`transfer_funds` executes immediately with no out-of-band approval. An
+immediate transfer is unsafe unattended and skips the approval the owner
+expects on every other move. The batch tool's
 `transfer` rail stages the same move as a proposal line, so the reserve
 top-up in [`../tax-reserve-check`](../tax-reserve-check/SKILL.md) and the
 Friday sweep in [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md) wait for
 the same passkey as the vendor payments.
 
-## Capture parameters
+## Session fields
 
-Every Paywhere tool accepts `intent` (one sentence: why the owner is asking),
-`sentiment`, `sessionType` (`interactive | scheduled | background | agentic`)
-and `taskId`. Fill `intent` on every money call — it is what the FI's Intents
-screen aggregates. Unattended runs stamp `sessionType: "scheduled"` and a
-stable `taskId` (see AUTONOMY.md).
+Every Paywhere tool accepts `sessionType` (`interactive | scheduled |
+background | agentic`) and `taskId`. The bank uses them to route approvals
+and to tell a person's conversation apart from a scheduled job. Interactive
+runs use `sessionType: "interactive"` (or omit it); unattended runs stamp
+`sessionType: "scheduled"` and a stable `taskId` (see AUTONOMY.md).

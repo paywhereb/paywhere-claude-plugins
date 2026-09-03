@@ -1,11 +1,11 @@
 ---
 name: pay-and-bill
-version: 1.0.0
+version: 1.0.2
 description: >
-  (Staffing vertical, frozen — D9. Not part of the Nick's HVAC demo and not
-  maintained; kept for reference against the retired Meridian Staffing
-  world. Predates the propose-only approval path: on the demo deployment the
-  payment tools STAGE a /confirm proposal instead of executing — see
+  (Staffing vertical, frozen — D9. Not maintained; kept for reference
+  against the retired Meridian Staffing world. Predates the propose-only
+  approval path: the payment tools now STAGE a /confirm proposal instead of
+  executing — see
   ../_shared/APPROVAL.md.) Hours-to-cash cycle for a staffing firm: reads a
   period's worker hours from QuickBooks time-activities, presents each
   client's billing (invoicing narrated, books read-only), pays workers over
@@ -27,15 +27,15 @@ User: "run the pay-and-bill cycle"
 → Aggregate: per-worker hours; per-client hours × BillRate — show the math
 → Dedupe: query_transactions for prior debits carrying PWD-PB-…-{period} markers
 → GATE 1: invoice table → approval → narrate the per-client QBO invoicing
-  (outside a demo, create_invoice per client — the demo books are read-only)
+  (with write access, create_invoice per client — the QuickBooks connector is read-only)
 → GATE 2: pay table (incl. stablecoin fee from dryRun) → approval
 → ONE make_batch_payment (mixed rails, recipientId=worker name per item) → per-item results
-→ Narrate the booking: outside a demo, a Bill + Bill Payment per worker
+→ Narrate the booking: with write access, a Bill + Bill Payment per worker
 → Reconcile: query_transactions (debits) + margin summary (≈ 1.3×)
 ```
 
 Money moves on three rails and is recorded at the bank; the QuickBooks side
-is narrated (the demo books are read-only). Get the data model right before
+is narrated (the QuickBooks connector is read-only). Get the data model right before
 running — read [DATA-MODEL.md](DATA-MODEL.md).
 
 ## What is the source of truth
@@ -47,9 +47,9 @@ running — read [DATA-MODEL.md](DATA-MODEL.md).
     paid — flag and exclude.
   - **Time-activities** carry *how many hours* each worker actually worked the
     period. Hours are read from the books, never invented and never assumed.
-  - Outside a demo, the client invoice is the revenue record and the worker
-    Bill + Bill Payment is the cost record. The **demo connector is
-    read-only** (the shared books reseed server-side daily), so this skill
+  - With write access, the client invoice is the revenue record and the worker
+    Bill + Bill Payment is the cost record. The **QuickBooks connector is
+    read-only**, so this skill
     narrates those writes instead of performing them.
 - **Paywhere** is the bank: it disburses worker pay and proves it posted. A pay
   step passes the worker's **name** (`recipientId`) + amount, and the bank
@@ -58,10 +58,8 @@ running — read [DATA-MODEL.md](DATA-MODEL.md).
 ## Setup (first run only)
 
 This skill reads what is already in QuickBooks and Paywhere — it does not stand
-up its own data. The demo world's persona, worker vendors, and time-activities
-are seeded server-side in the shared books (reseeded daily), and the saved
-payees ride the caller's own bank world via `/demo-setup` — see
-[../../DATASET.md](../../DATASET.md). On real books, the owner would enter the
+up its own data. The reference world's persona, worker vendors, time-activities and saved
+payees are described in [../../DATASET.md](../../DATASET.md). On real books, the owner would enter the
 vendors and time-activities in QuickBooks first; resume `pay-and-bill` once
 they exist.
 
@@ -115,7 +113,7 @@ invoiced-to-pay ratio ([DATA-MODEL.md](DATA-MODEL.md), "The math").
 `PWD-PB-BILL-{period}-{worker-slug}` marker as the ACH `paymentName` / wire
 `description`, so `query_transactions {direction: "debit",
 descriptionContains: "PWD-PB-BILL-{period}"}` finds every worker already paid
-for this period by a prior run. (The read-only demo books never record this
+for this period by a prior run. (The read-only books never record this
 skill's invoices or bills, so QBO carries no trace of a prior run — don't
 search it for markers.) A hit → a **potential duplicate** row: show the prior
 debit's evidence (date, amount, paymentId) and ask the owner whether to pay
@@ -131,12 +129,12 @@ on it here):
 | Client | Worker(s) | Hours | Bill rate | Invoice total | Status |
 |---|---|---|---|---|---|
 
-Also show excluded workers. On approval, **narrate the invoicing** — outside
-a demo, each client would get a QuickBooks invoice (`create_invoice`):
+Also show excluded workers. On approval, **narrate the invoicing** — with
+write access, each client would get a QuickBooks invoice (`create_invoice`):
 DocNumber `PWD-PB-INV-{period}-{client-slug}`, TxnDate today, DueDate per the
 owner's terms (default net-15 — confirm in the table), one line per worker
 (Qty = hours, Rate = BillRate), marker-first `PrivateNote`. The read-only
-demo books skip that write; say so in one line and move on.
+connector skips that write; say so in one line and move on.
 
 ### 7. GATE 2 — pay the workers
 
@@ -175,11 +173,11 @@ whole batch.
 ### 8. Narrate the booking — what would happen in QuickBooks
 
 The workers are paid; the bookkeeping is narration. Say — briefly, per the
-run — what would happen next outside a demo: each paid worker would get a
+run — what would happen next with write access: each paid worker would get a
 Bill (`create-bill`, DocNumber `PWD-PB-BILL-{period}-{worker-slug}`, amount =
 gross, marker-first `PrivateNote` carrying the Paywhere `paymentId`) and a
 matching Bill Payment (`create_bill_payment`), booking the cost side of the
-cycle. The read-only demo books skip those writes; the dedupe trail lives in
+cycle. The read-only connector skips those writes; the dedupe trail lives in
 the bank instead — each payment's description already carries its marker
 (step 7), which is what step 5 finds on a re-run.
 
@@ -192,8 +190,8 @@ the bank instead — each payment's description already carries its marker
 - **Margin summary**: invoiced total vs worker pay total vs the ratio —
   should sit at ≈1.3 (persona rates are exactly 1.3×); flag a material
   deviation.
-- Collecting the invoiced hours is **not** this skill's job: outside a demo
-  the cash is chased later via `/invoice-chase` and shows up in
+- Collecting the invoiced hours is **not** this skill's job: the cash is
+  chased later via `/invoice-chase` and shows up in
   `/plan-payroll` — say so in the close-out.
 
 End with: the billing table as narrated (per-client totals), payments (rail +
@@ -228,12 +226,12 @@ Paywhere id), the one-line bookkeeping narration, and the margin line.
   it covers (or doesn't cover) these hours.
 - **Report total ≠ sum of day lines**: ask the owner which is right.
 - **Unverified stablecoin recipient**: exclude that worker from the batch and
-  fix it with `create_stablecoin_recipient` + verification (the demo world
-  seeds this — see [../../DATASET.md](../../DATASET.md)); never pay an
+  fix it with `create_stablecoin_recipient` + verification (the reference
+  world in [../../DATASET.md](../../DATASET.md) has one); never pay an
   unverified wallet.
 - **Batch partial failure**: re-submit only the failed `results[]` items —
   `make_batch_payment` is not idempotent.
-- **A prior run's payment for the same worker/period** (the demo re-run
+- **A prior run's payment for the same worker/period** (the re-run
   case): caught by the step-5 bank check — surface it as a potential
   duplicate with the prior debit's evidence and let the owner decide; never
   pay a flagged row without that explicit confirmation.
@@ -254,6 +252,5 @@ Paywhere id), the one-line bookkeeping narration, and the margin line.
 - [DATA-MODEL.md](DATA-MODEL.md) — the QBO worker-vendor and time-activity
   shapes, the invoice/pay/margin math, PWD-PB marker formats, and the verbatim
   MCP tool signatures.
-- [../../DATASET.md](../../DATASET.md) — the demo world's persona, worker
-  roster, weekly hours (seeded server-side in the shared books), and saved
-  payees (seeded by `/demo-setup`).
+- [../../DATASET.md](../../DATASET.md) — the reference world's persona, worker
+  roster, weekly hours and saved payees.

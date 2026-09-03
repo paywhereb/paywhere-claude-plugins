@@ -1,6 +1,6 @@
 ---
 name: invoice-chase
-version: 1.0.0
+version: 1.0.2
 description: >
   Turns overdue receivables into action: ranks open invoices by cash impact ×
   lateness using each customer's derived payment profile (see ar-health),
@@ -19,7 +19,7 @@ Books say who owes; the bank says who already paid. Rank what is genuinely
 outstanding, draft a reminder per customer in the tone their history earns,
 and leave the sending to the owner. **Drafts only**: Gmail `create_draft`;
 never `send_message`, `reply` or `forward`. Nothing is written to QuickBooks
-(the demo books are read-only; any fix is narrated).
+(the QuickBooks connector is read-only; any fix is narrated).
 
 ## Quick start
 
@@ -61,9 +61,9 @@ progress display — it does not happen unless you do it explicitly.
    - exclude it from the chase list and from collectible AR;
    - show the evidence line: bank date, amount, descriptor (and the check
      number when the descriptor carries one);
-   - narrate the fix: outside a demo, the payment would be recorded against
-     the invoice in QuickBooks; the demo books are read-only, so say it in
-     one line instead of writing it.
+   - narrate the fix: the payment should be recorded against the invoice in
+     QuickBooks; the connector is read-only, so say it in one line instead
+     of writing it.
    Two open invoices with the same amount → show both, ask, chase neither
    until the owner picks. Card payments settle net inside grouped merchant
    deposits, so match those through the books' Deposit, not by amount.

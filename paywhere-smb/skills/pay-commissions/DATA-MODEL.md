@@ -6,9 +6,9 @@ Three concerns, three homes — all server-known or in QuickBooks, no local file
 |---|---|---|
 | (a) Who gets commission + at what rate | **The commission map** (server-side, surfaced with the seeded QBO payments) | Business policy — configured at setup, not entered per run |
 | (b) How to pay each payee (rail + recipient) | **Saved payees** (ACH/Wire, paid by name) + a **verified stablecoin recipient** | The pay step passes the payee's name (`recipientId`) and the bank resolves the bank details |
-| (c) Pay once and only once | **Bank-side marker** (`COMM-{qboPaymentId}` in each disbursement's description) | The dedupe signal — the read-only demo books never record a run |
+| (c) Pay once and only once | **Bank-side marker** (`COMM-{qboPaymentId}` in each disbursement's description) | The dedupe signal — the read-only books never record a run |
 
-Commission config is **not** stored as JSON in QBO notes and **not** on the QBO vendor record. The commission map is the source of truth for (a); the Paywhere recipient store holds (b). QBO records the *payments received* (what we commission on); outside a demo it would also record the *commission expense* (Bill + Bill Payment) — on the read-only demo connector that booking is narrated, not written.
+Commission config is **not** stored as JSON in QBO notes and **not** on the QBO vendor record. The commission map is the source of truth for (a); the Paywhere recipient store holds (b). QBO records the *payments received* (what we commission on); with write access it would also record the *commission expense* (Bill + Bill Payment) — on the read-only connector that booking is narrated, not written.
 
 ## The commission map
 
@@ -21,7 +21,7 @@ A small server-known table — one row per commission-eligible customer — surf
 | `payee` | The party paid the commission |
 | `rail` | One of `ACH` / `Wire` / `Stablecoin` |
 
-The demo world's concrete map (client → rate → payee → rail) is documented in [../../DATASET.md](../../DATASET.md). For reference, the demo values are:
+The reference world's map (client → rate → payee → rail) is documented in [../../DATASET.md](../../DATASET.md). For reference, its values are:
 
 | Client | Rate | Payee | Rail | Commission (full month) |
 |---|---|---|---|---|
@@ -36,16 +36,16 @@ The demo world's concrete map (client → rate → payee → rail) is documented
 - **ACH / Wire** — the payee is a **saved payee** at the bank. The pay step passes the payee's **name** (`recipientId`) + amount; the bank resolves it to the saved payee's bank/wire details. No raw ABA/account/routing handling in this skill.
 - **Stablecoin** — the payee's wallet is **pre-registered and VERIFIED** in Paywhere via `create_stablecoin_recipient`; check status with `get_stablecoin_recipient` before paying. The pay step uses `{walletAddress, currency: "USD", accountNumber, amount}` — stablecoin has no pay-by-name form.
 
-**Graceful fallback:** if a real payee has no saved payee (not yet onboarded), fall back to an inline recipient block on the payment item rather than erroring (see "Tool signatures"). The demo payees are all saved at setup.
+**Graceful fallback:** if a real payee has no saved payee (not yet onboarded), fall back to an inline recipient block on the payment item rather than erroring (see "Tool signatures"). The reference world's payees are all saved.
 
 ## Dedupe — pay once and only once
 
 Checked **before** paying. The marker positive ⇒ report "already paid" with the prior bank reference; never pay it again without the owner's explicit go-ahead:
 
 - **Bank-side marker** — every ACH/wire disbursement carries `Commission COMM-{qboPaymentId}` as its `paymentName` / wire `description`, so `query_transactions {direction: "debit", descriptionContains: "COMM-{qboPaymentId}"}` (with `dateFrom` wide enough to cover prior runs) finds it; confirm on amount. Stablecoin disbursements carry no description — match those by amount + date + type.
-- The read-only demo books never record a run, so there are **no** `COMM-` marker Bills in QBO to search for — the bank is the only dedupe signal.
+- The read-only books never record a run, so there are **no** `COMM-` marker Bills in QBO to search for — the bank is the only dedupe signal.
 
-`COMM-{qboPaymentId}` keys on the QBO Payment being commissioned (the natural unique key). Outside a demo the same marker would also be written to QBO as a Bill (`DocNumber: COMM-{qboPaymentId}`, `PrivateNote: Commission on QBO payment {id} for {customer} @ {rate} — Paywhere {rail} ref {paywherePaymentId}`) — that write is narrated on the demo connector.
+`COMM-{qboPaymentId}` keys on the QBO Payment being commissioned (the natural unique key). With write access the same marker would also be written to QBO as a Bill (`DocNumber: COMM-{qboPaymentId}`, `PrivateNote: Commission on QBO payment {id} for {customer} @ {rate} — Paywhere {rail} ref {paywherePaymentId}`) — that write is narrated on the read-only connector.
 
 ## Real MCP tool signatures (Paywhere)
 
@@ -76,9 +76,9 @@ Options and results:
 
 ## Real MCP tool signatures (QuickBooks fork)
 
-The shared demo connector is **read-only**: only `get_*` / `search_*` / `read_*` tools are advertised; the create/update/delete tools do not exist there.
+The QuickBooks connector is **read-only**: only `get_*` / `search_*` / `read_*` tools are advertised; the create/update/delete tools do not exist there.
 
 - `search_payments` — filter by customer / date; each Payment carries `CustomerRef` DisplayName and amount. The unit we commission on.
-- `search_bills` — filters `DocNumber` and `PrivateNote` with `LIKE` (useful reads; not a dedupe source on the demo connector — see "Dedupe" above).
+- `search_bills` — filters `DocNumber` and `PrivateNote` with `LIKE` (useful reads; not a dedupe source on the read-only connector — see "Dedupe" above).
 
-Outside a demo, the narrated booking would use `create-bill` (the fork's hyphen anomaly on bill/vendor CRUD) + `create_bill_payment` to put the commission expense against the payee vendor. The vendor record carries **no** payment details — ABA/account/wallet live only in the Paywhere recipient store (the demo world's payees are seeded by `/demo-setup` — see [../../DATASET.md](../../DATASET.md)).
+With write access, the narrated booking would use `create-bill` (the fork's hyphen anomaly on bill/vendor CRUD) + `create_bill_payment` to put the commission expense against the payee vendor. The vendor record carries **no** payment details — ABA/account/wallet live only in the Paywhere recipient store (the reference world's payees are listed in [../../DATASET.md](../../DATASET.md)).

@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 1.0.0
+version: 1.0.2
 description: >
   Stages this week's vendor payments as ONE mixed-rail batch for the owner to
   approve on the bank's page: pulls open bills from QuickBooks, selects what is
@@ -10,7 +10,7 @@ description: >
   savings top-up as a transfer line) in a single make_batch_payment, and
   prints the /confirm URL as the approval step. Money moves only after the
   owner approves with a passkey; the QuickBooks Bill Payment booking is
-  narrated (read-only demo books). Use when the owner says "pay the bills due
+  narrated (the QuickBooks connector is read-only). Use when the owner says "pay the bills due
   this week," "pay my bills," "pay what's due," "pay Johnstone and Voltage"
   (any named vendors), "stage the vendor payments," or "catch up on payables."
 ---
@@ -141,9 +141,8 @@ rail). Then one call with every approved line (`rail: "ach"` items with
 `recipientId`, `paymentAmount`, `paymentName` = "Bill {DocNumber} {vendor}";
 `rail: "wire"` items with `recipientId`, `amount`, `purposeOfWire`; any
 top-up as `rail: "transfer"` with exact unmasked account numbers from
-`list_accounts`). Fill `intent` ("Pay this week's vendor bills; hold
-not-yet-due early-pay vendor") and, in a scheduled run, `sessionType` /
-`taskId` per [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md).
+`list_accounts`). In a scheduled run, stamp `sessionType` / `taskId` per
+[`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md).
 
 Read back `confirmation_url`, `confirmation_title`, `total_amount`,
 `by_rail`, `lines[]`, `expires_at`. An `{ error }` (expired / sealed
@@ -168,9 +167,9 @@ plain text. Do **not** say paid, sent, executed or transferred.
 One paragraph, per run not per bill: once approved and executed, each
 payment would be booked to QuickBooks as a **Bill Payment** against its bill
 (with a note carrying the Paywhere payment reference), and the bills would
-show paid. The demo books are read-only and reseed nightly, so this is
-narrated; on live books it is a one-approval write-back. The aging will keep
-showing these bills open in the demo — that is the missing write-back, not a
+show paid. The QuickBooks connector is read-only, so this is narrated; with
+write access it is a one-approval write-back. Until it is booked, the aging
+will keep showing these bills open — that is the missing write-back, not a
 failed payment.
 
 ### 10. After the owner approves — verify on request
@@ -219,4 +218,3 @@ on the bank's page, settlement verification.
 
 - [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md) — the approval path in full
 - [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — the pay-when-due analysis this skill applies
-- [`../demo-setup/SKILL.md`](../demo-setup/SKILL.md) — seeds the saved payees the batch resolves by name

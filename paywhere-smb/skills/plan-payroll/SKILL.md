@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 1.0.0
+version: 1.0.2
 description: >
   Answers "am I good for payroll?" from the bank first: the live operating
   balance made reserve-aware (minus the sales-tax reserve shortfall and
@@ -126,8 +126,8 @@ not recorded it. **Never chase a customer who paid this morning.**
 5. Partial credit → only the received amount is collected.
 6. **Received but not booked**: cross it out of collectible, do **not** add
    it to cash (it is already inside A1), narrate the QuickBooks payment
-   application in one line (read-only demo books; it reappears until the
-   nightly reseed). _E.g. a church customer's check deposited Monday whose
+   application in one line (the QuickBooks connector is read-only; it
+   reappears until the bookkeeper applies it). _E.g. a church customer's check deposited Monday whose
    invoice is still open._
 
 Output: open AR split into **already landed** (with bank evidence) and
@@ -160,7 +160,7 @@ path. If short, rank the options:
   and the exact amount; if the owner wants it, stage it as one
   `make_batch_payment` with a `{rail: "transfer", fromAccountNumber:
   <savings>, toAccountNumber: <operating>, amount}` item (exact unmasked
-  numbers from `list_accounts`, `intent` filled), print `confirmation_url`
+  numbers from `list_accounts`), print `confirmation_url`
   + `confirmation_title` verbatim, and say nothing has moved until the
   passkey approval. Never the Tax Reserve; never `transfer_funds`.
 
@@ -169,7 +169,7 @@ other obligations, and ask whether to chase outstanding AR anyway.
 
 ### A6. "Check again"
 
-When money is expected to land (the demo's live-deposit moment), re-run **A1
+When money is expected to land (a customer says the payment went out), re-run **A1
 and A4 steps 2–6 only**: `get_account_balance` on operating and
 `query_transactions {direction: "credit", dateFrom: <yesterday>, status:
 ["posted"]}`. Diff against the previous pass, recompute A5, and say what

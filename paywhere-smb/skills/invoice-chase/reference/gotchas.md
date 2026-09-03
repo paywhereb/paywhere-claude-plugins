@@ -1,6 +1,6 @@
 # Gotchas
 
-**A check was deposited but never applied in the books.** The most common false chase. The bank row `MOBILE CHECK DEPOSIT <check#>` matching an open invoice's balance is the evidence; exclude the invoice, quote the row, narrate the QuickBooks payment application (read-only demo books: the item reappears until the nightly reseed).
+**A check was deposited but never applied in the books.** The most common false chase. The bank row `MOBILE CHECK DEPOSIT <check#>` matching an open invoice's balance is the evidence; exclude the invoice, quote the row, narrate the QuickBooks payment application (the QuickBooks connector is read-only: the item reappears until the bookkeeper applies it).
 
 **Card payments do not match by amount.** They arrive in grouped `INTUIT PYMT SOLN DEPOSIT` rows net of fees. Match through the books' Deposit (which lists the payments), not against the bank amount.
 
@@ -16,4 +16,4 @@
 
 **Pending credits are in transit.** A `pending` bank credit means the money is coming; mark "in transit — do not chase".
 
-**Internal/test customers.** Skip customers whose email domain matches the owner's or whose name contains "Test"/"Demo".
+**Internal/test customers.** Skip customers whose email domain matches the owner's or whose name contains "Test" or "Sample".

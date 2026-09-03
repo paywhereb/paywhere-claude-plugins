@@ -1,14 +1,14 @@
 ---
 name: close-month
-version: 1.0.0
+version: 1.0.2
 description: >
   Closes the month: reconciles every bank account against the books, matches
   merchant settlements GROSS-TO-NET (bank net vs QuickBooks deposit gross
   minus the fee line), finds deposits whose fee line the bookkeeper never
   posted, finds debit-card purchases not recorded in the books, flags gaps
   and duplicates, writes the P&L narrative and exports the close packet to
-  the working folder. Narrates every bookkeeping fix (demo books are
-  read-only). Accepts optional month argument. Use when the owner says
+  the working folder. Narrates every bookkeeping fix (the QuickBooks
+  connector is read-only). Accepts optional month argument. Use when the owner says
   "close the books," "close the month," "month-end," "reconcile," or "what's
   missing from the books."
 allowed-tools: Read, WebFetch, Bash
@@ -98,7 +98,7 @@ CSV export and note "reconciling against CSV". Both → stop.
 
 ## Approval gates
 
-- **Never fix flagged items in QuickBooks** — the demo books are read-only and
+- **Never fix flagged items in QuickBooks** — the connector is read-only and
   the write-back is the bookkeeper's; narrate the exact correction.
 - **Never delete duplicates**; show both records.
 - **Always pause after Step 3** before the narrative and export.

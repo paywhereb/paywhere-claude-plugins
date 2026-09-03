@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.0
+version: 1.0.2
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar, writes `briefs/YYYY-MM-DD.md` (three
@@ -45,9 +45,9 @@ repeated because this file is loaded on its own:
 | Prompt | `Run my morning cash brief` |
 | Working folder | the owner's finance folder (where `briefs/` and `dashboard/` live) |
 
-Cowork must be open for the run to fire. Pre-run before a demo so the file,
-the dashboard and the staged proposal already exist; in the room, show the
-schedule, open the brief, open the URL, approve.
+Cowork must be open for the run to fire. To see the output without waiting
+for 7:30, run the same prompt interactively; the file, the dashboard and the
+staged proposal are identical.
 
 Interactive invocation ("run my morning cash brief" typed by the owner) is
 fine: same output, `sessionType: "interactive"`, and you may show the batch
@@ -65,9 +65,8 @@ does not happen unless you do it explicitly.
 
 - Resolve today from the actual date. If `briefs/YYYY-MM-DD.md` exists →
   print "Today's brief exists at briefs/YYYY-MM-DD.md — skipping." and stop.
-- From here every Paywhere call carries `sessionType: "scheduled"`,
-  `taskId: "daily-cash-brief"`, and an `intent` such as "Scheduled morning
-  cash brief: balances, due bills, reserve shortfall."
+- From here every Paywhere call carries `sessionType: "scheduled"` and
+  `taskId: "daily-cash-brief"`.
 
 ### 2. Pull in parallel (same map as business-pulse)
 
@@ -144,9 +143,8 @@ follows `../invoice-chase`, drafts only). Say that in the brief.
 ### 5. Stage — ONE `make_batch_payment`
 
 Build the item list (transfer first, then ACH, then wire) and call
-`make_batch_payment` once with `sessionType: "scheduled"`, `taskId:
-"daily-cash-brief"`, `intent: "Morning brief: stage reserve top-up and bills
-due this week for owner approval."` Optionally `dryRun: true` first if any
+`make_batch_payment` once with `sessionType: "scheduled"` and `taskId:
+"daily-cash-brief"`. Optionally `dryRun: true` first if any
 payee match is uncertain. From the response keep `confirmation_url`,
 `confirmation_title`, `total_amount`, `by_rail`, `lines[]`, `expires_at`.
 If the response is `{ error }`, record it in the brief and move on. If there
@@ -210,11 +208,10 @@ Nothing has moved until you approve this on the bank's page.
 Needs you: {top 2 bullets} | Unavailable: {connectors or none}
 ```
 
-**What the FI sees:** the calls arrive with `sessionType: scheduled` (the
-Intents screen separates them from interactive sessions) and the staged
-batch sits in Money Movement as agent-proposed, awaiting a human approval.
-Say this in the demo; the server records the assertion, it does not verify
-the scheduler.
+**What the bank sees:** the calls arrive with `sessionType: scheduled`, and
+the staged batch sits at the bank as agent-proposed, awaiting a human
+approval. The server records the assertion; it does not verify the
+scheduler — say so if asked.
 
 ## Guardrails
 

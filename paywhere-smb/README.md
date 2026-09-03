@@ -5,11 +5,11 @@ Finance workflows for an owner-operated small business, run against your
 Calendar. Tell Claude what you need in plain English — "how is my business
 doing," "who do I call first," "am I good for payroll Friday," "how much of
 my balance is actually mine," "can I afford the van" — and the right skill
-runs. Version **1.0.0** ships the Nick's HVAC demo world and the three A's:
+runs. Version **1.0.2** covers the three A's:
 
 | | What it is | In this plugin |
 |---|---|---|
-| **Assistant** | Interactive chat; skills fire from intent | `business-pulse`, `cash-bridge`, `ar-health`, `invoice-chase`, `ap-timing`, `pay-bills`, `plan-payroll`, `tax-reserve-check`, `subscription-audit`, `big-purchase-decision`, `credit-readiness`, `cash-flow-snapshot`, `what-if`, briefs and close |
+| **Assistant** | Interactive chat; skills fire from what you ask | `business-pulse`, `cash-bridge`, `ar-health`, `invoice-chase`, `ap-timing`, `pay-bills`, `plan-payroll`, `tax-reserve-check`, `subscription-audit`, `big-purchase-decision`, `credit-readiness`, `cash-flow-snapshot`, `what-if`, briefs and close |
 | **Application** | Files Claude builds into your working folder | `build-cash-dashboard` → `dashboard/cash.html` + `models/cash-13w.xlsx` |
 | **Agent** | Cowork scheduled tasks that run while you're away | `daily-cash-brief` (weekdays 7:30am), `tax-sweep-agent` (Fridays 4pm) |
 
@@ -27,20 +27,20 @@ the plugin never sends. See
 ## Installation
 
 The plugin system runs in **Claude Code** and **Cowork**. Claude Desktop and
-claude.ai chat do not load plugins — they host raw MCP servers only (that is
-the demo's warm-up beat: the bare Paywhere connector, no skills).
+claude.ai chat do not load plugins — they host raw MCP servers only (the
+bare Paywhere connector, no skills).
 
 ### Cowork — side-load the `.plugin` archive
 
 ```bash
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
-./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.0.plugin
+./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.2.plugin
 ```
 
 In Cowork, use the "side-load a plugin file" picker and select the `.plugin`
 file. Connect the four connectors below, pick a working folder, and start
-with `/demo-setup` (demo) or "set me up" (real accounts).
+with "set me up" (or `/demo-setup` on the hosted sandbox — see Demo setup).
 
 ### Claude Code — install from the marketplace
 
@@ -51,8 +51,9 @@ with `/demo-setup` (demo) or "set me up" (real accounts).
 
 ### Claude Desktop / claude.ai — bare connector only
 
-Settings → Connectors → Add custom connector → `https://demo.dev.paywhere.com/mcp`
-(demo) — every Paywhere tool works, no skills load. Add QuickBooks, Gmail and
+Settings → Connectors → Add custom connector → your bank's Paywhere MCP URL
+(`https://demo.dev.paywhere.com/mcp` on the hosted sandbox) — every Paywhere
+tool works, no skills load. Add QuickBooks, Gmail and
 Google Calendar the same way if you want them without the plugin.
 
 ## Connectors
@@ -61,8 +62,8 @@ Wired in [`.mcp.json`](.mcp.json):
 
 | Connector | Role | Notes |
 |---|---|---|
-| **Paywhere** — `https://demo.dev.paywhere.com/mcp` | Your bank: balances, 12 months of cleared and pending activity, saved payees, ACH / wire / batch payments and transfers (staged for passkey approval), transaction enrichment | On demo deployments it also carries the seeder tools used by `/demo-setup` and `demo-inject` |
-| **quickbooks** — `https://qbo.dev.paywhere.com/mcp` | Your books: invoices, payments, deposits, bills, bill payments, purchases, journal entries, estimates, aging, P&L, balance sheet, customers/vendors/employees | **Read-only** in the demo (the shared books reseed daily); skills narrate any booking |
+| **Paywhere** — `https://demo.dev.paywhere.com/mcp` | Your bank: balances, 12 months of cleared and pending activity, saved payees, ACH / wire / batch payments and transfers (staged for passkey approval), transaction enrichment | Staged moves are approved on the bank's `/confirm` page |
+| **quickbooks** — `https://qbo.dev.paywhere.com/mcp` | Your books: invoices, payments, deposits, bills, bill payments, purchases, journal entries, estimates, aging, P&L, balance sheet, customers/vendors/employees | **Read-only**; skills narrate any booking they would make |
 | **gmail** — `https://gmailmcp.googleapis.com/mcp/v1` | Reminder drafts; vendor invoices, quotes, payroll summaries, renewal notices as evidence | **Drafts only** — never send/reply/forward |
 | **google calendar** — `https://calendarmcp.googleapis.com/mcp/v1` | Dated obligations: payroll Fridays, the 20th remittance, estimates, renewals, appointments | Read; a reminder event only when you ask, no attendees |
 
@@ -128,12 +129,24 @@ gracefully, and never execute or send.
 | **tax-prep** → **tax-season-organizer** | "estimated taxes", "1099s" (owner income tax; sales tax lives in `tax-reserve-check`) |
 | **smb-onboard** / **smb-router** / **conventions** | "set me up" / "what can you do" / "how do approvals work" |
 
-### Presenter (demo deployments only)
+### Demo setup (hosted sandbox only)
+
+The hosted sandbox (`demo.dev.paywhere.com`) carries seeder tools that build a
+per-presenter bank world for Nick's HVAC, a Kansas City owner-operator; the
+shared QuickBooks sandbox, mailbox and calendar are seeded to match. The demo
+persona lives in server data ([`DATASET.md`](DATASET.md)); no skill hardcodes
+it.
 
 | Skill | What it does |
 |---|---|
 | **demo-setup** | Builds your own Nick's HVAC bank world (async seed, polled), reads it back through the connector, reports the answer-key summary. See [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md) and [`../demo/presenter-kit.md`](../demo/presenter-kit.md). |
 | **demo-inject** | Ready prompts for live moments: "Westport just paid", an emergency-call settlement, a failed autopay. |
+
+To try it: create a Cowork project, paste
+[`../demo/cowork-project-prompt.md`](../demo/cowork-project-prompt.md) as its
+instructions, connect the sandbox connectors, run `/demo-setup` (≈ 5 minutes),
+then walk [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md). The same skills run
+on real accounts; what they surface depends entirely on the data present.
 
 ### Frozen (D9)
 
@@ -144,18 +157,11 @@ propose-only approval path.
 ## How it works
 
 1. **Skills** do one thing each and read live data — they never assume a
-   record, a name or an amount. The demo persona lives in server data
-   ([`DATASET.md`](DATASET.md)).
+   record, a name or an amount.
 2. **Conventions** are written once in `skills/_shared/` and repeated inline
    where they matter: propose → `/confirm` → passkey; scheduled runs propose
    and never execute; drafts only.
 3. **The router** turns plain English into one skill and one confirmation.
-
-## Trying it out
-
-Connect the demo connectors, run `/demo-setup` (≈ 5 minutes), then walk
-[`../demo/SCENARIOS.md`](../demo/SCENARIOS.md). The same skills run on real
-accounts; what they surface depends entirely on the data present.
 
 ## Customizing
 

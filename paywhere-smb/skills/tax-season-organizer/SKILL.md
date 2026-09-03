@@ -1,6 +1,6 @@
 ---
 name: tax-season-organizer
-version: 1.0.0
+version: 1.0.2
 description: >
   Prepares owner income-tax materials as deliverables for the accountant,
   not tax advice. Two modes: (1) quarterly estimated-tax calculation — YTD
@@ -57,7 +57,7 @@ Read the user's message and context to decide which path applies:
 - **Year-end 1099 prep** — keywords: 1099, 1099-NEC, year-end, contractors, W-9, send 1099s, file 1099s
 - **Combined** — some users will ask "year-end summary" and need both. Run quarterly last; run 1099 prep first since it drives the most action items.
 
-If the intent is ambiguous, ask: "Are you looking at your estimated tax payment for this quarter, or are you preparing 1099s for your contractors — or both?"
+If the ask is ambiguous, ask: "Are you looking at your estimated tax payment for this quarter, or are you preparing 1099s for your contractors — or both?"
 
 ---
 

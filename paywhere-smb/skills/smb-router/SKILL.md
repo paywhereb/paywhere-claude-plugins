@@ -1,6 +1,6 @@
 ---
 name: smb-router
-version: 1.0.1
+version: 1.0.2
 description: >
   The front door to the Paywhere SMB plugin. Listens to what the owner needs
   — vague or specific — and routes to the single best skill: pulse, cash
@@ -36,7 +36,7 @@ Check session memory for `## Business context`. Use it (industry, headaches,
 connected tools) to bias the recommendation. If absent and the owner seems
 new, suggest `smb-onboard`; do not force it when they have a specific ask.
 
-## Step 2 — Match intent to ONE skill
+## Step 2 — Match the ask to ONE skill
 
 Pick the single best match. When two are close, pick the one that addresses
 the more urgent dollars. The full table lives in `reference/routing-table.md`;
@@ -101,7 +101,7 @@ the short form:
 |---|---|
 | "Close the books" / "month-end" / "reconcile" | `close-month` (→ `month-end-prep`) |
 
-**Getting started / demo**
+**Getting started / presenter tools**
 | | |
 |---|---|
 | "What can you do" / "set me up" / "I'm new" | `smb-onboard` |
@@ -156,12 +156,12 @@ that is missing, say so first and offer the closest fallback. Requirements:
 | big-purchase-decision | Paywhere + quickbooks | gmail (quotes), google calendar (appointment) |
 | credit-readiness, build-cash-dashboard | Paywhere + quickbooks | google calendar |
 | close-month / month-end-prep, quarterly-review, tax-prep | quickbooks + Paywhere | — |
-| demo-setup, demo-inject | Paywhere (demo deployment) + quickbooks | — |
+| demo-setup, demo-inject | Paywhere (a deployment that carries the seeder tools) + quickbooks | — |
 
 ## Step 7 — Tiebreakers and no match
 
 - Urgent dollars first (payroll, an early payment about to leave, a reserve
-  shortfall before the 20th) beat retrospectives.
+  shortfall before the 20th) come before retrospectives.
 - Equal urgency → the smaller scope first.
 - Still tied → one clarifying question, at most two options.
 - Genuinely out of scope (marketing, hiring, CRM) → say so plainly and give

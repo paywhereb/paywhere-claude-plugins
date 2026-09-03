@@ -49,7 +49,7 @@ Run the prove-value recipe immediately after the **first** connector is live —
 3. Gmail → search for unread invoice-related emails, surface top 3
 4. Google Calendar → `list_events` for the next 14 days, surface the dated obligations
 
-**QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first. On the shared **read-only demo connector** that update tool does not exist — note the missing profile info and run the recipe anyway; the seeded demo company is already complete.
+**QuickBooks profile_info_required:** If QuickBooks returns a `profile_info_required` status (missing business_name or industry), use the `quickbooks-profile-info-update` tool with the owner's business name from interview question 1 before running `cash-flow-snapshot`. Do not skip the recipe — collect the missing info first. If the QuickBooks connector is **read-only**, that update tool does not exist — note the missing profile info and run the recipe anyway.
 
 ---
 

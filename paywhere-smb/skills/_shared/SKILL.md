@@ -1,11 +1,11 @@
 ---
 name: conventions
-version: 1.0.0
+version: 1.0.2
 description: >
   (Reference skill) Explains how money moves and how unattended runs behave in
   this plugin: every payment or transfer is staged as a proposal and approved
   on the bank's /confirm page with a passkey; scheduled runs propose and never
-  execute; a demo never sends email (drafts only). Use when the owner asks
+  execute; email is drafts only, never sent. Use when the owner asks
   "how do approvals work," "did that payment go through," "why do I need a
   passkey," "what runs while I'm away," "is anything scheduled," or "what
   can the agent do on its own."

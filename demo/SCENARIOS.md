@@ -30,6 +30,17 @@ The bank's page is where the approval happens."*
 
 ## Act 0 — Setup (presenter, before the meeting)
 
+1. In Cowork, create a project for the demo and paste
+   [`cowork-project-prompt.md`](cowork-project-prompt.md) into its
+   instructions (persona, answer style, money-movement rules, tool-field
+   hygiene — the steer the skills deliberately do not carry).
+2. Connect the four connectors in that project — Paywhere
+   (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
+   signed in as **demo-nick@paywhere.com** for the Google pair
+   ([`presenter-kit.md`](presenter-kit.md) §1).
+3. Side-load `dist/paywhere-smb-1.0.2.plugin` (presenter-kit §2).
+4. Then, in the project:
+
 ```
 /demo-setup
 ```
@@ -233,12 +244,14 @@ What should I bring to the bank?
 and the package written to the working folder
 (`bank/credit-readiness-<date>.pdf` + `.xlsx`).
 
-**FI seat (paywhere-admin → Intents):** the `intent` on every call in this
-beat names the financing question ("evaluating a $58,500 van purchase and
-whether to finance it or use a line of credit"), so the Intents screen shows
-**`financing_debt` rising** during the beat — the CRO's warm loan lead. If it
-stays flat, the skill's calls did not carry the financing words; see
-`big-purchase-decision/reference/method.md`, "Intent wording".
+**FI seat (paywhere-admin → Intents):** with the project prompt in place,
+the `intent` on every call in this beat is Nick's question in his own words
+("decide whether to finance a $58,500 van or pay cash"), so the Intents
+screen shows **`financing_debt` rising** during the beat — the CRO's warm
+loan lead. If it stays flat, the calls did not carry the financing words:
+the skills no longer word that field, so check the Cowork project's
+instructions are [`cowork-project-prompt.md`](cowork-project-prompt.md)
+(§Tool fields).
 
 ### 1.9 — What-ifs
 ```
@@ -374,6 +387,7 @@ Pending card authorizations cannot be injected (posted rows only).
 
 ## Rehearsal checklist
 
+- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.2 side-loaded.
 - [ ] `/demo-setup` completed; readback ✓ ×4; credentials recorded; `dateModelSource: "provided"`.
 - [ ] Gmail (`demo-nick@paywhere.com`) and Calendar connected in Cowork; the Google seed ran this week (`seed-google.mjs --check`).
 - [ ] Bare-connector session (1.0) signed in on a second window with the same bank user.

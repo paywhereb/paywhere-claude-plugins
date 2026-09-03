@@ -1,6 +1,6 @@
 ---
 name: big-purchase-decision
-version: 1.0.1
+version: 1.0.2
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit — the simple yes/no
@@ -42,12 +42,6 @@ Step 1 (subject = the step's name, e.g. "Step 1 — The simple question"), then
 `TaskUpdate` it to `in_progress` when you begin that step and `completed`
 when it's done. This is what drives Cowork's visible progress display — it
 does not happen unless you do it explicitly.
-
-**Capture parameter.** Every Paywhere call this skill makes carries an
-`intent` that names the purchase *and the financing question* — see
-"Intent wording" in [`reference/method.md`](reference/method.md). The FI's
-Intents screen aggregates that text; it is how the bank learns a customer is
-weighing a purchase it could finance.
 
 ## Step 1 — The simple question (bank; 13 weeks)
 
@@ -161,8 +155,7 @@ Assumptions: {bullets — every number's source}
 ```
 
 Then: "Want the package for the bank?" → [`../credit-readiness`](../credit-readiness/SKILL.md)
-writes the PDF + workbook (the financing question carries into its `intent`
-too). Say what only the bank connector supplied here: the real lows and the
+writes the PDF + workbook. Say what only the bank connector supplied here: the real lows and the
 timing of debits vs receipts.
 
 Close with: "Not financial or tax advice — confirm terms with the lender and
@@ -189,4 +182,4 @@ your accountant."
 
 ## Reference
 
-- [`reference/method.md`](reference/method.md) — the simple test, PMT formula, month-scoring rule, second-vehicle test, intent wording
+- [`reference/method.md`](reference/method.md) — the simple test, PMT formula, month-scoring rule, second-vehicle test

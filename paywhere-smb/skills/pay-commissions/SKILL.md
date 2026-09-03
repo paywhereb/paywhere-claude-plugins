@@ -1,11 +1,11 @@
 ---
 name: pay-commissions
-version: 1.0.0
+version: 1.0.2
 description: >
-  (Staffing vertical, frozen — D9. Not part of the Nick's HVAC demo and not
-  maintained; kept for reference against the retired Meridian Staffing
-  world. Predates the propose-only approval path: on the demo deployment the
-  payment tools STAGE a /confirm proposal instead of executing — see
+  (Staffing vertical, frozen — D9. Not maintained; kept for reference
+  against the retired Meridian Staffing world. Predates the propose-only
+  approval path: the payment tools now STAGE a /confirm proposal instead of
+  executing — see
   ../_shared/APPROVAL.md.) Pays sales commissions on payments actually
   received across ACH / wire / stablecoin from a commission map (client →
   rate → payee → rail), matching bank credits to QuickBooks customer
@@ -27,20 +27,20 @@ User: "pay commissions for last week"
 → Show a table: customer, payment, gross, rate, commission, payee, rail, status
 → WAIT for explicit approval — nothing moves money before this
 → Run the batch live; narrate the marker Bill + Bill Payment that would be
-  booked in QBO outside a demo (the demo books are read-only)
+  booked in QBO with write access (the QuickBooks connector is read-only)
 ```
 
 Money moves on three rails in one batch call and is recorded at the bank; the QuickBooks side is narrated. Get the data model right before running — read [DATA-MODEL.md](DATA-MODEL.md).
 
 ## What is the source of truth
 
-- **The commission map** — the business's policy of *who* gets commission, at *what rate*, to *which payee*, on *which rail*. It is server-known (configured at setup, not entered per run) and surfaced alongside the seeded QBO customer payments; for the demo world it is documented in [../../DATASET.md](../../DATASET.md). A customer not in the map earns no commission — skip them.
-- **QuickBooks** is the system of record for the *payments received* (the unit we commission on). Outside a demo it would also record the *commission expense* (a Bill + Bill Payment per commission paid); the **demo connector is read-only** (the shared books reseed server-side daily), so that booking is narrated, not written.
+- **The commission map** — the business's policy of *who* gets commission, at *what rate*, to *which payee*, on *which rail*. It is server-known (configured at setup, not entered per run) and surfaced alongside the seeded QBO customer payments; the reference world's map is documented in [../../DATASET.md](../../DATASET.md). A customer not in the map earns no commission — skip them.
+- **QuickBooks** is the system of record for the *payments received* (the unit we commission on). With write access it would also record the *commission expense* (a Bill + Bill Payment per commission paid); the **QuickBooks connector is read-only**, so that booking is narrated, not written.
 - **Paywhere** is the bank — it shows the credits that prove a customer actually paid, and it is the rail that disburses each commission. A pay step passes the payee's **name** (`recipientId`) + amount, and the bank resolves it to the saved payee.
 
 ## Setup (first run only)
 
-This skill reads the business's existing commission map and QBO payments — it does not stand up its own data. If no commission map is configured, help the owner define it (client → rate → payee → rail, plus saved ACH/Wire payees and a verified stablecoin recipient). For the demo world this is all seeded by `/demo-setup` — the commission map and payees are documented in [../../DATASET.md](../../DATASET.md). Resume `pay-commissions` once the map exists.
+This skill reads the business's existing commission map and QBO payments — it does not stand up its own data. If no commission map is configured, help the owner define it (client → rate → payee → rail, plus saved ACH/Wire payees and a verified stablecoin recipient). The reference world's commission map and payees are documented in [../../DATASET.md](../../DATASET.md). Resume `pay-commissions` once the map exists.
 
 ## Workflow
 
@@ -71,7 +71,7 @@ For each matched QBO payment, join its customer DisplayName to the commission ma
 
 ### 4. Dedupe — before paying
 
-The dedupe signal lives at the **bank**: every disbursement this skill makes carries its `COMM-{qboPaymentId}` marker in the payment description (ACH `paymentName` / wire description — step 6). For each candidate, `query_transactions {direction: "debit", descriptionContains: "COMM-{qboPaymentId}"}` (widen `dateFrom` to cover prior runs); confirm a hit on amount. Stablecoin disbursements carry no description — match those by amount + date + type. A positive hit ⇒ show "already paid" with the prior debit's evidence (date, amount, paymentId) and skip it unless the owner explicitly says to pay again. This makes the run safe to re-run: a second pass surfaces every prior disbursement. (The read-only demo books never record a run, so don't look for `COMM-` marker Bills in QBO — they won't be there.)
+The dedupe signal lives at the **bank**: every disbursement this skill makes carries its `COMM-{qboPaymentId}` marker in the payment description (ACH `paymentName` / wire description — step 6). For each candidate, `query_transactions {direction: "debit", descriptionContains: "COMM-{qboPaymentId}"}` (widen `dateFrom` to cover prior runs); confirm a hit on amount. Stablecoin disbursements carry no description — match those by amount + date + type. A positive hit ⇒ show "already paid" with the prior debit's evidence (date, amount, paymentId) and skip it unless the owner explicitly says to pay again. This makes the run safe to re-run: a second pass surfaces every prior disbursement. (The read-only books never record a run, so don't look for `COMM-` marker Bills in QBO — they won't be there.)
 
 ### 5. Resolve the payee for each candidate
 
@@ -94,7 +94,7 @@ Call `make_batch_payment` with **`dryRun: true`** first: it validates every item
 
 ### 7. Confirm — the gate
 
-Present a single table — fees from the dry-run, not estimates — and **wait for explicit owner approval**. Nothing moves money before this. Example layout (the values below are the demo world's numbers, labeled **example** — live data drives the real table):
+Present a single table — fees from the dry-run, not estimates — and **wait for explicit owner approval**. Nothing moves money before this. Example layout (the values below are the reference world's numbers, labeled **example** — live data drives the real table):
 
 | Customer | QBO Payment | Gross | Rate | Commission | Payee | Rail | Status |
 |---|---|---|---|---|---|---|---|
@@ -102,7 +102,7 @@ Present a single table — fees from the dry-run, not estimates — and **wait f
 | _Zurich Dynamics_ | _paymentId_ | $7,200 | 10% | $720.00 | _wire payee_ | Wire | ready |
 | _Mitsui Digital_ | _paymentId_ | $2,100 | 10% | $210.00 (+$2.10 fee) | _stablecoin payee_ | Stablecoin | ready (verified) |
 
-Also show: skipped (customer not in the commission map — e.g. the demo's Hallsten & Berg), already-paid (with the prior reference), unmatched (both lists from step 2), and flagged (missing/unverified payee). Get a clear "yes, pay these" — partial approval is fine, but adding or changing a row after approval starts a new round **and a fresh dry-run**.
+Also show: skipped (customer not in the commission map — e.g. a customer with no commission agreement), already-paid (with the prior reference), unmatched (both lists from step 2), and flagged (missing/unverified payee). Get a clear "yes, pay these" — partial approval is fine, but adding or changing a row after approval starts a new round **and a fresh dry-run**.
 
 ### 8. Execute — one live batch call
 
@@ -113,16 +113,16 @@ Re-submit the approved `payments` array (dropping any rows the owner excluded) w
 
 ### 9. Narrate the booking — what would happen in QuickBooks
 
-The dedupe marker already rides each disbursement's description at the bank (step 6) — nothing else needs to be written. Say — briefly, per the run — what would happen next outside a demo: each commission would be booked to QuickBooks as a marker Bill against the payee's vendor (`DocNumber: COMM-{qboPaymentId}`, `PrivateNote: Commission on QBO payment {qboPaymentId} for {customer} @ {rate} — Paywhere {rail} ref {paywherePaymentId}`) plus a matching Bill Payment, putting the commission expense on the books. The read-only demo books skip that write.
+The dedupe marker already rides each disbursement's description at the bank (step 6) — nothing else needs to be written. Say — briefly, per the run — what would happen next with write access: each commission would be booked to QuickBooks as a marker Bill against the payee's vendor (`DocNumber: COMM-{qboPaymentId}`, `PrivateNote: Commission on QBO payment {qboPaymentId} for {customer} @ {rate} — Paywhere {rail} ref {paywherePaymentId}`) plus a matching Bill Payment, putting the commission expense on the books. The read-only connector skips that write.
 
 End with a summary listing each commission with its **Paywhere** payment id (the bank reference carrying the COMM- marker), plus totals by rail and total fees.
 
 ## Edge cases — spell these out, don't guess
 
-- **Partial payment**: commission on the amount actually received (the QBO Payment amount), not the invoice total. (In the demo world, Mitsui pays in two $2,100 halves — commission each half it actually receives: $210.)
+- **Partial payment**: commission on the amount actually received (the QBO Payment amount), not the invoice total. (Example: a customer pays in two $2,100 halves — commission each half it actually receives: $210.)
 - **Multiple payments per customer in range**: each QBO Payment is its own commission line with its own `COMM-{id}` marker. Do not collapse them.
 - **Payee has no configured recipient and no inline details**: flag and exclude; never fabricate ABA, bank aba, or wallet values.
-- **Unverified stablecoin recipient** (`get_stablecoin_recipient` not VERIFIED): do not pay on that rail. Exclude the row and tell the owner how to fix it — register and verify the wallet with `create_stablecoin_recipient` / `get_stablecoin_recipient` (the demo world seeds a verified recipient — see [../../DATASET.md](../../DATASET.md)).
+- **Unverified stablecoin recipient** (`get_stablecoin_recipient` not VERIFIED): do not pay on that rail. Exclude the row and tell the owner how to fix it — register and verify the wallet with `create_stablecoin_recipient` / `get_stablecoin_recipient` (the reference world in [../../DATASET.md](../../DATASET.md) has one).
 - **Batch partial failure**: per-item `ok` flags tell you exactly which rows paid. The succeeded items already carry their COMM- marker at the bank (dedupe is safe); re-submit **only** the failed items; the tool is not idempotent. An item that failed validation in the dry-run never makes it into the live call.
 - **Unmatched credits / payments**: surface both lists; never commission on a Paywhere credit that has no matching QBO payment, or vice versa.
 - **Commission map missing**: stop and resolve it with the owner (see Setup) — never invent rates or payees.
@@ -143,4 +143,4 @@ End with a summary listing each commission with its **Paywhere** payment id (the
 ## Reference
 
 - [DATA-MODEL.md](DATA-MODEL.md) — the commission map shape, the payee names, the dedupe marker, and the real MCP tool signatures (batch + single-payment fallbacks).
-- [../../DATASET.md](../../DATASET.md) — the demo world's commission map, payees, rails, and verified stablecoin recipient (seeded by `/demo-setup`).
+- [../../DATASET.md](../../DATASET.md) — the reference world's commission map, payees, rails, and verified stablecoin recipient.
