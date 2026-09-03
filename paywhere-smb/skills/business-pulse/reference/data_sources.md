@@ -21,7 +21,7 @@ Fire everything in one parallel batch. Resolve dates from the actual current dat
 |---|---|
 | Revenue trend | `get_profit_and_loss` (trailing 3 months, by month; a year-ago month if asked) |
 | Open AR / aging | `get_aged_receivables`, `search_invoices` (open balance > 0) |
-| Payments received since last remittance | `search_payments {dateFrom}` — needed for the reserve shortfall |
+| Payments received in the months not yet remitted (before the 20th: last month + this month; on/after: this month) | `search_payments {dateFrom: 1st of the oldest unremitted month}` — needed for the reserve shortfall |
 | Open AP | `get_aged_payables`, `search_bills` (open) |
 | Vendor early-pay history | `search_bill_payments` + `search_bills` (12 months) — only if the #1-issue candidate needs it; otherwise leave to `ap-timing` |
 

@@ -1,6 +1,6 @@
 ---
 name: subscription-audit
-version: 1.0.2
+version: 1.0.3
 description: >
   Finds every recurring debit in 12 months of bank descriptors — no
   counterparty field needed — normalizes the statement text, groups it into
@@ -110,7 +110,9 @@ into the first.
 For each recurring stem: latest amount, cadence, months seen, 12-month
 total, `get_transaction_detail` on the latest row (may be null), the books'
 vendor (`search_vendors`) and expense account, last purchase recorded
-(`search_purchases`), and any inbox thread. Then flag:
+(`search_purchases` **for every recurring stem, not just the unfamiliar
+ones** — a vendor record with no recorded purchase is the commonest orphan:
+someone set it up, nobody books it), and any inbox thread. Then flag:
 
 | Flag | Test |
 |---|---|
@@ -125,7 +127,7 @@ vendor (`search_vendors`) and expense account, last purchase recorded
 ```
 Recurring charges — {date} (12 months of bank debits, Operating)
 
-| Vendor (stem) | Amount | Cadence | Months seen | 12-mo total | In books? | Flag |
+| Vendor (stem) | Amount | Cadence | Months seen | 12-mo total | Vendor in books? | Last recorded purchase | Flag |
 |---|---|---|---|---|---|---|
 | … | … | monthly | 12 | … | yes / no | zero attribution |
 

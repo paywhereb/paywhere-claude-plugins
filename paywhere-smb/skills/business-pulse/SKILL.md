@@ -1,6 +1,6 @@
 ---
 name: business-pulse
-version: 1.0.0
+version: 1.0.1
 description: >
   One-page pulse for an owner-operated business: the three bank balances,
   TRUE AVAILABLE CASH (operating minus the sales-tax reserve shortfall minus
@@ -44,7 +44,10 @@ mapping). Resolve "today" from the actual current date.
   REVENUE", limit: 3}` for the last sales-tax remittance date.
 - **quickbooks** — `get_profit_and_loss` (trailing 3 months, by month),
   `get_aged_receivables`, `search_invoices` (open), `get_aged_payables`,
-  `search_bills` (open), `search_payments` since the last remittance date.
+  `search_bills` (open), `search_payments` for the months not yet remitted
+  (the 20th remittance pays the previous month: before the 20th that is last
+  month + this month, on/after the 20th this month — see
+  [`../tax-reserve-check/reference/method.md`](../tax-reserve-check/reference/method.md)).
 - **google calendar** — `list_events` for the next 14 days (payroll, the
   20th remittance, estimates, dealer/bank appointments).
 - **gmail** — `search_threads` for urgent/unread customer threads (7 days).

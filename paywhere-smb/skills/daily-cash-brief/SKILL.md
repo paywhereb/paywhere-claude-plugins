@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.2
+version: 1.0.3
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar, writes `briefs/YYYY-MM-DD.md` (three
@@ -81,7 +81,9 @@ does not happen unless you do it explicitly.
   `query_transactions {direction: "debit", dateFrom: today}` (same-day
   duplicate check, used in step 5); `list_saved_payees` once.
 - **quickbooks** (read-only): `get_aged_receivables`, `search_invoices`
-  (open), `search_payments` since the last remittance, `get_aged_payables`,
+  (open), `search_payments` for the months not yet remitted (the 20th pays
+  the previous month: before the 20th, last month + this month; see
+  tax-reserve-check's method), `get_aged_payables`,
   `search_bills` (open), `search_bill_payments` (12 months, for early-pay
   history), `search_deposits` (last 30 days, for settlement matching).
 - **google calendar**: `list_events` today → +7 days.

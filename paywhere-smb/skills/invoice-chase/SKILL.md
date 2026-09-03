@@ -1,6 +1,6 @@
 ---
 name: invoice-chase
-version: 1.0.3
+version: 1.0.4
 description: >
   Turns overdue receivables into action: ranks open invoices by cash impact ×
   lateness using each customer's derived payment profile (see ar-health),
@@ -95,6 +95,10 @@ progress display — it does not happen unless you do it explicitly.
    |---|---|---|---|---|---|---|
    | 1 | _customer_ | $7,200 | 18 | routinely late | firm | Gmail draft |
    | — | _customer_ | $520 | 9 | prompt | — | **excluded — check #… deposited {date}** |
+
+   Total open AR: ${total from get_aged_receivables} across {n} customers
+   ({overdue $} past due). State the total once, as the report gives it, so
+   the owner hears "who owes me money" answered before "who do I call".
 
    Then every draft in full, each labelled "in your Gmail Drafts". Offer to
    reword, retone or delete any of them; the owner sends from Gmail.

@@ -3,7 +3,9 @@
 ## Formulas
 
 ```
-window            = (last remittance debit date + 1 day) … today
+window            = 1st of the oldest month not yet remitted … today
+                    (the 20th remittance pays the previous month: before the
+                     20th → last month + this month; on/after → this month)
 tax collected(p)  = Σ over invoices i applied by payment p:
                       taxLines(i) × applied(p, i) ÷ total(i)
 collected[j]      = Σ tax collected(p) for tax items posting to liability account j
@@ -29,7 +31,9 @@ If a stem returns nothing, widen (`TAX`) and read the rows rather than concludin
 
 ## The Friday test
 
-1. List every Friday F in `[window start − 7 days, today]`.
+1. List every Friday F in `[today − 12 months, today]` — the whole year, not the
+   remittance window. Ignore the first Friday if it falls before the earliest
+   transfer history you can see.
 2. A sweep "belongs" to F if a Tax Reserve credit with the sweep stem posted on F (or the following Monday, for a weekend post).
 3. Missed = Fridays with no such credit. Name them.
 4. For each sweep, week tax = Σ tax collected(p) for payments dated Mon…Sun of that week. `|sweep − week tax| ≤ $5` → matches received. If instead it matches the tax on invoices *issued* that week → note "swept on invoiced amounts".

@@ -1,6 +1,6 @@
 ---
 name: tax-reserve-check
-version: 1.0.3
+version: 1.0.4
 description: >
   Answers "how much of my balance is actually mine" for a business that
   collects sales tax: sales tax on payments RECEIVED since the last
@@ -54,12 +54,18 @@ reserve, say so and run the rest as "collected vs nothing set aside".
 
 ## Step 2 — The window (bank)
 
-The window is "since the last remittance". `query_transactions` on the Tax
-Reserve, `direction: "debit"`, `descriptionContains: "DEPT OF REVENUE"` (or
-whatever stem the remittance rows carry — see `reference/method.md`),
-`limit: 5`. Window start = the day after the most recent remittance debit.
-Fallback when none is found in 60 days: the 21st of the previous month.
-Resolve every date from the actual current date.
+The window is the **months whose tax has not been remitted yet**, not "the
+days since the remittance debit". The 20th remittance pays the *previous*
+calendar month, so: before the 20th, the window is last month + this month
+to date; on or after the 20th, it is this month to date. Confirm the last
+remittance with `query_transactions` on the Tax Reserve, `direction:
+"debit"`, `descriptionContains: "DEPT OF REVENUE"` (or whatever stem the
+remittance rows carry — see `reference/method.md`), `limit: 5`: a debit
+on or after the 20th of month M paid month M−1, so the window starts on the
+1st of month M. Fallback when none is found in 60 days: the 1st of the
+previous month. Resolve every date from the actual current date; a payment
+received on the 19th of last month is in the window, one received on the
+day of the remittance debit is too — it belongs to a month not yet filed.
 
 ## Step 3 — Sales tax inside payments RECEIVED (books)
 
@@ -144,7 +150,7 @@ but a remittance, and never propose touching Business Savings.
 
 ```
 Tax Reserve Check — {date}                          (not tax advice)
-Window: since last remittance on {date}
+Window: {first day of the oldest unremitted month} … {today} (months not yet remitted; last remittance {date} paid {month})
 
 Collected on RECEIVED payments, not yet remitted
   {jurisdiction A}   ${x}     {jurisdiction B}   ${y}     Total ${t}

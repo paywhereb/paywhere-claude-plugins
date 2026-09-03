@@ -5,7 +5,7 @@ Finance workflows for an owner-operated small business, run against your
 Calendar. Tell Claude what you need in plain English — "how is my business
 doing," "who do I call first," "am I good for payroll Friday," "how much of
 my balance is actually mine," "can I afford the van" — and the right skill
-runs. Version **1.0.5** covers the three A's:
+runs. Version **1.0.6** covers the three A's:
 
 | | What it is | In this plugin |
 |---|---|---|
@@ -35,7 +35,7 @@ bare Paywhere connector, no skills).
 ```bash
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
-./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.5.plugin
+./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.6.plugin
 ```
 
 In Cowork, use the "side-load a plugin file" picker and select the `.plugin`
