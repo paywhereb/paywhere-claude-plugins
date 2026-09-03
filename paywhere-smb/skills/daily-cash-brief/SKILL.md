@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.5
+version: 1.0.6
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar, writes `briefs/YYYY-MM-DD.md` (three
@@ -104,16 +104,24 @@ does not happen unless you do it explicitly.
    debits).
 3. **Exceptions**, each with dollars and evidence:
    - Overdue invoices with **no matching bank credit** (amount ± $0.50 and
-     counterparty in the descriptor), largest first. An invoice whose cash
-     already landed is listed as "received, not yet booked" and excluded.
+     counterparty in the descriptor), largest first, **one line per invoice**:
+     DocNumber, customer, open amount, days past due. Never a customer's
+     total open balance, never an invoice that is not yet due. An invoice
+     whose cash already landed is listed as "received, not yet booked" and
+     excluded.
    - Bills due within 7 days (vendor, amount, due date, rail from saved
      payees).
    - **Held bills**: open bills not yet due whose vendor has a habit of being
      paid early (method in [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md));
      recommend the due date, do not stage.
-   - **Reserve**: collected-not-remitted vs Tax Reserve balance → shortfall,
-     and the Fridays with no sweep credit (method in
-     [`../tax-reserve-check/SKILL.md`](../tax-reserve-check/SKILL.md)).
+   - **Reserve**: shortfall = sales tax collected on payments **received** in
+     the months not yet remitted (before the 20th: last month + this month)
+     − Tax Reserve balance, floor 0 — the same formula as
+     [`../tax-reserve-check/SKILL.md`](../tax-reserve-check/SKILL.md), from
+     the applied invoices' tax lines, not an estimate. It is **not** the sum
+     of the missed weeks' sweeps: a sweep that was skipped is why the reserve
+     is short, not how much it is short by. Name the Fridays with no sweep
+     credit separately.
    - Pending authorizations (descriptors + total).
    - Unknown recurring debit: a monthly-repeating descriptor with no matching
      vendor bill or purchase in the books (see `../subscription-audit`).

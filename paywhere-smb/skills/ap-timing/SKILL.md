@@ -1,6 +1,6 @@
 ---
 name: ap-timing
-version: 1.0.0
+version: 1.0.1
 description: >
   Pay-when-due analysis for payables: what is due this week, what is not yet
   due, and which vendors the owner habitually pays earlier than the terms

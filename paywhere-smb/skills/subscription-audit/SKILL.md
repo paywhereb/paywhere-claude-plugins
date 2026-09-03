@@ -1,6 +1,6 @@
 ---
 name: subscription-audit
-version: 1.0.4
+version: 1.0.5
 description: >
   Finds every recurring debit in 12 months of bank descriptors — no
   counterparty field needed — normalizes the statement text, groups it into
@@ -110,12 +110,23 @@ into the first.
 For each recurring stem: latest amount, cadence, months seen, 12-month
 total, `get_transaction_detail` on the latest row (may be null), the books'
 vendor (`search_vendors`) and expense account, and the **last recorded
-purchase**: one `search_purchases` call per recurring stem (by vendor ref or
-name, last 6 months) — the cell holds that date or the word "none", and is
-never filled in from the vendor list. A vendor record is not evidence the
-charge is booked; a vendor record with no purchase in 6 months is the
-commonest orphan (someone set it up, nobody books it). Then any inbox
-thread. Then flag:
+purchase**: one `search_purchases` call per recurring stem, filtered by the
+vendor's QuickBooks Id on the Purchase entity's vendor field —
+`{params: {criteria: [{field: "EntityRef", value: "<vendor Id>"},
+{field: "TxnDate", operator: ">=", value: "<6 months ago>"}], limit: 5}}`
+(a Purchase's vendor is `EntityRef`; there is no `VendorRef` and no
+`vendor_ref` parameter — an unknown parameter is ignored and the tool returns
+an unfiltered list). Read `EntityRef.name` in the rows: if they name other
+vendors, the filter did not apply — fix the call, never treat those rows as
+this vendor's purchases. The cell holds the latest `TxnDate` or the word
+"none", and is never filled in from the vendor list. A vendor record is not
+evidence the charge is booked; a vendor record with no purchase in 6 months
+is the commonest orphan (someone set it up, nobody books it). Then any inbox
+thread. Then flag — **mechanically, from the tests below**: a stem whose
+last-recorded-purchase cell reads "none" is flagged orphaned, with no
+"not confident enough" caveat. Orphaned means nobody *books* it, not nobody
+*uses* it; a $23 PDF tool someone may still open is orphaned when a year of
+bank debits has no purchase in the books.
 
 | Flag | Test |
 |---|---|

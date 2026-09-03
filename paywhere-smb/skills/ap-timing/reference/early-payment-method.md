@@ -12,15 +12,17 @@ Positive = paid before due; 0 = on the due date; negative = late. Partial paymen
 
 ## Per-vendor statistics
 
+Compute these for **every vendor with paid bills in the window**, not only vendors with an open bill today: the year's `search_bills` and `search_bill_payments` are two calls and already cover everyone, and "am I paying anyone early?" is a question about the year. A supplier paid early all winter with nothing open in September still belongs in the answer.
+
 | Stat | Definition |
 |---|---|
-| bills observed | applied bills in the window |
-| mean days early | mean of days early over those bills |
-| dollars paid early | sum of bill totals paid ≥ 5 days early |
-| months | calendar months in which a bill was paid ≥ 5 days early |
+| bills observed | applied bills paid **≥ 5 days early** in the window (the early-paid bills only) |
+| mean days early | mean of days early over those early-paid bills. Bills paid on time or late are **not** averaged in — a seasonal habit averaged over the on-time summer bills reads as "no pattern" |
+| dollars paid early | sum of those early-paid bills' totals |
+| months | calendar months (by payment date) in which a bill was paid ≥ 5 days early |
 | seasonal? | the habit appears in some months and not others |
 
-**Habitually paid early** = mean days early ≥ 7 over ≥ 3 bills. Report the seasonality when present; a habit that switches off in the busiest months is a cash-management tell, not noise.
+**Habitually paid early** = ≥ 3 bills paid ≥ 5 days early in the window. Report the seasonality when present; a habit that switches off in the busiest months is a cash-management tell, not noise. State the basis in one clause ("5 bills paid early, 16 days early on average, $18k") so the owner knows the average is over the early bills.
 
 ## Bank corroboration
 

@@ -1,6 +1,6 @@
 ---
 name: business-pulse
-version: 1.0.2
+version: 1.0.3
 description: >
   One-page pulse for an owner-operated business: the three bank balances,
   TRUE AVAILABLE CASH (operating minus the sales-tax reserve shortfall minus

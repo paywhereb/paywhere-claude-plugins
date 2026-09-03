@@ -1,6 +1,6 @@
 ---
 name: invoice-chase
-version: 1.0.4
+version: 1.0.5
 description: >
   Turns overdue receivables into action: ranks open invoices by cash impact ×
   lateness using each customer's derived payment profile (see ar-health),
@@ -64,6 +64,12 @@ progress display — it does not happen unless you do it explicitly.
    - narrate the fix: the payment should be recorded against the invoice in
      QuickBooks; the connector is read-only, so say it in one line instead
      of writing it.
+   Do this as a **lookup, not a glance**: write down every open invoice's
+   open balance, then scan every credit's amount for a match. The credit
+   usually carries no customer name (a check reads `MOBILE CHECK DEPOSIT
+   4471`), so the amount is the key and the descriptor is the evidence; a
+   credit that landed *before* the invoice was due still counts. Say what you
+   checked ("7 open balances against 41 posted credits since 7/1: one match").
    Two open invoices with the same amount → show both, ask, chase neither
    until the owner picks. Card payments settle net inside grouped merchant
    deposits, so match those through the books' Deposit, not by amount.

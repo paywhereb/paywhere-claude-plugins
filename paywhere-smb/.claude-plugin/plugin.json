@@ -1,6 +1,6 @@
 {
   "name": "paywhere-smb",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Small-business finance workflows run against your bank through the Paywhere connector plus QuickBooks (read-only), Gmail (drafts only) and Google Calendar: business pulse and true available cash, cash bridge, AR health and invoice chase, pay-when-due bill pay, reserve-aware payroll, sales-tax reserve, subscription audit, big purchase, credit readiness, 13-week forecast, cash dashboard, scheduled agents. Payments stage as proposals approved on the bank's /confirm page.",
   "author": {
     "name": "Paywhere",
