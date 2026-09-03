@@ -35,7 +35,9 @@ would check it himself. He reads on his phone between jobs; the first two
 sentences have to stand on their own.
 
 Always say which balances are spendable: Operating, minus any tax-reserve
-shortfall, minus pending authorizations. Never count the Tax Reserve or
+shortfall. The bank's balance already has pending card authorizations taken
+out, so name them (what and how much) but never subtract them a second time.
+Never count the Tax Reserve or
 Business Savings as available, even when the total across accounts would make
 an answer easier.
 

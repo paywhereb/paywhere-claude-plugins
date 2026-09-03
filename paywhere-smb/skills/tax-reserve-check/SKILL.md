@@ -117,7 +117,7 @@ Name the Fridays; do not just count them.
 ## Step 6 — True available cash
 
 ```
-true available = Operating balance − shortfall − pending card authorizations
+true available = Operating balance − shortfall
 ```
 (`query_transactions {status: ["pending"]}` on Operating for the pending
 sum.) Business Savings is not in the formula. Show every term with its
@@ -160,7 +160,7 @@ Tax Reserve balance                                  ${r}
 Shortfall                                            ${s}   ← {n} Friday sweeps missed: {dates}
 Due {remittance date}: ${t} ({A} ${x}, {B} ${y}) — reserve {covers / short ${s}}
 
-True available = Operating ${o} − shortfall ${s} − pending ${p} = ${ta}
+True available = Operating ${o} − shortfall ${s} = ${ta}   (pending card authorizations ${p} already netted by the bank)
 Not covered by the reserve: owner estimate ${e} due {date} (from Operating)
 
 Staged for approval: transfer Operating → Tax Reserve ${s}

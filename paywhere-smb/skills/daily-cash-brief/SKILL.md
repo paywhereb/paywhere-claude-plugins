@@ -95,7 +95,8 @@ does not happen unless you do it explicitly.
 
 1. **Balances + true available** — the formula in
    [`../business-pulse/reference/true-available.md`](../business-pulse/reference/true-available.md):
-   Operating − reserve shortfall (floor 0) − pending authorizations. Business
+   Operating − reserve shortfall (floor 0); the bank's balance is already net
+   of pending authorizations, so list them but do not subtract them. Business
    Savings and the Tax Reserve are never spendable.
 2. **Today / this week** — calendar events with amounts (payroll Friday, the
    20th remittance, estimates, appointments), plus bank-derived items the
@@ -167,7 +168,7 @@ interactively later.
 ```
 # Cash brief — {date} (scheduled 7:30)
 
-**True available: ${x}** = Operating ${a} − reserve shortfall ${b} − pending ${c}
+**True available: ${x}** = Operating ${a} − reserve shortfall ${b}   (pending ${c} already netted by the bank)
 Operating ${a} · Tax Reserve ${r} (owes ${t}, short ${b}) · Business Savings ${s} (not counted)
 
 ## Today / this week

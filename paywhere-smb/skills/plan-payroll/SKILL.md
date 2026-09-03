@@ -74,7 +74,7 @@ explicitly. Don't create tasks for the mode you did not enter.
   for tax), business savings — by name/type/`isPrimary`, never by number.
   More than one plausible operating account → ask which funds payroll.
 - `get_account_balance` on each.
-- **Spendable** = Operating − sales-tax reserve shortfall − pending
+- **Spendable** = Operating − sales-tax reserve shortfall (pending card authorizations are already netted out of the bank balance; name them, do not subtract them)
   authorizations, per
   [`../business-pulse/reference/true-available.md`](../business-pulse/reference/true-available.md)
   (the full method is [`../tax-reserve-check`](../tax-reserve-check/SKILL.md)).
@@ -140,7 +140,7 @@ Output: open AR split into **already landed** (with bank evidence) and
 ```
 Operating balance (cleared)                     $A
 − tax-reserve shortfall                          $R    ← owed to the state, not yours
-− pending authorizations                         $P
+  (pending card authorizations $P are already netted by the bank — shown, not subtracted)
 = spendable                                      $S
 − payroll (net + taxes) on <date>                $W    ← A2
 − bills due on/before <date>                     $B    ← A3, confirmed

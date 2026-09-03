@@ -11,7 +11,9 @@ tax collected(p)  = Σ over invoices i applied by payment p:
 collected[j]      = Σ tax collected(p) for tax items posting to liability account j
 collected total   = Σ_j collected[j]
 shortfall         = max(0, collected total − Tax Reserve balance)
-true available    = Operating balance − shortfall − |pending authorizations|
+true available    = Operating balance − shortfall
+                    (the bank's balance is already net of pending card
+                     authorizations — report them, never subtract them again)
 ```
 
 Round to cents in the table, to dollars in prose. Pro-rate only when a payment is partial; a payment that covers the whole invoice takes the whole tax line.

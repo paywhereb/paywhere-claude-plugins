@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 1.0.2
+version: 1.0.3
 description: >
   Stages this week's vendor payments as ONE mixed-rail batch for the owner to
   approve on the bank's page: pulls open bills from QuickBooks, selects what is
@@ -79,7 +79,11 @@ the hold check.
 
 Run the early-payment check from
 [`../ap-timing/reference/early-payment-method.md`](../ap-timing/reference/early-payment-method.md)
-(12 months of `search_bills` vs `search_bill_payments`). A **not-yet-due**
+(12 months of `search_bills` vs `search_bill_payments` — the whole year for
+every vendor with an open bill, not the last two or three payments: the habit
+is seasonal, paid early in the slow months when cash was flush and on the due
+date in summer, so a recent sample says "no pattern" when the year says
+otherwise). A **not-yet-due**
 bill from a vendor habitually paid early is **HELD**: shown in the table as
 "held — due {date}, {n} days; usually paid {m} days early", not staged. The
 owner can override ("pay it anyway") — re-present. Overdue and due-within-7

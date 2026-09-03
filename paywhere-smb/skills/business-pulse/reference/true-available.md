@@ -5,7 +5,7 @@ The number an owner can actually spend today. The full method, the missed-Friday
 ```
 true available = Operating balance
                − max(0, sales tax collected on RECEIVED payments not yet remitted − Tax Reserve balance)
-               − pending card authorizations (absolute sum)
+               (pending card authorizations: already netted out of the bank balance — report, never subtract) (absolute sum)
 ```
 
 1. **Window start** = the day after the most recent `DEPT OF REVENUE` debit from the Tax Reserve (bank). If none in 60 days, use the 21st of the previous month.

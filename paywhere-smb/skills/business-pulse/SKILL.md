@@ -60,12 +60,18 @@ mid-pulse.
 ## Step 2 — Compute
 
 1. **Balances** — one line per account with the account's role.
-2. **True available cash** — the headline. See `reference/true-available.md`.
+2. **True available cash** — the headline, and it is COMPUTED, never the raw
+   balance. See `reference/true-available.md`. The shortfall is the whole
+   point of the number: with QuickBooks connected, always run the reserve
+   arithmetic (tax inside the payments received in the months not yet
+   remitted, by state, minus the Tax Reserve balance — the same method as
+   `../tax-reserve-check`) before writing the headline. The bank's balance
+   already has pending card authorizations taken out: name them, do not
+   subtract them again.
    ```
    Operating balance
-   − sales-tax reserve shortfall   (tax collected on RECEIVED payments not yet remitted − Tax Reserve balance, floor 0)
-   − pending card authorizations
-   = true available
+   − sales-tax reserve shortfall   (tax collected on RECEIVED payments in the months not yet remitted − Tax Reserve balance, floor 0)
+   = true available                (pending card authorizations: shown, already netted by the bank)
    ```
    Business Savings is reported but never counted as available. If
    QuickBooks is down, show the reserve balance and say the shortfall could

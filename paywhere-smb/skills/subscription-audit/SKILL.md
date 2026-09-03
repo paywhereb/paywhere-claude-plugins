@@ -1,6 +1,6 @@
 ---
 name: subscription-audit
-version: 1.0.3
+version: 1.0.4
 description: >
   Finds every recurring debit in 12 months of bank descriptors — no
   counterparty field needed — normalizes the statement text, groups it into
@@ -109,15 +109,18 @@ into the first.
 
 For each recurring stem: latest amount, cadence, months seen, 12-month
 total, `get_transaction_detail` on the latest row (may be null), the books'
-vendor (`search_vendors`) and expense account, last purchase recorded
-(`search_purchases` **for every recurring stem, not just the unfamiliar
-ones** — a vendor record with no recorded purchase is the commonest orphan:
-someone set it up, nobody books it), and any inbox thread. Then flag:
+vendor (`search_vendors`) and expense account, and the **last recorded
+purchase**: one `search_purchases` call per recurring stem (by vendor ref or
+name, last 6 months) — the cell holds that date or the word "none", and is
+never filled in from the vendor list. A vendor record is not evidence the
+charge is booked; a vendor record with no purchase in 6 months is the
+commonest orphan (someone set it up, nobody books it). Then any inbox
+thread. Then flag:
 
 | Flag | Test |
 |---|---|
 | **zero attribution** | A lead-gen / advertising / directory subscription with no customer whose Notes or referral source names it (`search_customers`), or with zero revenue traced to it |
-| **orphaned** | No vendor record in the books, no purchase recorded in 6 months, or the inbox shows it was set up by someone no longer with the business |
+| **orphaned** | Last recorded purchase = "none" (no purchase in 6 months, whether or not a vendor record exists), no vendor record at all, or the inbox shows it was set up by someone no longer with the business |
 | **duplicate** | Two stems serving the same function (two file-sync tools, two phone lines for one person) or a second seat of the same product |
 | **price creep** | Amount stepped up during the window; show old → new and the annualized delta |
 | **unknown** | Nothing in the books or inbox explains it — ask the owner |
