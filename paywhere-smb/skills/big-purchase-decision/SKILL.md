@@ -6,11 +6,10 @@ description: >
   equipment) from cleared cash rather than book profit, in five tool calls:
   today's balance, twelve months of monthly cash from the bank (the year's
   highs and lows), the last payroll debits (the cushion), and the dealer /
-  lender / insurer emails for the price, terms and deadline. A single narrow
-  question ("can I carry the payment?") gets a short verdict in under 120
-  words; only a multi-part ask gets the full package — cash vs finance, the
-  safest months to buy, the risky months, whether a second vehicle fits —
-  and "what to bring the bank" hands off to credit-readiness. Read-only, stages nothing. Use when the
+  lender / insurer emails for the price, terms and deadline. Always answers
+  SHORT — a verdict, the number behind it, one caveat, under 120 words — and
+  offers depth rather than volunteering it; preparing a lender application is
+  credit-readiness, invoked explicitly. Read-only, stages nothing. Use when the
   owner says "can I afford the van / a new truck / new equipment," "can I buy
   a van this week for $X," "cash or finance," "when is the safest month to
   buy," "should I buy a second van," or "what if I put $10k down."
@@ -27,16 +26,11 @@ reply, under half a minute.
 *this* purchase at *this* price (yes / no / yes if financed) with the one
 number that decides it. Everything after is why the verdict holds.
 
-## Answer the question that was asked — two shapes
+## One shape: short
 
-Read what the owner actually asked before deciding how much to write. A long
-answer to a short question is a wrong answer: it costs the reader more than it
-tells them, and it spends minutes the owner is watching tick by.
-
-| The owner asked | Shape | Reads |
-|---|---|---|
-| **ONE narrow question** — "can I afford it", "can I carry the monthly payment", "is $X a month doable" | **Short verdict** (below), under ~120 words. No tables, no month-by-month, no second-unit digression, no bank-meeting aside. | The seller thread (search + `get_thread`) for price and terms, `list_accounts`, and the monthly-nets call only if the share is worth stating |
-| **SEVERAL questions at once**, or an explicit ask for the analysis — "cash or finance, when should I buy, and what about a second one" | **Full package** — Steps 1–3 below | All five |
+This skill answers in under ~120 words, whatever it is asked. A long answer to
+a short question is a wrong answer — it costs the reader more than it tells
+them, and it spends minutes the owner is watching tick by.
 
 **Short verdict** — four lines, then stop:
 
@@ -44,14 +38,21 @@ tells them, and it spends minutes the owner is watching tick by.
 {Yes / No / Yes, if financed} — {the deciding number, one clause}.
 {One sentence of why: the monthly figure, netted against what it replaces or against what an average month clears.}
 {At most ONE caveat, and only if it changes the answer.}
-{One line offering the full picture — cash vs finance, safest months, a second unit — then stop.}
+{One line offering more — deeper analysis, or the lender package — then stop.}
 ```
 
 A hedge is not a verdict: "Yes, if financed" is one, "it depends whether you
-finance" is not. Pick the answer the numbers support and say it plainly. Do
-**not** volunteer the cash-vs-finance comparison, the twelve month-ends, the
-tax reserve or the line of credit in the short shape — each is one question
-away, and the owner will ask if they want it.
+finance" is not. Pick the answer the numbers support and say it plainly.
+
+Do **not** volunteer the cash-vs-finance comparison, the twelve month-ends, a
+second unit, the tax reserve or a line of credit. Each is one question away,
+and the owner will ask if they want it. If the owner asks several things at
+once, answer the one that decides it and offer the rest — still short.
+
+**The lender package is a different job.** "What should I bring to the bank",
+"get me ready for the loan application", "how much credit should I ask for" →
+name `credit-readiness` and stop. It is invoked explicitly and produces a
+markdown package; do not start assembling one here.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1, `TaskUpdate` to `in_progress` when you begin a step and `completed`
@@ -118,44 +119,39 @@ net monthly impact = payment + insurance delta (+ fuel/maintenance if quoted)
   on the three low months; defer unless the lows would still clear the
   cushion, and name what would change it (collections, a line of credit).
 
-## Step 3 — Reply, FULL PACKAGE ONLY (under ~25 lines)
+## Step 3 — Reply. Short, always.
 
-This is the multi-part answer. If the owner asked one narrow question, the short
-verdict above is the whole reply — do not fall through to this template.
+This skill has ONE output shape: the short verdict above. There is no long
+form here any more (2026-09-04). The owner asked whether a purchase fits; the
+answer is a verdict, the number behind it, and a way to go deeper.
 
 ```
-{Yes / No / Yes, if financed} — {one sentence with the deciding number}.
-{One sentence: deadline from the dealer's email, and what to say at the appointment.}
-
-Purchase decision — {date}
-Quote ${price} all-in ({seller}, good through {date}) · Finance ${down} down, ${principal} at {apr}% / {n} mo → ${pmt}/mo ({lender}) · Insurance +${x}/mo
-Net monthly cash impact: ${net}
-
-Cash today:   ${spendable} − ${price} = ${afterCash}  vs cushion ${cushion} (payroll + a week)  → {clears / does not}
-Financed:     ${spendable} − ${down}  = ${afterDown}  → {clears}; ${net}/mo is {p}% of an average month's debits
-
-| Month-ends (12 mo) | |
-| Highest | {Mon} ${a} · {Mon} ${b} · {Mon} ${c}  ← safest to buy |
-| Lowest  | {Mon} ${d} · {Mon} ${e} · {Mon} ${f}  ← a second payment stream would land here |
-
-Second unit: {defer / fits} — {one clause}.
-Recommendation: {one or two sentences}.
-Want the package for the bank meeting on {date}? (credit-readiness)
+{Yes / No / Yes, if financed} — {the deciding number, one clause}.
+{One sentence of why: the monthly figure netted against what it replaces, or the cash left against the cushion.}
+{At most ONE caveat, only if it changes the answer.}
+{One line: deeper analysis, or the lender package, is one question away.}
 Not financial or tax advice — confirm terms with the lender and your accountant.
 ```
 
-Say once what only the bank supplied: the real month-ends and the drawdown,
-which the P&L cannot show.
+Under ~120 words. **No tables in the default answer**: no month-end grid, no
+cash-vs-finance ledger, no second-unit paragraph, no tax-reserve aside, no
+line-of-credit digression. Say once what only the bank supplied — the real
+month-ends, the drawdown — in a clause, not a section.
+
+A follow-up question earns the depth it asks for, and nothing more: answer
+*that* question, in a few lines, using the figures already computed. Preparing
+a lender application is a different job with its own skill — hand it to
+`credit-readiness`, which the owner invokes explicitly.
 
 ## Follow-ups this skill expects
 
 | Owner says | Do |
 |---|---|
-| "Cash or finance?" | The two lines above, side by side; the cushion decides. |
+| "Cash or finance?" | Two lines, side by side; the cushion decides. Still no tables. |
 | "When is the safest month?" | The highest three month-ends, with amounts; avoid the lowest three. |
 | "What about a second one?" | Two payment streams against the three lows. |
 | "What if I put $10k down?" | Recompute PMT with the new principal; one-time hit and monthly delta. |
-| "What should I bring to the bank?" | Hand off to `credit-readiness`. |
+| "What should I bring to the bank?" | Hand off to `credit-readiness` — say the name so the owner can invoke it; do not start assembling the package here. |
 | "Show me the next 13 weeks" | Build a week-by-week table from open invoices, open bills and the payroll pattern; no skill, and not part of the default answer. |
 
 ## Degraded modes

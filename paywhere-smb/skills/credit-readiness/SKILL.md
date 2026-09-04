@@ -1,21 +1,22 @@
 ---
 name: credit-readiness
-version: 1.0.3
+version: 1.0.4
+disable-model-invocation: true
 description: >
-  Answers "what should I bring to the bank" with one markdown one-pager built
-  from cleared cash: twelve month-end balances of the operating account
-  derived from the bank's monthly aggregates, the three troughs and what
-  caused them, the deepest peak-to-trough drop as the working-capital gap, a
-  line of credit sized from that gap (gap times 1.25, rounded up to $5k), the
-  repayment source, the receivables and the books' P&L and balance sheet the
-  lender will ask for, and the lender's own document checklist read from the
-  email thread. Six read calls in one parallel turn, then one file:
-  bank/credit-readiness-YYYY-MM-DD.md, and nothing else. Read-only, stages
-  nothing. Use when the owner says "what should I bring to the bank,"
-  "prepare a package for the bank," "how much credit do I need," "what's my
-  working capital gap," "would a line of credit have helped," or "when am I
-  most likely short." NOT for "can I afford this purchase" — that
-  is big-purchase-decision, which hands the bank meeting here.
+  Prepares a loan or credit application from cleared cash — generic, any
+  borrowing purpose: twelve month-end balances of the operating account from
+  the bank's monthly aggregates, the three troughs and what caused them, the
+  deepest peak-to-trough drop as the working-capital gap, a facility sized
+  from that gap (gap x 1.25, rounded up to $5k), the repayment source, the
+  receivables and the books' P&L and balance sheet the lender will ask for,
+  and any lender document checklist found in email. Six read calls in one
+  parallel turn, then one file: bank/credit-readiness-YYYY-MM-DD.md. Read-only,
+  stages nothing. EXPLICITLY INVOKED ONLY — the long-form package a lender
+  asks for, never volunteered mid-conversation. Use when the owner says "what
+  should I bring to the bank," "prepare a package for the bank," "get me ready
+  for the loan application," "how much credit do I need," or "what's my
+  working capital gap." NOT for "can I afford this" — that is
+  big-purchase-decision, which answers in a line or two and offers this.
 ---
 
 # Credit Readiness
