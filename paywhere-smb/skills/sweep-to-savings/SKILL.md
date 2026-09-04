@@ -1,49 +1,62 @@
 ---
 name: sweep-to-savings
-version: 1.0.4
+version: 1.1.0
 description: >
-  Answers "how much can I move to savings without getting tight" for a
-  business whose operating account carries a cushion it never actually
-  needs: the committed outflows between today and the end of the next pay
-  cycle (recurring debits, the next payroll run, bills already due),
-  the operating buffer the business's own history says it needs, and any
-  money earmarked but not yet moved, subtracted from the operating balance
-  to give ONE safe-to-sweep figure — staged as a transfer the owner
-  approves on the bank's /confirm page. Three reads in one turn, one staged
-  transfer. Use when the owner says "how much can I move to savings," "how
-  much spare cash do I have," "can I put some cash away," "sweep the extra
-  to savings," or "how much can I set aside this month." NOT for "show my
-  balances" (one list_accounts call, no skill), not for moving money OUT of
-  savings, and not for the sales-tax reserve — a tax reserve is a
-  liability, not spare cash.
+  The idle-cash sweep, automated (scheduled agent). On its run day it works
+  out how much of the operating balance is genuinely spare — net of everything
+  committed through the next pay cycle, the operating buffer the business's
+  own history says it needs, and any money earmarked and not yet moved — then
+  writes savings/YYYY-MM-DD.md and STAGES one operating-to-savings transfer
+  for the owner to approve on the bank's /confirm page with a passkey. Four
+  reads in one turn, one staged transfer. Proposes, never executes; never
+  transfer_funds. Use when the owner says "run the savings sweep," "sweep the
+  spare cash to savings," "how much can I move to savings," "how much spare
+  cash do I have," or schedules "every Friday at 6am run the savings sweep"
+  (any day the owner picks). NOT for the sales-tax reserve — that is
+  tax-sweep-agent, and a tax reserve is a liability, not spare cash.
 ---
 
-# Sweep to Savings
+# Sweep to Savings (agent)
 
 Most operating accounts carry a balance the business never touches, because
-nobody has ever worked out what the real floor is. This skill works it out
-from the account's own history and moves the difference — once, behind one
-approval.
+nobody has ever worked out what the real floor is. This agent works it out from
+the account's own history and stages the difference — once, behind one
+approval, on a schedule.
 
-The safe-to-sweep figure is deliberately conservative: it is what is left
-after everything already committed, plus a buffer the business has actually
-needed, plus anything earmarked for someone else. Being wrong here bounces
-payroll, so the skill rounds DOWN and says what the number is net of.
+Follows [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md) and
+[`../_shared/APPROVAL.md`](../_shared/APPROVAL.md). The load-bearing rules,
+repeated because this file is loaded on its own:
 
-> `make_batch_payment` **never moves money**: it stages the transfer on the
-> owner's open proposal and returns a confirmation URL of the form
-> `https://<bank host>/confirm/<id>/<nonce>`. **Print that URL verbatim as
-> the approval step**; the owner approves with a passkey, and only then does
-> money move. **Never claim money has moved** — say "staged" / "awaiting your
-> approval". Internal transfers are staged as a `{rail: "transfer",
-> fromAccountNumber, toAccountNumber, amount}` item, **never
-> `transfer_funds`**. Full path: [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
+> Stamp `sessionType: "scheduled"` and `taskId: "sweep-to-savings"` on every
+> tool call. Write `savings/YYYY-MM-DD.md`; if today's exists, stop and say so.
+> **Propose, never execute**: the transfer is staged as ONE
+> `make_batch_payment` with a single `{rail: "transfer", fromAccountNumber,
+> toAccountNumber, amount}` item — never `transfer_funds` — and the returned
+> `/confirm/<id>/<nonce>` URL is printed verbatim with its
+> `confirmation_title` and *"Nothing has moved until you approve this on the
+> bank's page."* Never say "swept", "moved" or "transferred". A missing
+> connector removes a term, not the run. No email, no invites, no questions —
+> **nobody is there to answer them**, which is also why the run shows its
+> arithmetic in full.
 
-## Quick start — four reads in one turn, one staged transfer
+The figure is deliberately conservative: being wrong here bounces payroll, so
+it rounds DOWN and says what the number is net of.
+
+## Schedule (Cowork Desktop → scheduled task)
+
+| Field | Value |
+|---|---|
+| Schedule | `Every Friday at 6:00am` — any day the owner picks; a weekly cadence suits a business paid weekly, monthly suits one paid monthly |
+| Prompt | `Run the savings sweep` |
+
+Cowork must be open for the run to fire. To see a run on demand, use the same
+prompt interactively.
+
+## Quick start — six calls, no questions
 
 ```
-User: "how much can I move to savings without getting tight?"
-→ In ONE turn, in parallel (all four at once — never one after another):
+Scheduled task fires: "Run the savings sweep"
+→ In ONE turn, in parallel (all four reads at once — never one after another):
     list_accounts                                                          (roles, balances, exact unmasked numbers)
     query_transactions {accountNumbers:[<operating>], direction:"debit",
                         dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, average weekly outflow)
@@ -51,15 +64,20 @@ User: "how much can I move to savings without getting tight?"
     get_sales_tax_collected {date_from:<1st of the month last remitted>}   (earmarked: collected, not yet swept)
 → Window = today through the next payroll date + 7 days (payroll cadence comes from the processor debits)
 → safeToSweep = operating − committed − buffer − earmarked, floored at 0, rounded DOWN
-→ Reply: the figure first, the three things it is net of, ONE transfer line, "Stage it?"
-User: "yes"
+→ If safeToSweep is 0: write the file saying so, stage NOTHING, and stop.
 → ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<operating>,
                                      toAccountNumber:<savings>, amount:<safeToSweep>}]}   → confirmation_url renders
-→ One closing line: staged, nothing has moved.
+→ write_file savings/YYYY-MM-DD.md — the figure, the arithmetic, the staged transfer, the /confirm URL
+→ Run output: the figure, what it is net of, the transfer, the link, "nothing has moved until you approve it".
 ```
 
+**Nobody is asked anything.** There is no "Stage it?" turn: the run stages the
+transfer itself and the owner approves it — or does not — when they next open
+Cowork. That is the whole point of a scheduled agent, and it is safe precisely
+because staging is not moving.
+
 Nothing else is read: no balance sheet, no P&L, no per-invoice loop, no
-calendar. Four reads plus the stage is five calls; the budget is six. If the
+calendar, no email. Four reads, one stage, one file — six calls. If the
 books are not connected, skip the tax call, subtract nothing for earmarked
 money, and say in one line that the figure does not account for collected tax.
 
@@ -141,10 +159,10 @@ cycle and why, and stage nothing.
 
 ## Output — the figure, then how you got there
 
-Lead with the number and the transfer. Then **show your work**: the owner is
-being asked to move real money, often reading this the next morning with
-nobody to ask, so a bare figure is not actionable. The derivation is required,
-and it is three or four lines — not three or four sections.
+The run writes `savings/YYYY-MM-DD.md` and says the same thing in its output.
+**Show the work**: the owner reads this the next morning with nobody to ask, so
+a bare figure is not actionable. The derivation is required — three or four
+lines, not three or four sections.
 
 1. **One line:** the safe-to-sweep figure and the destination account.
 2. **"That's net of:"** one line per term, each with its amount:
@@ -157,14 +175,14 @@ and it is three or four lines — not three or four sections.
      number with no story.
    - **Earmarked, not yours to sweep** — sales tax collected and not yet
      swept, with the sweep days that were missed if the history shows them.
-3. **The transfer line:** from, to, amount.
-4. **"Stage it?"** — and stop. Do not stage on the same turn as the figure.
-   One extra line offering `tax-reserve-check` for the earmarked shortfall is
+3. **The staged transfer:** from, to, amount, the `confirmation_title`, and
+   the `/confirm/<id>/<nonce>` URL verbatim.
+4. **One closing line:** nothing has moved until the owner approves it on the
+   bank's page.
+5. One extra line naming `tax-reserve-check` for the earmarked shortfall is
    welcome; anything more is not.
-5. After the owner agrees: the staged transfer, the `/confirm` URL verbatim,
-   and one line saying nothing has moved yet.
 
-It stays a **reply, not a report**: no 13-week forecast, no month-by-month
+It stays a **run report, not an essay**: no 13-week forecast, no month-by-month
 history, no per-invoice ledger, no unrelated analysis. Naming four vendors
 inline is right; itemising four bills as a table is not.
 
@@ -172,7 +190,8 @@ inline is right; itemising four bills as a table is not.
 should usually have something to sweep. If the figure lands at or below zero,
 re-check the two mistakes that cause a false zero — counting open bills that
 fall due after the window, and using a worst-case week as the buffer — before
-telling the owner there is nothing spare.
+writing that there is nothing spare. A legitimate zero is fine: say why, stage
+nothing.
 
 ## Guardrails
 
@@ -180,8 +199,8 @@ telling the owner there is nothing spare.
   retainage are liabilities that happen to be sitting in a checking account.
 - **Never sweep from a reserve account**, and never present a sweep as
   freeing money it does not free — the total across accounts is unchanged.
-- **One transfer, one approval.** If the owner asks for a different amount,
-  stage that amount instead; do not stage twice.
+- **One transfer, one approval, one run.** Never stage twice. If today's
+  `savings/YYYY-MM-DD.md` already exists, the sweep has run — stop and say so.
 - **Round down, and say what it is net of.** A figure with no stated basis
   is not actionable.
 - If the business has no separate savings account, say so and stop; do not
