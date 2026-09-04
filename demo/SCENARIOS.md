@@ -38,8 +38,15 @@ The bank's page is where the approval happens."*
    (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
    signed in as **demo-nick@paywhere.com** for the Google pair
    ([`presenter-kit.md`](presenter-kit.md) §1).
-3. Side-load `dist/paywhere-smb-1.0.13.plugin` (presenter-kit §2).
-4. Then, in the project:
+3. Side-load `dist/paywhere-smb-1.0.17.plugin` (presenter-kit §2).
+4. **Set the model to Claude Sonnet 5 at MEDIUM effort** (Brett, 2026-09-04).
+   This is measured, not a preference: across the whole suite medium landed
+   5 of 10 beats and was the only setting where the pay-bills beat passed
+   every run; low landed 4 and degraded even a plain balance question, and
+   the API default (high) put every beat over the wall clock. The scenario
+   eval is locked to the same setting, so the grading run and the demo behave
+   alike — do not change one without the other.
+5. Then, in the project:
 
 ```
 /demo-setup
