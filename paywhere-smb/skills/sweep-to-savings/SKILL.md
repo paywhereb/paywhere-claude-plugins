@@ -1,6 +1,6 @@
 ---
 name: sweep-to-savings
-version: 1.1.0
+version: 1.1.1
 description: >
   The idle-cash sweep, automated (scheduled agent). On its run day it works
   out how much of the operating balance is genuinely spare — net of everything
@@ -156,6 +156,55 @@ rather than guessing.
 DOWN to the nearest 100 of the account's currency. A figure at or below zero
 is a legitimate answer: say the operating account has no spare cash this
 cycle and why, and stage nothing.
+
+## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "2. Read — four calls, one
+turn"), then `TaskUpdate` it to `in_progress` when you begin that step and
+`completed` when it's done. This is what drives Cowork's visible progress
+display — it does not happen unless you do it explicitly. The owner reads the
+finished run in the morning, but the steps are what a presenter watches live.
+
+### 1. Dedupe and stamp
+
+Stamp `sessionType: "scheduled"` and `taskId: "sweep-to-savings"` on every
+call. If `savings/YYYY-MM-DD.md` already exists for today, the sweep has run:
+stop and say so. Never stage a second transfer for the same day.
+
+### 2. Read — four calls, one turn
+
+The four reads in the quick start, issued together, never one after another:
+balances and roles, ninety days of operating debits, the open bills due inside
+the window, and the sales tax collected since the month last remitted.
+
+### 3. Compute the safe figure
+
+Window = today through the next payroll date + 7 days. Then
+`safeToSweep = operating − committed − buffer − earmarked`, floored at 0 and
+rounded DOWN to the nearest 100 — every term as defined above and in
+[`../_shared/AVAILABLE-CASH.md`](../_shared/AVAILABLE-CASH.md). Sanity-check a
+zero before reporting one.
+
+### 4. Stage — ONE `make_batch_payment`
+
+A single `{rail: "transfer", fromAccountNumber: <operating>, toAccountNumber:
+<savings>, amount: <safeToSweep>}` item. No `dryRun` first — an agent has
+nobody to show a table to — and never `transfer_funds`. If the figure is zero,
+skip this step entirely and record why. Read back `confirmation_url`,
+`confirmation_title` and `expires_at`.
+
+### 5. Write `savings/YYYY-MM-DD.md`
+
+The figure, the arithmetic one line per term, the staged transfer and the
+`/confirm` URL verbatim. This file is what the owner actually reads; the run
+output is its summary.
+
+### 6. Run output
+
+What Cowork shows in the notification: the figure, what it is net of, the
+transfer, the link, and one line saying nothing has moved until it is
+approved.
 
 ## Output — the figure, then how you got there
 

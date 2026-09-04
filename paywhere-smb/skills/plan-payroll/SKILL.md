@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 1.0.6
+version: 1.0.7
 description: >
   Answers "am I good for payroll?" from the bank: the live Operating balance
   made reserve-aware (minus the sales-tax reserve shortfall; pending
@@ -107,7 +107,7 @@ guide). **Pay date** = the last debit date plus the cadence, or the date the
 owner named. No processor pattern in 8 weeks → ask once for the amount and
 date and label the verdict "owner-stated payroll".
 
-### 3. The reserve shortfall
+### 3. Earmarked money — the reserve shortfall
 
 `get_sales_tax_collected` was pulled from the 1st of last month — the widest
 the window can be. The window is the months not yet remitted: the reserve's
@@ -119,7 +119,7 @@ re-totalled from `byPayment[]` (`txnDate` on or after the 1st). Shortfall =
 tax authority is not payroll money. Full method:
 [`../tax-reserve-check/reference/true-available.md`](../tax-reserve-check/reference/true-available.md).
 
-### 4. Bills due on or before the pay date
+### 4. Committed — bills due on or before the pay date
 
 From `get_vendor_payment_timing`: every `openBills[]` row with `dueDate` on
 or before the pay date, plus everything overdue. `notYetDue[]` rows are not

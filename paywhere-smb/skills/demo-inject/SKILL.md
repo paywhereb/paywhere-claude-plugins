@@ -1,6 +1,6 @@
 ---
 name: demo-inject
-version: 1.0.3
+version: 1.0.4
 disable-model-invocation: true
 description: >
   PRESENTER-ONLY, demo deployments only. Posts live "money just landed" or
@@ -32,9 +32,11 @@ world; the next balance or AR check sees the change. To undo, re-run
 3. Resolve the **Operating** account via `list_accounts` (primary checking)
    — never a hardcoded number.
 
-**Progress tracking:** call `TaskCreate` once per step below before starting
-(subject = the step's name, e.g. "1. Guard"), then `TaskUpdate` to
-`in_progress` / `completed` as you go — it drives Cowork's progress display.
+**Progress tracking:** call `TaskCreate` once for each of the four phases
+below — "1. Guard", "2. Read the live world", "3. Inject", "4. Confirm" —
+before starting the first, then `TaskUpdate` each to `in_progress` when you
+begin it and `completed` when it is done. It drives Cowork's progress display
+and does not happen unless you do it explicitly.
 
 ## Read the live world first
 
