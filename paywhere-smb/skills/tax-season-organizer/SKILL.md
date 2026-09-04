@@ -35,11 +35,19 @@ description: >
 
 ```
 User: "what do I owe for estimated taxes this quarter?"
-→ In ONE turn, in parallel (3 calls):
+→ Round 1, in parallel (2 calls):
     get_profit_and_loss {Jan 1 of the tax year → last day of the last completed quarter}
     list_accounts                                                       (Operating by role)
+→ Round 2, the moment list_accounts returns (1 call):
     query_transactions {accountNumbers:[Operating], direction:"debit",
                         descriptionContains:"IRS", dateFrom:<Jan 1 of the tax year>}   (estimates already paid; also try EFTPS / USATAXPYMT)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → Compute SE tax + federal estimate − payments made ÷ quarters remaining
 → write_file tax/estimate-{YYYY}-Q{n}.md
 → Reply: "Estimated Q{n} payment due {date}: $X — assumptions in the file."

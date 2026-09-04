@@ -41,12 +41,20 @@ does not happen unless you do it explicitly.
 User: "what should I bring to the bank?"
 → In ONE turn, in parallel:
     list_accounts                                                                     (Operating by role, today's balance)
-    query_transactions {accountNumbers:[Operating], aggregate:true, groupBy:"month",
-                        dateFrom:<first day of the month 12 months ago>}             (twelve monthly nets)
     get_aged_receivables                                                              (what is collectible, and how old)
     get_profit_and_loss {trailing 12 months}                                          (revenue, net income)
     get_balance_sheet                                                                 (assets, liabilities, equity, existing debt)
     search_threads (Gmail) "term sheet OR documents requested OR line of credit"      (the lender's thread: what they asked for)
+→ Then, the moment list_accounts returns, one more read:
+    query_transactions {accountNumbers:[Operating], aggregate:true, groupBy:"month",
+                        dateFrom:<first day of the month 12 months ago>}             (twelve monthly nets)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → Compute month-ends, troughs, gap, request (below).
 → write_file bank/credit-readiness-YYYY-MM-DD.md
 → Reply: the request in two lines, the file path, the checklist gaps.

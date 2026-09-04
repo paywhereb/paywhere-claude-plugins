@@ -44,13 +44,21 @@ form other skills link to.
 
 ```
 User: "how much of my balance is actually mine?"
-→ In ONE turn, in parallel (all four reads at once — never one after another):
+→ Round 1 — two reads in parallel, never one after another:
     list_accounts                                                                       (roles + balances + exact unmasked numbers)
+    get_sales_tax_collected {date_from:<1st of last month>}                             (tax inside payments RECEIVED; total, byItem, byWeek, byPayment)
+→ Round 2 — the moment list_accounts returns, both in parallel:
     query_transactions {accountNumbers:[<Tax Reserve>], direction:"debit",
                         descriptionContains:<remittance stem>, dateFrom:<90 days ago>, limit:5}   (last remittance → remittance day, month last paid)
-    get_sales_tax_collected {date_from:<1st of last month>}                             (tax inside payments RECEIVED; total, byItem, byWeek, byPayment)
     query_transactions {accountNumbers:[<Tax Reserve>], direction:"credit",
                         dateFrom:<12 months ago>, status:["posted"], limit:200}         (sweep history → sweep weekday, missed sweeps)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → Window from the remittance debit · collected = the report cut to the window · shortfall = collected − reserve, floor 0
 → Reply: true available first, the terms, the missed sweep days, ONE transfer line, "Stage the catch-up?"
 User: "yes"

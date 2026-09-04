@@ -41,9 +41,17 @@ User: "the books say I made money last month, why is my cash lower?"
     get_balance_sheet  {end_date: M-end}                                                     (AR, AP, inventory, fixed assets, liabilities, equity, bank accounts)
     get_balance_sheet  {end_date: (M−1)-end}                                                 (the same, a month earlier → every Δ)
     list_accounts                                                                            (Operating by role; reserve and savings names)
+→ Then, the moment list_accounts returns, one more read:
     query_transactions {accountNumbers:[Operating], dateFrom: M-01, dateTo: M-end,
                         aggregate: true, includeTransactions: true, sort: "amount_desc", limit: 20}
                                                                                              (net = the bank's change in Operating; the 20 largest rows name the big debits)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → Bridge: net income → adjustments (each with its source) → change in cash; residual; bank check
 → Reply under 25 lines, the gap first
 ```

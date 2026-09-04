@@ -56,12 +56,20 @@ prompt interactively.
 
 ```
 Scheduled task fires: "Run the savings sweep"
-→ In ONE turn, in parallel (all four reads at once — never one after another):
+→ Round 1 — three reads in parallel, never one after another:
     list_accounts                                                          (roles, balances, exact unmasked numbers)
-    query_transactions {accountNumbers:[<operating>], direction:"debit",
-                        dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, average weekly outflow)
     search_bills {status:"open", due_before:<window end>}                  (ONLY bills due inside the window)
     get_sales_tax_collected {date_from:<1st of the month last remitted>}   (earmarked: collected, not yet swept)
+→ Round 2 — the moment list_accounts returns, one read:
+    query_transactions {accountNumbers:[<operating>], direction:"debit",
+                        dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, average weekly outflow)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → Window = today through the next payroll date + 7 days (payroll cadence comes from the processor debits)
 → safeToSweep = operating − committed − buffer − earmarked, floored at 0, rounded DOWN
 → If safeToSweep is 0: write the file saying so, stage NOTHING, and stop.

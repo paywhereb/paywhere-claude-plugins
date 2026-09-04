@@ -36,13 +36,21 @@ and what is owed to the business. No unlanded inflow is ever counted.
 
 ```
 User: "am I good for payroll?"
-→ In ONE turn, in parallel (all six reads at once — never one after another):
+→ Round 1 — five reads in parallel, never one after another:
     list_accounts                                                                          (Operating, Tax Reserve, Business Savings; balances; exact numbers)
-    query_transactions {direction:"debit", dateFrom:<8 weeks ago>, status:["posted"], limit:250}   (all accounts: the processor's runs on Operating + the last remittance debit on the reserve)
+    query_transactions {direction:"debit", dateFrom:<8 weeks ago>, status:["posted"], limit:250}   (all accounts ON PURPOSE: the processor's runs on Operating + the last remittance debit on the reserve)
     get_sales_tax_collected {date_from:<1st of last month>}                                (reserve shortfall — the books side in one call)
     get_vendor_payment_timing                                                              (open bills with due dates; which vendors are habitually paid early)
     get_aged_receivables                                                                   (open AR — the recovery path, never cash)
+→ Round 2 — the moment list_accounts returns, one read:
     query_transactions {accountNumbers:[<Operating>], direction:"credit", dateFrom:<14 days ago>, status:["posted"]}   (landed-but-unbooked)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → headroom = operating − committed(through the pay date) − earmarked        (terms: ../_shared/AVAILABLE-CASH.md)
              i.e. Operating − (next payroll + bills due on/before the pay date + recurring debits landing by then) − reserve shortfall
 → Reply: the headroom first, the equation, "Next up", the options if short, "Stage the top-up?"

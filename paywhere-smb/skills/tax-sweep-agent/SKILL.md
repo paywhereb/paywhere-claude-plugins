@@ -59,11 +59,19 @@ reports separately.
 ```
 Schedule fires (or: "run the tax sweep")
 → sweeps/<today>.md exists? → one line, stop.
-→ In ONE turn, in parallel (all four reads at once):
+→ Round 1 — two reads in parallel:
     list_accounts                                                                            (Operating + Tax Reserve, exact unmasked numbers, balances)
     get_sales_tax_collected {date_from:<Monday>, date_to:<today>}                            (tax inside payments RECEIVED this week: total, byItem, byPayment)
+→ Round 2 — the moment list_accounts returns, both in parallel:
     query_transactions {accountNumbers:[<Operating>], direction:"credit", dateFrom:<Monday>, dateTo:<today>, status:["posted"]}   (bank cross-check)
     query_transactions {accountNumbers:[<Tax Reserve>], direction:"credit", dateFrom:<7 days ago>}                              (already swept this week? same-day duplicate?)
+   `query_transactions` takes EXACT unmasked account numbers and reads EVERY account when
+   `accountNumbers` is omitted or empty, so a scoped read cannot go in the same round as the
+   `list_accounts` that supplies the number. Never guess it and never leave the field empty to
+   keep one round: an unscoped read folds the owner's own transfers (tax sweeps, savings moves)
+   into the totals, and they do not net out — a transfer out is a debit whether or not it comes
+   back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
+   from the wide number, and do not narrate the correction to the owner.
 → amount = collected.total − tax on booked payments with no bank credit − transfers already into the reserve this week
 → ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Operating>, toAccountNumber:<Tax Reserve>, amount}], sessionType:"scheduled", taskId:"tax-sweep-agent"}
 → Write sweeps/<today>.md · print the run output with the URL

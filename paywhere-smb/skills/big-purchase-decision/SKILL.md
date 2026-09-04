@@ -58,10 +58,13 @@ markdown package; do not start assembling one here.
 Step 1, `TaskUpdate` to `in_progress` when you begin a step and `completed`
 when it's done — this drives Cowork's progress display.
 
-## Step 1 — Three reads in one turn, then the thread
+## Step 1 — Three reads in two rounds, then the thread
 
 The whole answer is a verdict and one number, so read only what the verdict
-needs. **Turn one, all three in parallel:**
+needs. Three reads, and the order matters: **fire 1 and 3 together, then 2 as
+soon as 1 comes back.** Step 2 needs the operating account's exact number,
+which only step 1 can tell you — firing all three at once means guessing it,
+and the tool reads EVERY account when you leave it out.
 
 1. `list_accounts` → Operating (primary checking by role). Spendable cash is
    **Operating only**; the Tax Reserve holds customers' sales tax and Business
@@ -69,11 +72,21 @@ needs. **Turn one, all three in parallel:**
    card authorizations — do not subtract them. Do **not** compute a reserve
    shortfall here; if the reserve looks short, say so in one clause and point
    at tax-reserve-check.
-2. `query_transactions {accountNumbers: [Operating], aggregate: true, groupBy:
+2. **After `list_accounts` returns**, `query_transactions {accountNumbers:
+   [<the operating account's exact accountNumber>], aggregate: true, groupBy:
    "month", dateFrom: <first day of the month 12 months ago>}` → twelve monthly
    nets: the average month's debits (what the new payment is measured against),
    the lowest month-ends, and the deepest drop from any month-end to a later
    one. One call covers all three; do not follow it with per-month queries.
+
+   **Never leave `accountNumbers` empty here.** Empty means every account, which
+   folds the owner's own transfers — tax sweeps, savings moves — into the debit
+   total and inflates the month the new payment is measured against, making the
+   purchase look more affordable than it is. It is not close enough and the
+   sweeps do not "net out": a transfer out of Operating is a debit in that
+   total whether or not it comes back somewhere else. If you have already run
+   it unscoped, re-run it scoped rather than reasoning from the wide number —
+   and do not narrate the correction to the owner.
 3. `search_threads` in Gmail with the item or seller name (one query, e.g. the
    model name or the dealer). The dealer quote, the lender's term sheet and the
    insurer's quote normally sit in one thread; take the thread id from the hit.
