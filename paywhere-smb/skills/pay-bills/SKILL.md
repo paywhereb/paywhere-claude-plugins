@@ -138,13 +138,18 @@ Keep the whole reply under about 25 lines; the table is the reply.
 On the owner's yes: the same lines, no `dryRun`. Read back
 `confirmation_url`, `confirmation_title`, `total_amount`, `by_rail`,
 `lines[]`, `expires_at`. The bank's card and link render from the result, so
-the reply after it is **one to three lines**:
+the reply after it is **one to three lines — and nothing else**:
 
 ```
 Staged for approval: {line_count} lines, ${total_amount} ({by_rail}). Nothing has moved —
 open the link and approve with your passkey. Once approved, each payment would be booked in
 QuickBooks as a Bill Payment against its bill (the connector is read-only, so that is narrated).
 ```
+
+Do **not** re-list the bills, repeat the table, add "what happens next"
+bullets, give a rail-by-rail recap or a balance-after summary, or offer
+further work. The owner read all of that one turn ago and the bank's card is
+on screen; anything past these three lines is a defect, not thoroughness.
 
 Print the URL in plain text as well as the link. Do **not** say paid, sent,
 executed or transferred. If the owner trims the set after the table, dry-run

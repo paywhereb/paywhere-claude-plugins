@@ -1,6 +1,6 @@
 ---
 name: sweep-to-savings
-version: 1.0.0
+version: 1.0.1
 description: >
   Answers "how much can I move to savings without getting tight" for a
   business whose operating account carries a cushion it never actually
@@ -46,8 +46,8 @@ User: "how much can I move to savings without getting tight?"
 → In ONE turn, in parallel (all three at once — never one after another):
     list_accounts                                                          (roles, balances, exact unmasked numbers)
     query_transactions {accountNumbers:[<operating>], direction:"debit",
-                        dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, weekly outflow peaks)
-    get_aged_payables                                                      (bills already due or due inside the window)
+                        dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, average weekly outflow)
+    search_bills {status:"open", due_before:<window end>}                  (ONLY bills due inside the window)
 → Window = today through the next payroll date + 7 days (payroll cadence comes from the processor debits)
 → safeToSweep = operating − committed − buffer − earmarked, floored at 0, rounded DOWN
 → Reply: the figure first, the three things it is net of, ONE transfer line, "Stage it?"
@@ -78,14 +78,23 @@ the window, from the debit history:
   The next run lands one cadence after the last one. Use the mean of the
   last three runs, not the last one alone; payroll varies with overtime.
   If the window spans two runs, count both.
-- **Bills already due.** From `get_aged_payables`: everything current or
-  overdue. Do not count bills due after the window.
+- **Bills due inside the window — not every open bill.** Read open bills
+  filtered by due date on or before the window end (`search_bills`); if only
+  `get_aged_payables` is available, count the overdue buckets plus what is due
+  this week and **exclude the rest of "current"**, which is mostly bills due
+  weeks from now. Counting the whole payables balance is the single easiest
+  way to arrive at a wrong zero.
 
-**buffer** — the floor the operating account should not drop below. Derive
-it, never assume a round number: take the **largest single week of outflows
-in the trailing quarter** and **one payroll run**, and use whichever is
-larger. That is the business's own worst ordinary week; a business that
-survives it survives most surprises.
+**buffer** — the floor the operating account should not drop below:
+
+```
+buffer = one payroll run (mean of the last three) + one week of average outflows
+```
+
+Same cushion the purchase decision uses, so two skills never give the owner
+two different floors. Do **not** use the worst week in the quarter: the worst
+week contains a payroll AND the month's supplier statements, so it
+double-counts payroll and quietly swallows the entire answer.
 
 **earmarked** — money sitting in the operating account that belongs to
 someone else and has not moved yet. The common case is collected sales tax
@@ -109,14 +118,24 @@ way round.
 1. **One line:** the safe-to-sweep figure, and the destination account.
 2. **What it is net of** — three or four lines, one per term, each with its
    figure: committed outflows through `<date>`, the buffer and where it came
-   from ("your worst week in the last quarter"), anything earmarked.
+   from ("one payroll run plus a week of normal outflows"), anything earmarked.
 3. **The transfer line:** from, to, amount.
 4. **"Stage it?"** — and stop. Do not stage on the same turn as the figure.
 5. After the owner agrees: the staged transfer, the `/confirm` URL verbatim,
    and one line saying nothing has moved yet.
 
-Keep the whole first reply under about 150 words. The owner asked one
-question; a long answer costs more than it explains.
+Keep the whole first reply under about 150 words — the figure, the three or
+four terms with their amounts, the transfer line, and the question. **No
+itemized bill list, no forecast table, no month-by-month history, no offer of
+adjacent work.** The owner asked one question; a long answer costs more than
+it explains, and it is the single biggest reason a beat misses its half
+minute.
+
+**Sanity-check a zero before you report it.** A healthy operating account
+should usually have something to sweep. If the figure lands at or below zero,
+re-check the two mistakes that cause a false zero — counting every open bill
+instead of only those due inside the window, and using a worst-case week as
+the buffer — before telling the owner there is nothing spare.
 
 ## Guardrails
 

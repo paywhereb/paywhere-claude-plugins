@@ -1,15 +1,16 @@
 ---
 name: big-purchase-decision
-version: 1.0.5
+version: 1.0.6
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit, in five tool calls:
   today's balance, twelve months of monthly cash from the bank (the year's
   highs and lows), the last payroll debits (the cushion), and the dealer /
-  lender / insurer emails for the price, terms and deadline. Verdict first
-  (yes / no / yes if financed), then cash vs finance, the safest months to
-  buy, the risky months, and whether a second vehicle fits; hands "what to
-  bring the bank" to credit-readiness. Read-only, stages nothing. Use when the
+  lender / insurer emails for the price, terms and deadline. A single narrow
+  question ("can I carry the payment?") gets a short verdict in under 120
+  words; only a multi-part ask gets the full package — cash vs finance, the
+  safest months to buy, the risky months, whether a second vehicle fits —
+  and "what to bring the bank" hands off to credit-readiness. Read-only, stages nothing. Use when the
   owner says "can I afford the van / a new truck / new equipment," "can I buy
   a van this week for $X," "cash or finance," "when is the safest month to
   buy," "should I buy a second van," or "what if I put $10k down."
@@ -25,6 +26,32 @@ reply, under half a minute.
 **Answer the question first.** The first two sentences are the verdict for
 *this* purchase at *this* price (yes / no / yes if financed) with the one
 number that decides it. Everything after is why the verdict holds.
+
+## Answer the question that was asked — two shapes
+
+Read what the owner actually asked before deciding how much to write. A long
+answer to a short question is a wrong answer: it costs the reader more than it
+tells them, and it spends minutes the owner is watching tick by.
+
+| The owner asked | Shape | Reads |
+|---|---|---|
+| **ONE narrow question** — "can I afford it", "can I carry the monthly payment", "is $X a month doable" | **Short verdict** (below), under ~120 words. No tables, no month-by-month, no second-unit digression, no bank-meeting aside. | The seller thread (search + `get_thread`) for price and terms, `list_accounts`, and the monthly-nets call only if the share is worth stating |
+| **SEVERAL questions at once**, or an explicit ask for the analysis — "cash or finance, when should I buy, and what about a second one" | **Full package** — Steps 1–3 below | All five |
+
+**Short verdict** — four lines, then stop:
+
+```
+{Yes / No / Yes, if financed} — {the deciding number, one clause}.
+{One sentence of why: the monthly figure, netted against what it replaces or against what an average month clears.}
+{At most ONE caveat, and only if it changes the answer.}
+{One line offering the full picture — cash vs finance, safest months, a second unit — then stop.}
+```
+
+A hedge is not a verdict: "Yes, if financed" is one, "it depends whether you
+finance" is not. Pick the answer the numbers support and say it plainly. Do
+**not** volunteer the cash-vs-finance comparison, the twelve month-ends, the
+tax reserve or the line of credit in the short shape — each is one question
+away, and the owner will ask if they want it.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
 Step 1, `TaskUpdate` to `in_progress` when you begin a step and `completed`
@@ -91,7 +118,10 @@ net monthly impact = payment + insurance delta (+ fuel/maintenance if quoted)
   on the three low months; defer unless the lows would still clear the
   cushion, and name what would change it (collections, a line of credit).
 
-## Step 3 — Reply (under ~25 lines)
+## Step 3 — Reply, FULL PACKAGE ONLY (under ~25 lines)
+
+This is the multi-part answer. If the owner asked one narrow question, the short
+verdict above is the whole reply — do not fall through to this template.
 
 ```
 {Yes / No / Yes, if financed} — {one sentence with the deciding number}.
