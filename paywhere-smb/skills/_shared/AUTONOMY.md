@@ -40,7 +40,7 @@ Interactive runs use `sessionType: "interactive"` (or omit it).
 ## 3. Write a file, dedupe on it
 
 Each agent skill names its output file (`briefs/YYYY-MM-DD.md`,
-`sweeps/YYYY-MM-DD.md`, `dashboard/cash.html`). Resolve the date from the
+`sweeps/YYYY-MM-DD.md`). Resolve the date from the
 actual current date. **If today's file already exists, stop and say so** in
 one line ("Today's brief exists at briefs/2026-09-02.md — skipping."). A
 re-run that must regenerate is an owner's explicit ask, not a schedule.

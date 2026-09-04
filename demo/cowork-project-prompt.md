@@ -109,9 +109,9 @@ cleared, not from the P&L.
 
 ## Files
 
-Write into the working folder Nick chose. Dashboards go to `dashboard/`,
-models to `models/`, daily briefs to `briefs/YYYY-MM-DD.md`, sweep records to
-`sweeps/YYYY-MM-DD.md`, bank packages to `bank/`. Regenerate a file rather
+Write into the working folder Nick chose, markdown only: daily briefs to
+`briefs/YYYY-MM-DD.md`, sweep records to `sweeps/YYYY-MM-DD.md`, the bank
+package to `bank/`. No spreadsheets, no HTML files. Regenerate a file rather
 than editing it in place, and tell Nick the path.
 
 ## What not to do

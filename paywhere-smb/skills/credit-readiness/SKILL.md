@@ -1,118 +1,189 @@
 ---
 name: credit-readiness
-version: 1.0.2
+version: 1.0.3
 description: >
-  Sizes the working-capital need and packages it for the bank: the deepest
-  troughs across 12 months of cleared bank balances and the 13-week forecast,
-  the months the business ran short and why (receivable timing, early vendor
-  payments, tax and insurance collisions, seasonal stocking), whether a line
-  of credit would have bridged each low and for how many days, a card-float
-  estimate from card-eligible spend, a sized request, and a one-page PDF plus
-  a workbook written to the working folder. Grounded in cleared cash, not
-  book balances. Read-only. Use when the owner says "what should I bring to
-  the bank," "would a line of credit have helped," "how much credit do I
-  need," "would a card help," "when am I most likely short," "what's my
-  working capital gap," or "prepare a package for the bank."
+  Answers "what should I bring to the bank" with one markdown one-pager built
+  from cleared cash: twelve month-end balances of the operating account
+  derived from the bank's monthly aggregates, the three troughs and what
+  caused them, the deepest peak-to-trough drop as the working-capital gap, a
+  line of credit sized from that gap (gap times 1.25, rounded up to $5k), the
+  repayment source, the receivables and the books' P&L and balance sheet the
+  lender will ask for, and the lender's own document checklist read from the
+  email thread. Six read calls in one parallel turn, then one file:
+  bank/credit-readiness-YYYY-MM-DD.md, and nothing else. Read-only, stages
+  nothing. Use when the owner says "what should I bring to the bank,"
+  "prepare a package for the bank," "how much credit do I need," "what's my
+  working capital gap," "would a line of credit have helped," or "when am I
+  most likely short." NOT for "can I afford this purchase" — that
+  is big-purchase-decision, which hands the bank meeting here.
 ---
 
 # Credit Readiness
 
-The request is built from what cleared, when it cleared and how low it
-went — the facts a lender otherwise reconstructs
-from statements. Nothing here moves money or writes to the books.
+A lender reconstructs the year from statements; this skill hands it over
+already assembled, from the bank's cleared transactions and the books' open
+items. Six reads in one turn, one markdown page, under half a minute.
+Nothing here moves money or writes to the books.
+
+**Answer the question first.** The first two lines of the reply are the
+sized request and the gap that sizes it. The file carries the rest.
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
-Step 1 (subject = the step's name, e.g. "Step 1 — Twelve months of cleared
-cash"), then `TaskUpdate` it to `in_progress` when you begin that step and
-`completed` when it's done. This is what drives Cowork's visible progress
-display — it does not happen unless you do it explicitly.
+Step 1 (subject = the step's name, e.g. "Step 1 — Read everything"), then
+`TaskUpdate` it to `in_progress` when you begin that step and `completed`
+when it's done. This is what drives Cowork's visible progress display — it
+does not happen unless you do it explicitly.
 
-## Step 1 — Twelve months of cleared cash (bank)
+## Quick start — six reads, one file
 
-- `list_accounts` → Operating (primary checking); Tax Reserve and Business
-  Savings are reported for context but excluded from the gap math.
-- `query_transactions {aggregate: true, groupBy: "month", dateFrom: <12
-  months ago>}` → monthly inflow, outflow, net. Month-end balance = current
-  balance − net of every later month.
-- For the three lowest month-ends, pull that month's rows
-  (`query_transactions {dateFrom, dateTo}` on Operating) to find the intra-
-  month low and the debits/credits around it. Resolve dates from today.
+```
+User: "what should I bring to the bank?"
+→ In ONE turn, in parallel:
+    list_accounts                                                                     (Operating by role, today's balance)
+    query_transactions {accountNumbers:[Operating], aggregate:true, groupBy:"month",
+                        dateFrom:<first day of the month 12 months ago>}             (twelve monthly nets)
+    get_aged_receivables                                                              (what is collectible, and how old)
+    get_profit_and_loss {trailing 12 months}                                          (revenue, net income)
+    get_balance_sheet                                                                 (assets, liabilities, equity, existing debt)
+    search_threads (Gmail) "term sheet OR documents requested OR line of credit"      (the lender's thread: what they asked for)
+→ Compute month-ends, troughs, gap, request (below).
+→ write_file bank/credit-readiness-YYYY-MM-DD.md
+→ Reply: the request in two lines, the file path, the checklist gaps.
+```
 
-## Step 2 — Why each low happened (books + bank)
+Six calls, all issued together. No calendar call (the meeting date, if any,
+is in the lender's mail — or ask), no per-month row pulls, no forecast. If
+the owner came from [`../big-purchase-decision`](../big-purchase-decision/SKILL.md)
+("what should I bring to the bank?"), reuse its month-ends rather than
+re-deriving them and reuse the purchase price and terms as the request's
+purpose.
 
-For each low, name the mechanism with figures, using the sibling methods:
+## Step 1 — Read everything in ONE turn
 
-| Mechanism | Evidence | Method |
-|---|---|---|
-| Receivable timing | Large invoices open past due in that month; the credit landed weeks later | [`../ar-health`](../ar-health/SKILL.md) |
-| Early vendor payments | Bill paid N days before due in that month | [`../ap-timing`](../ap-timing/SKILL.md) |
-| Collisions | Payroll + remittance + annual insurance + quarterly estimate inside 10 days | bank debits + Calendar (`search_events`) |
-| Seasonal stocking / equipment | Parts and equipment debits far above the monthly norm | [`../cash-bridge`](../cash-bridge/SKILL.md) |
+1. `list_accounts` → **Operating** (primary checking, by role, never by
+   number). Tax Reserve and Business Savings are reported for context and
+   excluded from the gap math: one holds customers' sales tax, the other is
+   the owner's cushion.
+2. `query_transactions {accountNumbers: [Operating], aggregate: true,
+   groupBy: "month", dateFrom: <first day of the month 12 months ago>}` →
+   per month `{count, sumCredits, sumDebits, net}`. If the result is flagged
+   truncated, say so in the file and use the months returned.
+3. `get_aged_receivables` → open invoices by bucket. Current + 1–30 days is
+   the near-term repayment source; anything older is a collection question,
+   not collateral.
+4. `get_profit_and_loss` for the trailing 12 months → revenue, gross margin,
+   net income. The lender reads this next to the cash picture.
+5. `get_balance_sheet` → cash, receivables, existing loans and lines (the
+   debt schedule the lender will ask about), equity.
+6. Gmail `search_threads` once, with the lender's name if the owner gave it,
+   else "term sheet", "documents requested", "line of credit". Take the
+   document checklist and any deadline from the hit's snippet; call
+   `get_thread` only if the snippet does not carry the list (that is a
+   seventh call — say so). No hit → use the typical checklist below and
+   label it "typical; replace with the lender's list".
 
-## Step 3 — Forward view
+## Step 2 — Compute
 
-Run or reuse [`../cash-flow-snapshot`](../cash-flow-snapshot/SKILL.md) for the
-13-week minimum and the reserve to keep; note weeks below the reserve.
+```
+month_end[m]  = today's Operating balance − Σ net[k] for every month k after m
+                (walk backwards from today; the current partial month is not a month-end)
+troughs       = the three lowest month_end values, with their months
+peak→trough   = for each trough, the highest month_end before it minus the trough
+gap           = the deepest peak→trough drop, floor 0        (the working-capital gap)
+request       = ceil(gap × 1.25 / 5000) × 5000                (line of credit, rounded up to $5k)
+repayment     = average net of the three strongest months (from the same aggregates)
+                + receivables current and 1–30 days (from the aging)
+```
 
-## Step 4 — Size it (method in `reference/sizing.md`)
+- Name the **mechanism** behind each trough only when the aggregates make it
+  obvious (debits far above the monthly norm, a month with almost no
+  credits). Do not pull the month's rows to find out; say "cause not
+  determined from monthly totals" instead.
+- If the gap is zero (cash only rose), say a line of credit is not
+  indicated by the last twelve months and size nothing; the page still
+  carries the twelve month-ends the lender asked for.
+- Never fill a rate, fee or covenant from general knowledge; those come from
+  the lender's term sheet or are left blank.
 
-- **Working-capital gap** = reserve to keep − the deepest balance observed
-  (historical intra-month low or forecast minimum, whichever is lower), floor 0.
-- **Months short** = every month whose low fell below the reserve to keep; name
-  them and their mechanism.
-- **LOC size** = gap × 1.25, rounded up to the nearest $5,000. For each low,
-  "would a LOC have helped": the draw needed and how many days until inflows
-  would have repaid it (the next receipts above the normal run-rate).
-- **Card float** = average monthly card-eligible spend (debits whose
-  descriptor stems are `POS DEBIT` / `RECURRING DEBIT` and vendors that
-  accept cards) × 25/30 → the cash a business card would defer by a cycle.
-- **Repayment source** = the strongest months' average net inflow.
+## Step 3 — Write `bank/credit-readiness-YYYY-MM-DD.md` (`write_file`, markdown)
 
-## Step 5 — Write the package (working folder, Cowork file tooling)
+One file, one page, these sections in order:
 
-**`bank/credit-readiness-YYYY-MM-DD.pdf`** — one page:
-1. Business summary (legal name, owner, what it does, employees — from the
-   books' company info and the owner; no invented facts).
-2. 12-month cleared cash: table of month · inflow · outflow · net · month-end.
-3. Lows and causes: date · low balance · mechanism · what would have bridged it.
-4. Request: LOC size and purpose (seasonal working capital, vendor timing),
-   optional card with the float estimate.
-5. Repayment source and the 13-week minimum with the reserve to keep.
-6. Footer: "Prepared from cleared bank transactions via the bank's connector
-   and open items in QuickBooks; not financial advice."
+```
+# Credit readiness — {business name from the books} — {date}
 
-**`bank/credit-readiness-YYYY-MM-DD.xlsx`** — sheets:
-- `Summary` — gap, LOC size, card float, months short, 13-week minimum,
-  repayment source (values with the formula text beside each).
-- `Monthly cash` — `Month · Inflow · Outflow · Net · Month-end` (12 rows;
-  `Month-end` as a formula: next row's month-end − next row's net, last row =
-  current balance).
-- `Lows` — `Date · Balance · Mechanism · Evidence · Draw needed · Days to
-  repay`.
-- `Forecast 13w` — the 13 rows from the forecast (week · inflow · outflow ·
-  close · below-reserve flag).
-- `Request` — `Product · Size · Purpose · Repayment source · Notes`.
+## Business snapshot
+{Legal name, what it does (owner-stated), years operating if known} · Revenue (trailing 12 mo) ${rev} · Net income ${ni} · Cash today ${operating} (Operating)
+Existing debt: {loans / lines from the balance sheet, or "none on the balance sheet"}
 
-Tell the owner the two file paths. Do not email or share the files; the
-owner brings them to the meeting (Calendar `search_events` for the bank
-appointment date, read-only).
+## Twelve month-ends (Operating, from cleared bank transactions)
+| Month | Credits | Debits | Net | Month-end |
+| {Mon YYYY} | ${c} | ${d} | ${n} | ${me} |
+… twelve rows, oldest first …
 
-## Step 6 — Say what the bank supplied
+## Troughs
+| Month | Month-end | Peak before | Drop | Likely cause |
+| {Mon} | ${me} | ${peak} ({Mon}) | ${drop} | {mechanism, or "not determined from monthly totals"} |
+… three rows …
 
-One sentence: the lows, the timing and the request size come from cleared
-transactions, not the P&L — the same data the lender would ask for, already
-assembled.
+## Request
+Working-capital gap ${gap} (deepest peak-to-trough drop, {Mon} → {Mon}).
+Requested: ${request} revolving line of credit — gap × 1.25, rounded up to $5,000.
+Purpose: {seasonal working capital / vendor timing / the purchase, if the owner named one}.
+Repayment source: strongest three months average ${avg}/mo net; receivables current–30 days ${ar}.
 
-Close with: "Not financial advice — a lender will apply its own underwriting."
+## Receivables
+Total open ${total} · Current ${a} · 1–30 ${b} · 31–60 ${c} · 61–90 ${d} · 90+ ${e}
+
+## Documents the lender asked for
+- [x] Twelve months of bank activity — this page (statements from the bank's site)
+- [ ] {each item from the lender's thread, with "ready" / "owner to supply"}
+(or the typical list: 2 years of business tax returns, YTD P&L and balance sheet, AR aging, debt schedule, owner's personal financial statement — labelled typical)
+
+Prepared from cleared bank transactions and open items in the books; not financial advice.
+```
+
+Tell the owner the file path. Do not email or share it; the owner brings it
+to the meeting.
+
+## Step 4 — Reply (under ~12 lines)
+
+```
+Request: ${request} line of credit — the deepest drop in the last twelve months was ${gap} ({Mon} ${peak} → {Mon} ${trough}).
+Repayment: the strongest three months net ${avg}/mo; ${ar} of receivables is current or under 30 days.
+Written: bank/credit-readiness-{date}.md
+Troughs: {Mon} ${a} · {Mon} ${b} · {Mon} ${c}
+Lender asked for: {n} items — {m} ready in the page, {k} for you to supply: {list}.
+Not financial advice — the lender applies its own underwriting.
+```
+
+Say once what only the bank supplied: the real month-ends and the drop,
+which the P&L cannot show.
+
+## Follow-ups this skill expects
+
+| Owner says | Do |
+|---|---|
+| "How much credit do I need?" | The request line and the gap that sizes it. |
+| "Would a line of credit have helped?" | For each trough: the draw needed to stay at the pre-drop level and the months until net inflows would have repaid it (from the same aggregates). |
+| "When am I most likely short?" | The three trough months, with balances. |
+| "Can I afford the purchase instead?" | Hand off to [`../big-purchase-decision`](../big-purchase-decision/SKILL.md). |
+| "The lender wants a forecast" | Not part of this page; offer the twelve month-ends as the trend and say a forecast is the owner's call. |
 
 ## Degraded modes
 
 | Missing | Effect |
 |---|---|
 | Paywhere | Stop — there is no cleared-cash basis for a credit request. |
-| quickbooks | Lows and sizing from the bank only; mechanisms limited to what descriptors show; say so in the PDF. |
-| google calendar | No meeting date; ask. |
+| quickbooks | Bank-only page: month-ends, troughs, gap and request; the snapshot, receivables and financial-statement sections read "QuickBooks unavailable — supply the P&L, balance sheet and AR aging from the books". |
+| gmail | No lender checklist; use the typical list, labelled, and ask the owner what the lender requested. |
 
-## Reference
+## Guardrails
 
-- [`reference/sizing.md`](reference/sizing.md) — gap, LOC and float formulas, bridging test
+- Read-only. Never stages a payment or transfer; never writes to the books.
+- One markdown file and nothing else — no second file of any format.
+- Never invent a rate, fee, covenant, tax figure or a document the lender
+  did not ask for; label the typical checklist as typical.
+- Generic wording — any lender, any business; no industry assumptions.
+- Close every output with: "Prepared from cleared bank transactions and open
+  items in the books; not financial advice."

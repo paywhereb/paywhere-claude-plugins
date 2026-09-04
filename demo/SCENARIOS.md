@@ -38,7 +38,7 @@ The bank's page is where the approval happens."*
    (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
    signed in as **demo-nick@paywhere.com** for the Google pair
    ([`presenter-kit.md`](presenter-kit.md) §1).
-3. Side-load `dist/paywhere-smb-1.0.12.plugin` (presenter-kit §2).
+3. Side-load `dist/paywhere-smb-1.0.13.plugin` (presenter-kit §2).
 4. Then, in the project:
 
 ```
@@ -77,6 +77,12 @@ staged proposals exist before the room fills.
 
 ## Act 1 — The assistant (interactive, in Cowork)
 
+Every beat below is six tool calls or fewer and lands in about thirty
+seconds; a beat that cannot is not in this list. "How is my business doing?"
+is a plain question now (balances, aging, P&L in a few calls, no skill), as
+are "show my balances" and "who owes me money". Longer showpieces — the bank
+package after 1.8, the daily brief — are shown from saved transcripts.
+
 Bank-only fact in **bold** — say it out loud; it is the reason the FI is
 buying the connector.
 
@@ -101,19 +107,6 @@ staged proposal and a `/confirm` link — open it, approve with the passkey.
 **The connector stands alone before skills add judgment.** FI seat:
 Connections + Money Movement show the session and the batch.
 
-### 1.1 — Pulse
-```
-How is my business doing?
-```
-You should see: three balances; **true available cash = Operating − reserve
-shortfall − pending** (`trueAvailable`); 12 months of money in vs out with
-best/worst months (`strongestMonths`, `weakestMonths`); the #1 issue — the
-largest overdue invoice from a routinely-late customer (`ar.largestOverdue`,
-`ar.chaseOrder[0]`; note `liveSurface.overdueInvoices` is sorted by days
-late, so its `[0]` is a smaller, older invoice) and/or the equipment bill
-about to be paid early (`liveSurface.earlyPayTemptation`). FI:
-`cash_flow_management` intent.
-
 ### 1.2 — Profit to cash
 ```
 QuickBooks says I made about $14k in August. Why doesn't my bank balance move with my profit?
@@ -134,13 +127,12 @@ cleared and when.**
 ```
 Who owes me money and who do I call first?
 ```
-You should see: aging (`ar.aging`), behavior profiles derived from 12 months
-of payment lags (`ar.latePayers`), DSO and direction (`ar.dso`), a chase
-order ranked by cash impact × lateness (`ar.chaseOrder`), two Gmail
-**drafts** (never sent), and one customer **excluded** because their check was
-deposited this week but not yet applied in the books
-(`ar.unbookedReceipt`; **received-but-unbooked credit**). FI:
-`accounts_receivable`.
+Four to six calls. You should see: the aging (`ar.aging`), a chase order
+ranked by cash impact and lateness (`ar.chaseOrder`) with the tone set by
+each customer's bucket mix, up to three Gmail **drafts** (never sent), and one
+customer **excluded** because their check landed at the bank this week but
+is not yet applied in the books (`ar.unbookedReceipt`; **received-but-
+unbooked credit** — only the bank knows). FI: `accounts_receivable`.
 
 ### 1.4 — Pay the bills due this week → one batch
 ```
@@ -190,20 +182,6 @@ month's; the three Oct–Nov ones are the history), the 20th
 catch-up transfer Operating → Tax Reserve staged as a batch **transfer**
 line with a `/confirm` link. **The reserve balance is a bank fact.** FI:
 `tax_compliance`.
-
-### 1.7 — The odd debit / subscriptions
-```
-What's this $349 'ANGI LEADS' debit?
-```
-```
-What subscriptions am I paying?
-```
-You should see: the row, its enrichment, the vendor, the renewal email, months
-seen (`liveSurface.unknownRecurringDebit`); then the recurring-debit table
-from 12 months of descriptors with flags — zero attribution, orphaned,
-duplicate seat — and the monthly total (`subscriptions.items`,
-`subscriptions.monthlyTotal`). **12 months of descriptors.** FI:
-`spend_analysis`.
 
 ### 1.8 — The van → what to bring the bank (the #1 beat)
 
@@ -255,43 +233,6 @@ the skills no longer word that field, so check the Cowork project's
 instructions are [`cowork-project-prompt.md`](cowork-project-prompt.md)
 (§Tool fields).
 
-### 1.9 — What-ifs
-```
-What if revenue drops 10%? What if Westport pays 30 days late? What if I hire a tech? What if I stop paying vendors early?
-```
-You should see: a lever table over the 13-week forecast with Δ minimum
-balance per lever and the best combination (`whatIf[]` — seven levers
-including "Van financed", each with `deltaMinBalance13w`;
-`forecast13w.minBalance`).
-
----
-
-## Act 2 — The application (on-demand)
-
-### 2.1
-```
-Build me a cash dashboard I can open every morning
-```
-→ `dashboard/cash.html` in the working folder: three balances, true
-available, 13-week chart, AR aging, next-30-days obligations, tax-reserve
-gauge, subscriptions. Open it. Say: *a file can't call the bank; the 7:30
-brief regenerates it every weekday.*
-
-### 2.2
-```
-Build a 13-week cash model in Excel I can play with
-```
-→ `models/cash-13w.xlsx`; change a lever cell (collections speed, pay-on-due,
-revenue %, hire, van, LOC) and watch the minimum-balance cell move.
-
-### 2.3 (optional)
-```
-Build a collections tracker
-```
-→ `tracking/collections.xlsx` with profiles, promises, next actions.
-
----
-
 ## Act 3 — The agent (Cowork scheduled tasks)
 
 Pre-run both before the meeting so outputs and staged proposals exist. In the
@@ -307,8 +248,8 @@ Cowork → Scheduled tasks → new task:
 
 Run it once now. You should see `briefs/<today>.md`: balances, true
 available, today's calendar obligations, exceptions (overdue with no credit,
-due bills, held bills, reserve shortfall, pending, unknown debit,
-unreconciled settlements), the regenerated `dashboard/cash.html`, and ONE
+due bills, not-yet-due bills from habitually-early vendors, reserve
+shortfall, pending), and ONE
 staged batch — reserve top-up transfer + due bills — with the `/confirm`
 link and *"Nothing has moved until you approve this on the bank's page."*
 FI: Intents shows `sessionType: scheduled`; Money Movement shows an
@@ -395,16 +336,15 @@ Pending card authorizations cannot be injected (posted rows only).
 
 ## Rehearsal checklist
 
-- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.12 side-loaded.
+- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.13 side-loaded.
 - [ ] `/demo-setup` completed; readback ✓ ×4; credentials recorded; `dateModelSource: "provided"`.
 - [ ] Gmail (`demo-nick@paywhere.com`) and Calendar connected in Cowork; the Google seed ran this week (`seed-google.mjs --check`).
 - [ ] Bare-connector session (1.0) signed in on a second window with the same bank user.
 - [ ] Passkey enrolled for the demo bank user on the `/confirm` page (or TOTP ready).
-- [ ] Act 3 pre-run: `briefs/<today>.md`, `sweeps/<last Friday>.md`, `dashboard/cash.html` exist; their `/confirm` links open.
-- [ ] Act 2 files opened once (dashboard renders offline; xlsx lever cells recalc).
+- [ ] Act 3 pre-run: `briefs/<today>.md` and `sweeps/<last Friday>.md` exist; their `/confirm` links open.
 - [ ] paywhere-admin open on Intents with the demo business filter.
 - [ ] Never-send safeguards in place (presenter-kit.md): Gmail send/reply/forward denied in the client; outbound restricted on the mailbox.
-- [ ] Every Act 1 prompt pasted once this week; the router picked the intended skill (dispatch is not covered by the eval).
+- [ ] Every Act 1 prompt pasted once this week; Cowork picked the intended skill from the catalog and each beat finished in about 30 s.
 - [ ] 1.8 specifically: "Can I afford to buy a van this week for $58,500?" reached `big-purchase-decision`, the verdict was in the first two sentences, and Intents showed `financing_debt` move.
 - [ ] 1.2 wording updated to last month's `cashBridge.netIncome`; the reply bridged the real direction.
 - [ ] Inject prompts tested once, then `/demo-setup` re-run.

@@ -1,137 +1,153 @@
 ---
 name: cash-bridge
-version: 1.0.1
+version: 1.0.2
 description: >
-  Reconciles "the books say I made money" with what the bank balance
-  actually did — in either direction: cash down while profitable (receivables
-  grew, distributions, owner taxes, sweeps, early vendor payments) or cash up
-  by more than profit (prior months' receivables collected, payables grew).
-  A profit-to-cash bridge for the last full month (or the month asked) from
-  net income to the change in the operating balance — receivables change,
-  owner distributions, owner estimated taxes, sales-tax sweeps to the
-  reserve, equipment and stocking, vendors paid before due, merchant fees,
-  payables movement, non-cash items — with a residual line and the top three
-  drivers named. Read-only. Use when the owner says "QuickBooks says I made
+  Reconciles "the books say I made money" with what the Operating balance
+  actually did, in either direction: cash down while profitable, or cash up by
+  more than profit. A profit-to-cash bridge for one month (the last full month
+  by default) built from the accrual P&L and two balance-sheet snapshots —
+  receivables change, payables change, inventory and equipment, undeposited
+  funds, sales-tax and other liabilities, owner distributions, money moved to
+  the reserve and savings, depreciation — with each line's source named, a
+  residual, and the bank's own change in Operating as the check. Read-only,
+  five calls in one turn. Use when the owner says "QuickBooks says I made
   money last month, why is my cash lower," "why doesn't my bank balance move
-  with my profit," "I made $X in August, where is it," "my cash went up more
-  than I made," "why is my cash declining while I'm profitable," "profit vs
-  cash," "where did the profit go," or "bridge profit to cash."
+  with my profit," "I made X last month, where is it," "my cash went up more
+  than I made," "profit vs cash," "where did the profit go," or "bridge profit
+  to cash." NOT for "how am I doing" or "what's my balance" — those need no
+  skill.
 ---
 
 # Cash Bridge
 
-Profit is an accounting opinion about a month; the operating balance is what
-actually cleared and when. The bridge lists every reason the two differ,
-with amounts from the source that knows them: the books for income, AR and
-AP; the bank for what left the account and when. Nothing here proposes or
-moves money.
+Profit is an accounting opinion about a month; the Operating balance is what
+cleared. The two differ for listed reasons, and every reason is a line on the
+balance sheet or a row at the bank. This skill lists them with amounts from
+the source that knows each one. Nothing here proposes or moves money.
 
-**The gap runs both ways.** In a slow month cash falls while the P&L is
-positive (invoices out, distributions and estimates paid, tax swept, vendors
-paid early). In the month after a peak, cash rises by *more* than profit —
-the receivables invoiced in the busy months are collected (ΔAR negative =
-cash in that was earned earlier) while this month's invoicing is smaller.
-Do not assume the owner's premise; compute the sign and explain whichever
-direction the numbers show. "Cash up more than profit" is not good news to
-bank on: it is last quarter's profit arriving, and the same receivables
-swing will run the other way when invoicing rises again.
+Do not assume the owner's premise. Compute the sign: in a slow month cash
+falls while the P&L is positive (invoices out, draws and taxes paid); after a
+busy one cash rises by more than profit (earlier months' invoices collected).
+Say which happened in the first sentence, and if the owner's direction or
+figure disagrees with the numbers, say so there too.
+
+## Quick start — five calls, one turn
+
+```
+User: "the books say I made money last month, why is my cash lower?"
+→ Resolve M = the month asked (default: last full calendar month, from the actual date)
+→ In ONE turn, in parallel:
+    get_profit_and_loss {start_date: M-01, end_date: M-end, accounting_method: "Accrual"}   (net income, depreciation)
+    get_balance_sheet  {end_date: M-end}                                                     (AR, AP, inventory, fixed assets, liabilities, equity, bank accounts)
+    get_balance_sheet  {end_date: (M−1)-end}                                                 (the same, a month earlier → every Δ)
+    list_accounts                                                                            (Operating by role; reserve and savings names)
+    query_transactions {accountNumbers:[Operating], dateFrom: M-01, dateTo: M-end,
+                        aggregate: true, includeTransactions: true, sort: "amount_desc", limit: 20}
+                                                                                             (net = the bank's change in Operating; the 20 largest rows name the big debits)
+→ Bridge: net income → adjustments (each with its source) → change in cash; residual; bank check
+→ Reply under 25 lines, the gap first
+```
+
+Never rebuild receivables or payables from a year of invoices, payments or
+bills: the balance sheet already carries open AR and AP at each date. Never
+pull bill payments to price early vendor payments here; if the owner asks
+about that habit, point at [`../ap-timing`](../ap-timing/SKILL.md).
 
 **Progress tracking:** call `TaskCreate` once per step below before starting
-Step 1 (subject = the step's name, e.g. "Step 1 — Pick the month"), then
-`TaskUpdate` it to `in_progress` when you begin that step and `completed`
-when it's done. This is what drives Cowork's visible progress display — it
-does not happen unless you do it explicitly.
+Step 1 (subject = the step's name, e.g. "Step 1 — Read"), then `TaskUpdate`
+it to `in_progress` when you begin that step and `completed` when it's done.
+This is what drives Cowork's visible progress display — it does not happen
+unless you do it explicitly.
 
-## Step 1 — Pick the month
+## Step 1 — Read (one parallel turn)
 
-Default: the last full calendar month, resolved from the actual current
-date. If the owner names a month or quotes a profit figure ("I made about
-$14k in August"), use that month and check their figure against the books in
-Step 2 — say so if it differs. If the owner asserts a direction ("why is my
-cash lower") that the bank contradicts, say so plainly in the first sentence
-and bridge the real movement.
+Pick M first: the last full calendar month unless the owner names one. If
+the owner quotes a profit figure, use their month and compare the figure to
+the P&L in Step 2. Then issue the five reads above at once. The Operating
+account is identified by role from `list_accounts` (the primary checking,
+never a hardcoded number); the balance-sheet bank rows are matched to the
+bank accounts by name.
 
-## Step 2 — Net income (books)
+Degraded modes: **no QuickBooks** → bank-only. Report the month's net from
+the aggregate and the 20 largest rows grouped by what they are (owner draws,
+tax payments, transfers to reserve or savings, equipment vendors, payroll);
+say net income is unavailable and skip the bridge. **No Paywhere** → books
+only. Bridge to the balance sheet's Operating row and label the result "per
+the books, not the bank". Never retry in a loop.
 
-`get_profit_and_loss` for the month (note the basis; accrual is typical).
-Capture net income, and separately: revenue, COGS, depreciation or other
-non-cash lines if present, merchant-fee expense.
+## Step 2 — Net income and the adjustments
 
-## Step 3 — Operating cash change (bank)
+Net income and depreciation come from the P&L. Every other line is a
+difference between the two balance sheets (`Δ = end of M − end of M−1`),
+signed by its effect on cash. A line with nothing behind it is $0, not
+omitted. Row-to-line mapping, signs and residual causes:
+[`reference/method.md`](reference/method.md).
 
-`list_accounts` → Operating by role. Balances at month end and prior month
-end are **derived**, not read: `query_transactions {aggregate: true,
-groupBy: "month", dateFrom: <month start>}` on Operating gives each month's
-net; closing(M) = current balance − Σ net of every month after M (see
-`reference/method.md`). Operating cash change = closing(M) − closing(M−1).
-State the current balance and the derivation in one line. Use the same
-`groupBy: "month"` pull to list the month's big debits by week if the owner
-wants "when".
-
-## Step 4 — Bridge lines
-
-Compute each; a line with nothing behind it is $0, not omitted.
-
-| Line | Source | How |
+| Line | Source | Effect on cash |
 |---|---|---|
-| **ΔAR** (receivables grew = cash not yet received; shrank = earlier months' invoices collected) | books | open AR at month end − open AR at prior month end: `search_invoices` (open balance, by txnDate ≤ each date) less `search_payments` applied by each date. Positive ΔAR reduces cash; negative ΔAR adds cash the business earned in prior months — the usual reason cash rises more than profit after a peak season. |
-| **Owner distributions** | bank + books | Operating debits whose descriptor is an owner transfer / distribution (name from the books' equity draw account; `search_transfers`, `search_journal_entries` to equity); equity, never expense. |
-| **Owner estimated taxes** | bank | Operating debits with an IRS / estimated-tax stem in the month; not on the P&L. |
-| **Sales-tax sweeps to reserve** | bank | Operating debits that are transfers into the Tax Reserve; the tax was never revenue, and the remittance later leaves from the reserve, not Operating. |
-| **Equipment / inventory stocking** | books + bank | `search_purchases` / `search_bills` posting to fixed-asset or inventory accounts, plus unusually large parts orders vs the trailing average; capitalized or stocked, so not (fully) in COGS this month. |
-| **Vendors paid before due** | books | `search_bill_payments` in the month vs each bill's `dueDate`: dollars paid with the due date after month end = cash that left early. Link `../ap-timing` for the pattern. |
-| **ΔAP** (payables grew = cash kept) | books | open AP at month end − prior month end (`search_bills` open). Positive ΔAP adds cash. |
-| **Merchant fees netted** | bank vs books | Merchant settlements land net; if the books record deposits gross without fee lines, the difference sits here (see `../month-end-prep`). |
-| **Non-cash items** | books | Depreciation, amortization: add back. |
-| **Savings sweep / interest** | bank | Transfers to Business Savings out of Operating; interest lands in savings, not Operating. |
-| **Residual** | computed | net income − Σ lines − operating cash change; if |residual| > 5% of revenue, look for the missing line before presenting. |
+| Net income | P&L | + |
+| Depreciation / amortization | P&L | + (non-cash) |
+| Receivables (ΔAR) | balance sheets | grew → −; shrank → + (earlier months collected) |
+| Undeposited funds and other current assets | balance sheets | grew → − |
+| Inventory | balance sheets | grew → − |
+| Equipment / fixed assets (gross) | balance sheets | bought → − |
+| Payables (ΔAP) and credit cards | balance sheets | grew → + |
+| Sales tax and other current liabilities | balance sheets | grew → + (collected, not yet remitted) |
+| Loans | balance sheets | drawn → +; paid down → − |
+| Owner distributions / draws | balance sheets (equity), confirmed by the bank rows | − |
+| Moved to Tax Reserve / Savings (Δ of the other bank accounts) | balance sheets, confirmed by the bank rows | − |
+| Residual | computed | the table must foot |
 
-## Step 5 — Present
+The sum equals the books' change in Operating. The bank's change is the
+`aggregate.net` of the one `query_transactions` call. The two normally match
+within a few dollars; a larger difference is the **books-vs-bank gap** (bank
+fees or deposits not yet booked, a transaction dated across the month
+boundary) — report it as its own line, not as residual. Use the 20 largest
+rows to attach a date to the big lines: the draw, the tax payment, the
+reserve transfer, the equipment purchase.
+
+## Step 3 — Reply (under 25 lines)
 
 ```
-Profit → cash bridge — {Month YYYY}                (books accrual · bank cleared)
+{Month YYYY}: the books show net income of ${ni}; Operating {fell|rose} ${chg} ({open} → {close}).
+{One sentence: the gap and its top two drivers, in plain words.}
 
-Net income (books)                                     +${ni}
-  Receivables {grew (invoiced, not yet paid) | shrank (prior months collected)}   {−|+}${dAR}
-  Owner distributions                                   −${dist}
-  Owner estimated taxes (from Operating)                −${est}
-  Sales-tax swept to the reserve                        −${sweep}
-  Equipment / stocking                                  −${equip}
-  Vendors paid before due                               −${early}
-  Payables grew                                          +${dAP}
-  Merchant fees netted at the bank                      −${fees}
-  Non-cash (depreciation)                                +${dep}
-  Savings sweep                                          −${sav}
-  Residual                                               ±${res}
-= Operating balance change (bank)                      ${chg}   ({open} → {close})
+Net income (books, accrual)                              +${ni}
+  Depreciation (non-cash)               P&L              +${dep}
+  Receivables {grew|shrank}             balance sheets   {−|+}${dAR}
+  Undeposited funds / other assets      balance sheets   {−|+}${}
+  Inventory                             balance sheets   {−|+}${}
+  Equipment purchased                   balance sheets   −${}
+  Payables & cards {grew|shrank}        balance sheets   {+|−}${}
+  Sales tax & other liabilities         balance sheets   {+|−}${}
+  Owner distributions                   equity · bank {date}   −${}
+  Moved to reserve / savings            bank {date}      −${}
+  Residual                                               ±${}
+= Change in Operating (books)                            ${chg}
+Bank: Operating net for the month ${net} ({count} posted rows); books-vs-bank gap ${} {cause or "none"}.
+
+{One closing sentence: structural (draws, taxes — the profit is real but committed) or
+ timing (receivables — it arrives later, and swings back). Offer invoice-chase if AR is the driver.}
 ```
 
-Then one sentence naming the top three drivers by size, and one sentence on
-timing: what actually cleared and when — the bank fact — e.g. "the largest
-outflow cleared in week 2, before the month's biggest receipt landed in week
-4." If a driver is a habit (early vendor payments, skipped sweeps), name the
-skill that changes it (`../ap-timing`, `../tax-reserve-check`); if it is
-structural (distributions, taxes), say the profit is real but committed.
+Omit $0 lines from the reply only when the table still foots and the reply
+would otherwise exceed 25 lines. If the residual exceeds 5% of revenue, look
+for the missing balance-sheet row before presenting; if still unexplained,
+label it "unexplained" rather than forcing it to zero.
 
-Example wording, cash down (illustrative): *"You did make ~$9k. About $4k of
-it is sitting in invoices customers haven't paid yet, $9k went out as a
-quarterly distribution, and one equipment bill was paid 18 days before it was
-due."*
+## What not to do
 
-Example wording, cash up more than profit (illustrative): *"You made ~$15k in
-August and Operating rose ~$41k. The difference is July's and June's
-invoices getting paid — receivables fell ~$32k — less the $9k quarterly
-distribution and ~$3k swept to the Tax Reserve. That extra cash was earned in
-the summer; it is not August's profit, and it will swing back when invoicing
-picks up."*
-
-## Degradation
-
-| Missing | Effect |
-|---|---|
-| quickbooks | Bank-only: show the month's debits grouped by descriptor stem (distributions, taxes, sweeps, equipment vendors) and the balance change; say net income is unavailable. |
-| Paywhere | Books-only: show net income vs the books' bank-account movement and label it "per the books, not the bank". |
+- Do not stage, propose or move money; nothing here touches the bank beyond
+  one read.
+- Do not narrate seasons, industries or the owner's habits; name the lines
+  and their sources.
+- Do not derive month-end bank balances from aggregates across many months —
+  the balance sheet gives both month-ends, and the one bank aggregate is the
+  check.
+- Do not quote a profit figure the owner gave as the books' figure; the P&L is.
 
 ## Reference
 
-- `reference/method.md` — deriving month-end balances from aggregates; the AR/AP delta queries; residual handling
+- [`reference/method.md`](reference/method.md) — balance-sheet rows → bridge lines, signs, residual and books-vs-bank causes
+- [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — when early vendor payments are the question
+- [`../invoice-chase/SKILL.md`](../invoice-chase/SKILL.md) — when receivables are the driver

@@ -1,185 +1,241 @@
 ---
 name: tax-reserve-check
-version: 1.0.5
+version: 1.0.6
 description: >
   Answers "how much of my balance is actually mine" for a business that
-  collects sales tax: sales tax on payments RECEIVED since the last
-  remittance (from the invoices' explicit tax lines, grouped by the per-state
-  liability account they post to) vs the Tax Reserve balance at the bank vs
-  what is due on the 20th; lists the Fridays whose sweep into the reserve was
-  skipped; computes true available cash; and proposes the catch-up transfer
-  Operating → Tax Reserve as a staged proposal the owner approves on the
-  bank's /confirm page. Not tax advice. Use when the owner says "how much of
-  my balance is actually mine," "how much of my cash is really mine," "what's
-  reserved for taxes," "is my tax reserve enough," "am I holding enough for
-  sales tax," "what do I owe on the 20th," or "did I miss a tax sweep." NOT
-  for "show my balances" or "what's my balance" — those are one list_accounts
-  call and a two-sentence answer, no skill.
+  collects sales tax and parks it in a separate reserve account: the sales
+  tax inside the payments RECEIVED in the months not yet remitted (one
+  QuickBooks cash-basis report, split by tax item) against the Tax Reserve
+  balance at the bank, the shortfall, the sweep days that were skipped, true
+  available cash (Operating minus the shortfall), and the catch-up transfer
+  Operating to Tax Reserve staged as a proposal the owner approves on the
+  bank's /confirm page. Four reads in one turn, one staged transfer. Not tax
+  advice. Use when the owner says "how much of my balance is actually mine,"
+  "how much of my cash is really mine," "what's reserved for taxes," "is my
+  tax reserve enough," "am I holding enough for sales tax," "what do I owe on
+  the next remittance," or "did I miss a tax sweep." NOT for "show my
+  balances" or "what's my balance" — those are one list_accounts call and a
+  two-sentence answer, no skill.
 ---
 
 # Tax Reserve Check
 
-The bank knows a fact the books cannot: how much money actually sits in the
-Tax Reserve today. The books know a fact the bank cannot: how much sales tax
-was inside the payments that landed. This skill puts the two together, names
-the gap, names the Fridays that caused it, and stages the fix for approval.
-It owns the full method; `../business-pulse/reference/true-available.md` is
-the one-paragraph version used by the pulse and the daily brief.
+The bank knows how much actually sits in the Tax Reserve today. The books
+know how much sales tax was inside the payments that landed. This skill puts
+the two together, names the gap, names the sweep days that caused it, and
+stages the fix for approval. It owns the full method;
+[`reference/true-available.md`](reference/true-available.md) is the short
+form other skills link to.
 
 > **Not tax advice.** Rates, jurisdictions and what is taxable are read from
-> the books (the tax items and the liability accounts they post to). Say so
-> in the output; the owner's CPA owns the rules.
+> the books (the tax items on the invoices). Say so in the output; the
+> owner's CPA owns the rules.
 
-**Approval (see [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md)):**
-`make_batch_payment` never moves money — it stages the transfer on the
-owner's open proposal and returns a confirmation URL of the form
-`https://<bank host>/confirm/<id>/<nonce>`. Print that URL verbatim as the
-approval step; the owner approves with a passkey and only then does money
-move. Never say the transfer "is done" — say "staged, awaiting your
-approval". Internal transfers go through `make_batch_payment` as a
-`{rail: "transfer", fromAccountNumber, toAccountNumber, amount}` item, never
-`transfer_funds`.
+> `make_batch_payment` **never moves money**: it stages the transfer on the
+> owner's open proposal and returns a confirmation URL of the form
+> `https://<bank host>/confirm/<id>/<nonce>`. **Print that URL verbatim as
+> the approval step**; the owner approves with a passkey, and only then does
+> money move. **Never claim money has moved** — say "staged" / "awaiting your
+> approval". Internal transfers are staged as a `{rail: "transfer",
+> fromAccountNumber, toAccountNumber, amount}` item, **never
+> `transfer_funds`**. Full path: [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
 
-**Progress tracking:** call `TaskCreate` once per step below before starting
-Step 1 (subject = the step's name, e.g. "Step 1 — Accounts and balances"),
-then `TaskUpdate` it to `in_progress` when you begin that step and
+## Quick start — four reads in one turn, one staged transfer
+
+```
+User: "how much of my balance is actually mine?"
+→ In ONE turn, in parallel (all four reads at once — never one after another):
+    list_accounts                                                                       (roles + balances + exact unmasked numbers)
+    query_transactions {accountNumbers:[<Tax Reserve>], direction:"debit",
+                        descriptionContains:<remittance stem>, dateFrom:<90 days ago>, limit:5}   (last remittance → remittance day, month last paid)
+    get_sales_tax_collected {date_from:<1st of last month>}                             (tax inside payments RECEIVED; total, byItem, byWeek, byPayment)
+    query_transactions {accountNumbers:[<Tax Reserve>], direction:"credit",
+                        dateFrom:<12 months ago>, status:["posted"], limit:200}         (sweep history → sweep weekday, missed sweeps)
+→ Window from the remittance debit · collected = the report cut to the window · shortfall = collected − reserve, floor 0
+→ Reply: true available first, the terms, the missed sweep days, ONE transfer line, "Stage the catch-up?"
+User: "yes"
+→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Operating>,
+                                     toAccountNumber:<Tax Reserve>, amount:<shortfall>}]}   → confirmation_url renders
+→ One closing line: staged, nothing has moved.
+```
+
+If `list_accounts` does not carry balances, add `get_account_balance` for
+Operating and the Tax Reserve to the **same** turn. Nothing else is read: no
+balance sheet, no ledger, no calendar, no per-invoice loop, no pending pull.
+Budget: about 30 seconds, at most six calls including the stage.
+
+## Sources of truth
+
+- **QuickBooks** (read-only): `get_sales_tax_collected` is the whole books
+  side — sales tax on payments *received* in the window, cash basis,
+  `collected.total`, `collected.byItem` (one entry per tax item, e.g. per
+  jurisdiction), `byWeek[]` (Monday–Sunday by payment date) and
+  `byPayment[]`. Never rebuild it from `search_payments` + `read_invoice`.
+- **Paywhere**: the reserve balance, the remittance debits (which month was
+  last paid, and on what day), the sweep credits (which weekday the owner
+  sweeps, and which weeks were skipped), and the staged transfer.
+
+## Workflow
+
+**Progress tracking:** call `TaskCreate` once per numbered step below before
+starting step 1 (subject = the step's name, e.g. "1. Read everything at
+once"), then `TaskUpdate` it to `in_progress` when you begin that step and
 `completed` when it's done. This is what drives Cowork's visible progress
 display — it does not happen unless you do it explicitly.
 
-## Step 1 — Accounts and balances (bank)
+### 1. Read everything at once
 
-`list_accounts` → identify by role, never by number: **Operating** (the
-primary checking), **Tax Reserve** (the savings account whose name mentions
-tax or reserve), **Business Savings** (the other savings — reported, never
-touched). `get_account_balance` on each. If no account reads as a tax
-reserve, say so and run the rest as "collected vs nothing set aside".
+Issue the four reads in the Quick start in **one turn**. Identify accounts by
+role, never by number: **Operating** (the primary checking), **Tax Reserve**
+(the savings account whose name mentions tax or reserve), **Business
+Savings** (any other savings — reported, never touched). If no account reads
+as a tax reserve, run the rest as "collected vs nothing set aside" and stage
+nothing.
 
-## Step 2 — The window (bank)
+The remittance stem is the revenue agency's name as it appears on the
+reserve's debits (try `REVENUE`, then `TAX`; read the rows — a remittance is
+a debit to a government payee, not a transfer out). If the owner has told
+you the stem, use it. `reference/method.md` lists patterns to try.
 
-The window is the **months whose tax has not been remitted yet**, not "the
-days since the remittance debit". The 20th remittance pays the *previous*
-calendar month, so: before the 20th, the window is last month + this month
-to date; on or after the 20th, it is this month to date. Confirm the last
-remittance with `query_transactions` on the Tax Reserve, `direction:
-"debit"`, `descriptionContains: "DEPT OF REVENUE"` (or whatever stem the
-remittance rows carry — see `reference/method.md`), `limit: 5`: a debit
-on or after the 20th of month M paid month M−1, so the window starts on the
-1st of month M. Fallback when none is found in 60 days: the 1st of the
-previous month. Resolve every date from the actual current date; a payment
-received on the 19th of last month is in the window, one received on the
-day of the remittance debit is too — it belongs to a month not yet filed.
+### 2. The window and the remittance day
 
-## Step 3 — Sales tax inside payments RECEIVED (books)
+The window is the **months whose tax has not been remitted yet**, never "the
+days since the last debit". A remittance on or after day D of month M pays
+month M−1, so **the window starts on the 1st of the month the last
+remittance debit posted in** and runs to today:
 
-1. `search_payments {dateFrom: <window start>}` — payments received, not
-   invoices issued. Receipt is what creates the obligation the reserve must
-   cover; invoiced-but-unpaid tax is a future line, shown separately.
-2. For each payment, follow its applied invoices (`search_invoices` by ref /
-   DocNumber). Take the invoice's **explicit sales-tax line items** (the
-   items whose income account is a sales-tax liability account) and pro-rate
-   by the share of the invoice the payment covered
-   (`tax collected = invoice tax × payment applied ÷ invoice total`).
-3. Group by the **liability account the tax item posts to** (one per
-   jurisdiction, e.g. "Sales Tax Payable - <state>"). Read those account
-   names from the books; do not assume how many states or which.
-4. Cross-check: `get_balance_sheet` (or `get_general_ledger` on the
-   liability accounts) should show balances that move with your sum; a big
-   gap means the books post tax on invoice (accrual) while the reserve
-   follows receipts — say which basis each number is on.
+- last debit dated **last month** → window = 1st of last month … today
+  (before this month's remittance day);
+- last debit dated **this month** → window = 1st of this month … today (on or
+  after it).
 
-Output: collected-not-remitted **by jurisdiction** and **total**.
+D = the day-of-month of that debit; the next remittance is day D of the
+coming month (or of this month, if today is before D and last month is still
+unpaid). No remittance debit in 90 days → use the 1st of last month, take D
+as unknown, say so in one clause, and let the owner correct it once.
 
-## Step 4 — Shortfall and the next remittance
+The report was pulled from the 1st of last month — the widest the window can
+be. If the window turns out to start this month, re-total from `byPayment[]`
+(`txnDate` on or after the 1st). When the reply needs the per-item split for
+that shorter window, one follow-up `get_sales_tax_collected {date_from:<1st
+of this month>}` is the fifth read — still within budget.
+
+### 3. Shortfall and the next remittance
 
 ```
-shortfall = max(0, collected-not-remitted total − Tax Reserve balance)
+shortfall = max(0, collected.total (window) − Tax Reserve balance)
 ```
 
-Next remittance: `search_events` / `list_events` on the calendar for the
-remittance deadline (an event naming the revenue department or "sales tax");
-if absent, use the 20th of this month (or next month if today is past it).
-Show the amount due **by jurisdiction** and whether the reserve covers it
-today. If the reserve is short, say by how much and how many days remain.
+Show what is due on the next remittance by tax item (`collected.byItem`) and
+whether the reserve covers it today. If short, say by how much and how many
+days remain to day D.
 
-## Step 5 — Missed Friday sweeps (bank)
+### 4. Sweep day and missed sweeps
 
-`query_transactions` on the Tax Reserve, `direction: "credit"`,
-`descriptionContains: "TAX RESERVE"` (the transfer-in stem), `dateFrom:
-<today − 12 months>` — the whole year, not just the current remittance
-window: a sweep skipped last autumn is still a missed sweep, and the owner
-asked which Fridays, not which recent Fridays. Build the list of Fridays in
-those 12 months; a Friday with no incoming transfer is a **missed sweep**. For each sweep found,
-compare its amount with the tax inside that week's received payments (Step
-3 sliced Mon–Sun): a sweep that matches the week's *invoiced* tax instead of
-*received* tax is a "swept on invoiced, not received" note, not a miss.
-Name the Fridays; do not just count them.
+The 12-month reserve **credits** are the sweep history (transfers in — a
+descriptor with the reserve's name or `TRANSFER`; ignore interest). The
+**sweep weekday** is the weekday most of those credits post on; with fewer
+than three credits there is no cadence — list what you found and ask once
+which day the owner sweeps. Walk every occurrence of that weekday from the
+earliest credit to the last complete week: no credit within one business day
+→ a **missed sweep**. Name the dates; do not just count them. For weeks
+inside the report window, a sweep well under that week's `byWeek.collected`
+is a **short sweep** — note it, it is not a miss. Exclude the current,
+incomplete week.
 
-## Step 6 — True available cash
+### 5. True available cash
 
 ```
 true available = Operating balance − shortfall
 ```
-(`query_transactions {status: ["pending"]}` on Operating for the pending
-sum.) Business Savings is not in the formula. Show every term with its
-number. Then two separate lines the reserve does **not** cover: the owner's
-quarterly estimated taxes (bank debits with an IRS stem from Operating; next
-date from the calendar) and any local business tax — say plainly "paid from
-Operating, not from the reserve" so the owner does not double-count.
 
-## Step 7 — Propose the catch-up transfer
+Business Savings is not in the formula. The bank's balance is already net of
+pending card authorizations: if the account payload shows a pending or
+available figure, name it in one clause; never spend a call on it and never
+subtract it. Owner income-tax estimates are paid from Operating, not the
+reserve — `../tax-season-organizer` covers them; do not compute them here.
 
-If `shortfall > 0`:
+### 6. Propose the catch-up — ONE `make_batch_payment`
 
-- Interactive: show one line — Operating → Tax Reserve, amount = shortfall,
-  why (the missed Fridays) — and ask "stage the catch-up?". Unattended (see
-  [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md)): stage it without asking.
-- Stage with ONE `make_batch_payment`:
-  `{payments: [{rail: "transfer", fromAccountNumber: <Operating, exact unmasked
-  from list_accounts>, toAccountNumber: <Tax Reserve, exact unmasked>, amount:
-  <shortfall>}]}`.
-- Print `confirmation_title` and `confirmation_url` verbatim, then:
-  *"Nothing has moved. Approve on the bank's page with your passkey; I can
-  verify the transfer posted afterwards."* Never call `transfer_funds`.
-- If the owner later says "I approved", verify with `query_transactions` on
-  the Tax Reserve (`direction: "credit"`, today, the amount) before saying
-  anything posted.
+If `shortfall > 0`, the reply ends with one line — Operating → Tax Reserve,
+amount = shortfall, why (the missed sweep days) — and exactly **"Stage the
+catch-up?"** A single internal transfer needs no dry run; the line in the
+reply is the gate. On the owner's yes, ONE call:
 
-If `shortfall == 0`, say the reserve is funded and by how much it exceeds
-what is owed. Never propose moving money **out** of the reserve for anything
-but a remittance, and never propose touching Business Savings.
+```json
+{ "payments": [ { "rail": "transfer",
+                  "fromAccountNumber": "<Operating, exact unmasked from list_accounts>",
+                  "toAccountNumber":   "<Tax Reserve, exact unmasked>",
+                  "amount": <shortfall> } ] }
+```
 
-## Output shape
+The bank's card and link render from the result; the reply after it is one
+to three lines: `confirmation_title` over `confirmation_url`, the URL in
+plain text too, and *"Nothing has moved. Approve on the bank's page with
+your passkey; I can verify the transfer posted afterwards."* A rejected call
+comes back as `{ error, invalid_items[] }` — fix the line and re-submit once.
+Never invent a URL. If `shortfall == 0`, say the reserve is funded and by
+how much it exceeds what is owed. Never propose moving money **out** of the
+reserve for anything but a remittance; never touch Business Savings here.
+
+### 7. After the owner approves — verify on request
+
+"I approved it" → `query_transactions {accountNumbers:[<Tax Reserve>],
+direction:"credit", dateFrom:<today>}` once, match the amount, report what
+posted. Never report this before the owner approves.
+
+## Reply template (under 25 lines; the number first)
 
 ```
-Tax Reserve Check — {date}                          (not tax advice)
-Window: {first day of the oldest unremitted month} … {today} (months not yet remitted; last remittance {date} paid {month})
+True available today: ${ta}  = Operating ${o} − reserve shortfall ${s}        (not tax advice)
 
-Collected on RECEIVED payments, not yet remitted
-  {jurisdiction A}   ${x}     {jurisdiction B}   ${y}     Total ${t}
-Tax Reserve balance                                  ${r}
-Shortfall                                            ${s}   ← {n} Friday sweeps missed: {dates}
-Due {remittance date}: ${t} ({A} ${x}, {B} ${y}) — reserve {covers / short ${s}}
+Window {start} … {today} — months not yet remitted (last remittance {date} paid {month}; next due {day D, month})
+Collected on RECEIVED payments   {item A} ${x} · {item B} ${y} · total ${t}
+Tax Reserve balance              ${r}
+Shortfall                        ${s}   ← {n} {weekday} sweeps missed: {dates}
+Due {next remittance date}: ${t} — reserve {covers it / short ${s}, {k} days to go}
+Business Savings ${b} (not in the formula) · pending authorizations ${p} already netted by the bank
 
-True available = Operating ${o} − shortfall ${s} = ${ta}   (pending card authorizations ${p} already netted by the bank)
-Not covered by the reserve: owner estimate ${e} due {date} (from Operating)
+Catch-up: transfer Operating → Tax Reserve ${s}. Stage the catch-up?
+```
 
-Staged for approval: transfer Operating → Tax Reserve ${s}
-{confirmation_title}
+After the stage, under the card:
+
+```
+Staged for approval: Operating → Tax Reserve ${s} — {confirmation_title}
 {confirmation_url}
 Nothing has moved until you approve this on the bank's page.
 ```
+
+## Scheduled runs
+
+No owner present: stage the catch-up without asking, print the URL in the run
+output, dedupe on the day's output file — see
+[`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md). The weekly sweep itself
+is [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md).
 
 ## Degradation
 
 | Missing | Effect |
 |---|---|
 | Paywhere | Stop — no reserve balance, no sweep history, nothing to stage. |
-| quickbooks | Report reserve balance, sweeps found/missed and the remittance date; say the collected figure cannot be computed and skip the proposal. |
-| google calendar | Use the 20th; say so. |
+| quickbooks | Report the reserve balance, the sweep history and the next remittance day; say the collected figure cannot be computed; stage nothing. |
+| No reserve account | Report collected vs "nothing set aside"; stage nothing; suggest opening one. |
+
+## Approval gates
+
+- **Money moves only on the bank's `/confirm` page with a passkey.** This
+  skill stages; it never executes and never says it did.
+- **Never `transfer_funds`.** The catch-up is a `transfer` line in
+  `make_batch_payment`.
+- **Never move money out of the reserve** except a remittance the owner
+  asked for; **never touch Business Savings** here.
+- **Exact, unmasked account numbers** from `list_accounts`, never typed.
 
 ## Reference
 
-- `reference/method.md` — formulas, pro-rating, descriptor stems to look for, the Friday test
-- `../business-pulse/reference/true-available.md` — the short form
-- `../tax-sweep-agent/SKILL.md` — the scheduled Friday version of Step 3 + Step 7
-- `../tax-season-organizer/SKILL.md` — owner income-tax estimates and 1099s (not sales tax)
+- [`reference/method.md`](reference/method.md) — formulas, window rule, descriptor stems, the sweep-day test
+- [`reference/true-available.md`](reference/true-available.md) — the short form other skills link to
+- [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md) — the approval path in full
+- [`../tax-sweep-agent/SKILL.md`](../tax-sweep-agent/SKILL.md) — the scheduled weekly sweep
+- [`../tax-season-organizer/SKILL.md`](../tax-season-organizer/SKILL.md) — owner income-tax estimates and 1099s (not sales tax)

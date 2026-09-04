@@ -1,83 +1,88 @@
 # Connector Query Guide
 
-How to pull the right data from each connector for each mode.
+The exact calls per mode, what to capture, and the paste-in fallback when a
+connector is missing. All reads; nothing here writes to the books or moves
+money.
 
 ---
 
-## QuickBooks — Quarterly mode (P&L)
+## Quarterly mode — 3 calls in one turn
 
-Pull a **Profit & Loss** report for the period January 1 through the last day of the most recently completed quarter.
+**QuickBooks:** `get_profit_and_loss` from January 1 of the tax year through
+the last day of the most recently completed quarter. Capture:
 
-Key fields to capture:
 - `Total Income` (gross revenue)
-- `Total Expenses` (all operating expenses)
-- `Net Ordinary Income` (= income − expenses; this is the basis for tax calculation)
+- `Total Expenses`
+- `Net Ordinary Income` (= income − expenses; the basis for the estimate)
 
-If QuickBooks returns multiple income/expense categories, sum them. You want the single
-bottom-line net profit figure.
+If the report lists several income or expense groups, use the totals. If the
+report states its basis, note it: cash basis is what most estimates use; on
+accrual, say the accountant should confirm.
 
-**If the user's QuickBooks is on cash basis**, use that. If accrual, note it in output —
-the accountant should confirm which basis to use for estimated taxes.
-
----
-
-## QuickBooks — Year-end mode (contractor payments)
-
-Pull all **bill payments and checks** to vendors for the full tax year (Jan 1 – Dec 31).
-
-Filter for:
-- Vendor type = "1099 eligible" (if the user has tagged vendors in QuickBooks)
-- OR any vendor whose category is: consulting, contract labor, subcontractor, freelance, design, legal, accounting, marketing, staffing
-
-For each vendor record, capture:
-- Vendor name (legal name if available)
-- EIN / SSN (from vendor profile — indicates W-9 on file)
-- Total payments for the year
-- Payment dates and amounts (for cross-reference)
-- Vendor type / 1099 eligibility flag
-
-**Common issue:** Many QuickBooks users do not tag vendors as 1099-eligible. If
-`1099 eligible` returns few or no results, pull ALL vendors with significant payment
-totals and let the user / accountant classify them. Note this in output.
+**Paywhere:** `list_accounts` (Operating by role — primary checking), then
+`query_transactions {accountNumbers: [Operating], direction: "debit",
+descriptionContains: "IRS", dateFrom: <Jan 1 of the tax year>}`. Estimated
+payments made through the federal system carry `IRS`, `EFTPS` or
+`USATAXPYMT` in the descriptor; one retry with a second stem is allowed if
+the first returns nothing (say it is the fourth call). Sum the debits found
+as "payments made"; list each with its date.
 
 ---
 
-## Paywhere — Year-end mode (cross-check)
+## Year-end mode — 5 calls in one turn, optional 6th
 
-Pull ACH and wire **outflows** for the tax year as a completeness check on
-QuickBooks. The bank doesn't generate 1099-K forms, so this is purely about
-catching contractor payments the owner forgot to book.
+**QuickBooks:**
 
-For each Paywhere account from `list_accounts`, call
-`get_account_transactions` scoped to the tax year.
+- `search_vendors` — capture vendor name, the `is1099` flag, and whether a
+  tax id is on file (that is the W-9 evidence).
+- `search_bill_payments` for the tax year — total per vendor.
+- `search_purchases` for the tax year — checks, expenses and card purchases
+  booked directly to a vendor; total per vendor.
 
-Filter to debit lines (negative `amount`) with `type` in (`ACH`, `DomesticWire`).
-For each line:
+Sum both per vendor. Keep services (subcontractors, consulting, design,
+legal, accounting, marketing, staffing, rent); drop goods and shipping.
+Many owners never set `is1099` — do not filter on it; use it as a hint and
+let the accountant classify.
 
-- Extract counterparty from `description` (heuristics in
-  `month-end-prep/reference/paywhere-bank-lines.md`).
-- Aggregate by counterparty.
-- Cross-reference each counterparty against QuickBooks vendor records:
-  - **Counterparty matches a QB vendor** → confirms the QB record (sanity check on total).
-  - **Counterparty has no matching QB vendor** → surface for accountant review under "Paywhere reconciliation note" in the deliverable.
+**Paywhere (cross-check):**
 
-**Exclude:** internal transfers between the owner's own Paywhere accounts
-(`type: "transfer"`), payroll provider payments if the owner uses an
-external payroll service (those generate their own W-2s), and stablecoin
-payouts to wallets the owner controls.
+- `query_transactions {direction: "debit", dateFrom: <Jan 1>, dateTo: <Jun 30>}`
+- `query_transactions {direction: "debit", dateFrom: <Jul 1>, dateTo: <Dec 31>}`
+
+A full year rarely fits one result; two halves do (if a half still comes
+back truncated, note it in the deliverable rather than adding calls). Keep
+rows whose type is ACH or wire; drop card purchases, payroll-processor
+debits (they produce W-2s), and transfers between the owner's own accounts.
+The counterparty is the descriptor stem (`ACH DEBIT <PAYEE>`,
+`WIRE OUT <PAYEE>`). `get_transaction_detail` on at most one row whose
+descriptor cannot be read.
+
+Cross-reference each counterparty against the vendor list:
+
+- **Matches a vendor** → confirms the record; compare the totals.
+- **No vendor** → "possible contractor payment not in the books" — the
+  accountant reviews it.
 
 ---
 
-## CSV fallback (owner-uploaded export)
+## Paste-in fallback (connector unavailable)
 
-If any connector is unavailable, ask the user to:
-1. Export a P&L from QuickBooks as CSV (Reports → Profit & Loss → Export)
-2. Export a Transaction List by Vendor from QuickBooks as CSV
-3. Export each Paywhere account's transactions as CSV from the Paywhere dashboard (Activity → Export)
+If a connector is missing, ask the owner for the numbers rather than adding
+calls:
 
-When reading uploaded CSVs, look for these columns (names vary by export):
+1. QuickBooks missing, quarterly mode: total income, total expenses, net
+   ordinary income for the period (from a P&L run in the books).
+2. QuickBooks missing, year-end mode: a Transaction List by Vendor export
+   for the tax year, pasted or uploaded.
+3. Paywhere missing: the estimated-tax payments made this year (quarterly
+   mode), or the year's ACH/wire debits exported from the bank's website
+   (year-end mode).
+
+When reading a pasted export, look for these columns (names vary):
+
 - P&L: `Description`, `Amount`, `Type` (Income / Expense)
-- QB Vendor: `Vendor`, `Amount`, `Date`, `Account`
-- Paywhere: `postDate`, `amount`, `description`, `type`
+- Vendor list: `Vendor`, `Amount`, `Date`, `Account`
+- Bank export: `postDate`, `amount`, `description`, `type`
 
-If columns don't match, ask the user to identify the payee name and amount columns.
+If the columns do not match, ask the owner to point at the payee-name and
+amount columns.

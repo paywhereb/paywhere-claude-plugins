@@ -96,7 +96,7 @@ immediate transfer is unsafe unattended and skips the approval the owner
 expects on every other move. The batch tool's
 `transfer` rail stages the same move as a proposal line, so the reserve
 top-up in [`../tax-reserve-check`](../tax-reserve-check/SKILL.md) and the
-Friday sweep in [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md) wait for
+weekly tax sweep in [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md) wait for
 the same passkey as the vendor payments.
 
 ## Session fields

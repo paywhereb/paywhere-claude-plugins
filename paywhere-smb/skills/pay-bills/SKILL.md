@@ -10,8 +10,8 @@ description: >
   stages the real batch and prints the /confirm URL. Money moves only after
   the owner approves with a passkey; the QuickBooks Bill Payment booking is
   narrated (the QuickBooks connector is read-only). Use when the owner says
-  "pay the bills due this week," "pay my bills," "pay what's due," "pay
-  Johnstone and Voltage" (any named vendors), "stage the vendor payments," or
+  "pay the bills due this week," "pay my bills," "pay what's due," "pay Acme and
+  Northside" (any named vendors), "stage the vendor payments," or
   "catch up on payables." NOT for "am I paying anyone early?" or vendor
   payment habits — that is ap-timing.
 ---
@@ -90,7 +90,7 @@ date, open balance, days overdue / until due.
 - **Not yet due** (8+ days out) → listed under "not yet due — pay on {date}",
   not staged. Paying a bill two weeks early is cash given away for nothing;
   say so in one clause when a large one is in the list. The owner can pull it
-  in ("pay Trane now too") — re-present.
+  in ("pay the equipment supplier now too") — re-present.
 
 ### 3. Rails, balance, duplicates
 

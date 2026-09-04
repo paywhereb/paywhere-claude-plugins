@@ -1,10 +1,10 @@
 > **Example only.** Names and amounts are illustrative; every real draft is filled from live QuickBooks data.
 
-# Gentle Reminder — Good Customer Example
+# Gentle Reminder — Fresh Slip Example
 
-**Scenario:** Acme Corp, $1,200 invoice, 18 days past due. Paid on time in 5 of 5 prior invoices.
+**Scenario:** a customer with one open invoice, $1,200, 18 days past due; nothing older on its aging row.
 
-**Score:** `good-payer` · **Tone:** Gentle
+**Aging:** all of the balance in 1–30 · **Tone:** Gentle
 
 ---
 

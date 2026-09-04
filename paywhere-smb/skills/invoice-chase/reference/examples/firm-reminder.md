@@ -1,10 +1,10 @@
 > **Example only.** Names and amounts are illustrative; every real draft is filled from live QuickBooks data.
 
-# Firm Reminder — Repeat Late Payer Example
+# Firm Reminder — Aged Balance Example
 
-**Scenario:** Smith LLC, $450 invoice, 47 days past due. Paid late in 3 of last 4 invoices.
+**Scenario:** a customer with one open invoice, $450, 47 days past due, and most of its aging row sitting past 60 days on earlier invoices.
 
-**Score:** `repeat-late` · **Tone:** Firm
+**Aging:** most of the balance 61+ · **Tone:** Firm
 
 ---
 

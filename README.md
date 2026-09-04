@@ -6,8 +6,9 @@ Public marketplace of Claude Code / Claude Desktop plugins maintained by
 Today this marketplace ships two plugins:
 
 - **[`paywhere-smb`](paywhere-smb/)** — Pre-built small-business workflows
-  (cash forecasting, month-end close, weekly briefs, growth campaigns,
-  invoice chase, tax prep) running against your Paywhere bank account,
+  (bill pay behind one approval, payroll headroom, the sales-tax reserve,
+  invoice chase, a big-purchase decision, scheduled cash briefs) running
+  against your Paywhere bank account,
   QuickBooks, HubSpot, and the rest of your stack.
 - **[`paywhere-eng-workflow`](paywhere-eng-workflow/)** — Shared
   engineering workflow for Paywhere repos: `/start`, `/finish`,
@@ -238,7 +239,7 @@ Three layers:
 
 1. **Skills** — atomic building blocks (forecast cash, score leads, draft an invoice reminder).
 2. **Commands** — multi-step workflows that chain skills together with approval gates.
-3. **The Router** — front-door skill that parses plain English requests and routes to the right command.
+3. **Routing** — the client picks a skill from its description; plain questions are answered without one.
 
 Every workflow pauses before taking action — nothing moves money or
 sends to customers without explicit owner approval.
@@ -279,8 +280,8 @@ the config schema and field reference.
 
 See [`demo/seed.md`](demo/seed.md) for instructions on standing up a
 QuickBooks Online sandbox company + a seeded Paywhere mock-dev
-environment for end-to-end demos of `/month-end-prep`, `/plan-payroll`, and
-`/monday-brief`.
+environment for end-to-end demos of `/pay-bills`, `/plan-payroll` and
+`/daily-cash-brief`.
 
 ## Provenance
 

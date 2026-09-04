@@ -1,142 +1,153 @@
 ---
 name: invoice-chase
-version: 1.0.5
+version: 1.0.6
 description: >
-  Turns overdue receivables into action: ranks open invoices by cash impact ×
-  lateness using each customer's derived payment profile (see ar-health),
-  cross-checks the bank so a customer whose check or ACH already landed but is
-  not yet applied in the books is EXCLUDED rather than chased, and creates
-  tone-matched Gmail DRAFTS — never sends. The owner approves the set of drafts
-  to create and sends from Gmail. Use when the owner says "who do I call
-  first," "who owes me money and who do I call first," "chase overdue
-  invoices," "follow up on unpaid invoices," "draft reminders," or "send
-  reminders" (they become drafts).
+  Turns overdue receivables into Gmail DRAFTS the owner sends: reads the
+  aging report and the open invoices, checks the bank's posted credits so an
+  invoice whose money already landed but is not yet applied in the books is
+  EXCLUDED rather than chased, ranks customers by open past-due balance, sets
+  the tone from where each customer's balance sits in the aging buckets, and
+  creates one draft per customer for the top three. Never sends; never writes
+  to QuickBooks. Six calls at most, reads in one turn. Use when the owner
+  says "who do I call first," "who owes me money and who do I call first,"
+  "chase overdue invoices," "follow up on unpaid invoices," "draft
+  reminders," or "send reminders" (they become drafts). NOT for "how much is
+  owed to me" alone — that is one get_aged_receivables call and a sentence,
+  no drafts.
 ---
 
 # Invoice Chase
 
-Books say who owes; the bank says who already paid. Rank what is genuinely
-outstanding, draft a reminder per customer in the tone their history earns,
-and leave the sending to the owner. **Drafts only**: Gmail `create_draft`;
-never `send_message`, `reply` or `forward`. Nothing is written to QuickBooks
-(the QuickBooks connector is read-only; any fix is narrated).
+The books say who owes; the bank says who already paid. Rank what is
+genuinely outstanding, draft one reminder per customer in the tone their
+aging earns, and leave the sending to the owner. **Drafts only**: Gmail
+`create_draft`; never send, reply or forward. Nothing is written
+to QuickBooks (the connector is read-only; any fix is narrated).
 
-## Quick start
+## Quick start — three reads + up to three drafts, one owner turn
 
 ```
 User: "who owes me money and who do I call first?"
-→ Open AR (get_aged_receivables + search_invoices) + 12-month lag history → profiles
-→ Bank credits since the oldest open invoice → received-but-unbooked items EXCLUDED
-→ Rank collectible invoices by cash impact × lateness
-→ Draft one Gmail reminder per customer for the top set (tone by profile)
-→ create_draft each reminder, then show the table + every draft in full
-→ Report: drafts created (in Gmail Drafts, for the owner to edit or delete), excluded items with bank evidence
+→ In ONE turn, in parallel:
+    get_aged_receivables {}                                                  (total AR, per-customer buckets)
+    search_invoices {criteria:[{field:"Balance", operator:">", value:0}], fetchAll:true}
+                                                                             (DocNumber, DueDate, Balance, BillEmail per open invoice)
+    query_transactions {direction:"credit", status:["posted"], dateFrom:<120 days ago>, limit:200}
+                                                                             (every posted credit since the oldest open invoice — the exclusion lookup)
+→ Exclude open balances that match a posted credit (exact amount ± $0.50) — received, not booked
+→ Rank customers by collectible past-due balance; tone from the aging buckets
+→ create_draft for the top ≤ 3 customers (one each), then the reply: total first, table, one summary line per draft
 ```
 
+Never pull 12 months of invoices or payments to profile customers: the aging
+report's buckets carry the payment behaviour this skill needs. Never call
+`search_customers` for emails: the open invoice's `BillEmail` is the AR
+contact; if it is empty, create the draft with no recipient and say so.
+
 **Progress tracking:** call `TaskCreate` once per numbered step below before
-starting step 1 (subject = the step's name, e.g. "1. Pull overdue
-receivables"), then `TaskUpdate` it to `in_progress` when you begin that
-step and `completed` when it's done. This is what drives Cowork's visible
-progress display — it does not happen unless you do it explicitly.
+starting step 1 (subject = the step's name, e.g. "1. Read"), then
+`TaskUpdate` it to `in_progress` when you begin that step and `completed`
+when it's done. This is what drives Cowork's visible progress display — it
+does not happen unless you do it explicitly.
 
 ## Workflow
 
-1. **Pull overdue receivables.** `get_aged_receivables` plus `search_invoices`
-   for invoices with a positive open `Balance` past due at today (resolve
-   today from the actual date). Roll sub-customer jobs up to the parent
-   customer; net any `search_credit_memos` against the customer. Pull the
-   customer's contact email from `search_customers`.
+1. **Read (one parallel turn).** Resolve today from the actual date. The
+   three reads above go out together. `dateFrom` for the credits is 120 days
+   ago, which covers the report's four 30-day buckets; if `search_invoices`
+   returns an open invoice older than that, say its cash was checked from 120
+   days only. Roll sub-customer jobs up to the parent customer.
 
-2. **Profile each customer.** Apply the derived-profile rules in
-   [`../ar-health/reference/profiles.md`](../ar-health/reference/profiles.md)
-   from 12 months of `search_invoices` + `search_payments` (lag = payment date
-   − due date). Fewer than 3 paid invoices → "insufficient history" and the
-   neutral tone.
+   Degraded modes: **no QuickBooks** → stop; there is no list of who owes.
+   **no Paywhere** → no exclusion step: say every draft is unverified against
+   the bank and cap drafts at 2. **no Gmail** → run the ranking, list who
+   would have been drafted, create nothing.
 
-3. **Cross-check the bank — the exclusion step.** `query_transactions
-   {direction: "credit", dateFrom: <oldest open invoice date>, status:
-   ["posted"]}` across all accounts. An open invoice whose amount matches a
-   posted credit within $0.50 (descriptor `ACH CR <name>`, `MOBILE CHECK
-   DEPOSIT <check#>`, `WIRE IN <sender>`) is **received, not booked**:
-   - exclude it from the chase list and from collectible AR;
-   - show the evidence line: bank date, amount, descriptor (and the check
-     number when the descriptor carries one);
-   - narrate the fix: the payment should be recorded against the invoice in
-     QuickBooks; the connector is read-only, so say it in one line instead
-     of writing it.
-   Do this as a **lookup, not a glance**: write down every open invoice's
-   open balance, then scan every credit's amount for a match. The credit
-   usually carries no customer name (a check reads `MOBILE CHECK DEPOSIT
-   4471`), so the amount is the key and the descriptor is the evidence; a
-   credit that landed *before* the invoice was due still counts. Say what you
-   checked ("7 open balances against 41 posted credits since 7/1: one match").
-   Two open invoices with the same amount → show both, ask, chase neither
-   until the owner picks. Card payments settle net inside grouped merchant
-   deposits, so match those through the books' Deposit, not by amount.
-   A credit still pending is "in transit — do not chase".
+2. **Exclude what already landed — a lookup, not a glance.** Write down every
+   open invoice's `Balance`, then scan every posted credit's amount for an
+   exact match within $0.50. A match (descriptor `ACH CR …`, `MOBILE CHECK
+   DEPOSIT …`, `WIRE IN …`, a lockbox or bill-pay row) is **received, not
+   booked**:
+   - exclude the invoice from the chase list and from collectible AR;
+   - show the evidence: bank date, amount, descriptor (and the check number
+     when the descriptor carries one);
+   - narrate the fix in one line: the payment should be applied to the
+     invoice in QuickBooks; the connector is read-only.
 
-4. **Rank.** `cash impact = open × lateness factor × profile factor`
-   (factors in the profiles reference). The top two are "call first".
-   Explain each rank in plain words: dollars, days late, pattern.
-   _E.g. "a multi-site restaurant customer: $2,100, 38 days late, pays 30–60
-   days late on one invoice in four — call before the check-paying church
-   whose $520 is 9 days late and always arrives."_
+   The credit usually carries no customer name, so the amount is the key and
+   the descriptor is the evidence; a credit that landed before the invoice was
+   due still counts. Say what you checked ("{n} open balances against {m}
+   posted credits since {date}: {k} matches"). Two open invoices sharing an
+   amount → show both, ask, chase neither until the owner picks. Card payments
+   settle net inside grouped merchant deposits and never match by amount;
+   note them as "card — not matchable at the bank" rather than excluding.
 
-5. **Draft one reminder per customer.** Consolidate a customer's overdue
-   invoices into one email. Tone from
-   [`reference/tone-matching.md`](reference/tone-matching.md): gentle for
-   prompt customers, neutral for occasionally-late / insufficient history,
-   firm for routinely late and cured-delinquent. Examples (clearly examples,
-   not templates to copy numbers from):
-   [`reference/examples/gentle-reminder.md`](reference/examples/gentle-reminder.md),
-   [`reference/examples/firm-reminder.md`](reference/examples/firm-reminder.md).
+3. **Rank and set the tone.** Collectible past-due balance per customer is
+   the rank; days late breaks ties. The top three are the drafts (the top two
+   are "call first"). Tone from the aging buckets — the short rule:
 
-6. **Create the drafts, then present the set.** A draft is inert — nothing
-   reaches a customer until the owner presses Send in Gmail — so create them
-   first and let the owner review them where they will send them. Gmail
-   `create_draft` for each reminder (to the customer's AR contact, subject
-   per the tone rules). Never send. Then the summary table (rows from live data):
+   | Where the customer's balance sits | Tone |
+   |---|---|
+   | most of it Current or 1–30 days | Gentle — a fresh slip, assume oversight |
+   | most of it 31–60, or spread across buckets | Neutral — factual, no judgement |
+   | most of it 61+ days, or balances in three or more buckets | Firm — direct, names a remit-by date |
 
-   | # | Customer | Open | Days late | Profile | Tone | Action |
-   |---|---|---|---|---|---|---|
-   | 1 | _customer_ | $7,200 | 18 | routinely late | firm | Gmail draft |
-   | — | _customer_ | $520 | 9 | prompt | — | **excluded — check #… deposited {date}** |
+   Subject lines and body rules: [`reference/tone-matching.md`](reference/tone-matching.md).
+   Explain each rank in plain words: dollars, days late, where the balance
+   sits — e.g. "the largest overdue customer: most of its balance is past 60
+   days, so the note is firm; a smaller customer whose one invoice slipped
+   two weeks gets a gentle one."
 
-   Total open AR: ${total from get_aged_receivables} across {n} customers
-   ({overdue $} past due). State the total once, as the report gives it, so
-   the owner hears "who owes me money" answered before "who do I call".
+4. **Create the drafts, then present.** A draft is inert — nothing reaches a
+   customer until the owner presses Send in Gmail — so create them first and
+   let the owner review them where they will send them. One `create_draft`
+   per customer (to the invoice's `BillEmail`; one email listing every
+   overdue invoice — number, amount, due date — and the combined total),
+   never more than three, never two to one customer. Then the reply.
 
-   Then every draft in full, each labelled "in your Gmail Drafts". Offer to
-   reword, retone or delete any of them; the owner sends from Gmail.
+## Reply (under 25 lines)
 
-7. **Follow-ups.** If the owner says "remind me to call X Thursday", `create_event` on the
-   calendar with **no attendees** — only when asked.
+```
+Owed to you: ${total from get_aged_receivables} across {n} customers, ${past due} past due.
+Checked {n} open balances against {m} posted credits since {date}: {k} already paid, not yet booked.
 
-8. **Report.** Drafts created (customer, amount, subject — "in your Gmail
-   Drafts, ready to send"); excluded items with their bank evidence and the
-   narrated books fix; the projected collectible if the top set pays.
+| # | Customer | Open | Days late | Aging | Tone | Action |
+| 1 | {largest overdue customer} | $ | {n} | mostly 61+ | firm | draft in your Gmail Drafts |
+| 2 | … | $ | {n} | mostly 1–30 | gentle | draft in your Gmail Drafts |
+| — | … | $ | {n} | — | — | excluded — {descriptor} ${amount} on {date}; apply it in QuickBooks |
+
+Call first: {#1} and {#2}. If the three drafted customers pay, ${} comes in.
+Drafts (in your Gmail Drafts — edit or delete there; nothing is sent):
+  1. To {contact} · "{subject}" · {two-line summary of the body}
+  2. …
+```
+
+Follow the table with each draft in full only if the owner asks to see them;
+the summary lines keep the reply short. Offer to reword, retone or delete
+any draft; the owner sends from Gmail.
 
 ## Approval gates
 
 - **Never send.** `create_draft` is the only Gmail write; the owner sends.
 - **Drafts need no approval.** They are the review step: create them, name
   them, and leave sending to the owner. Ask only when two invoices are
-  ambiguous or the contact is unknown.
+  ambiguous or the recipient is unknown and the owner is present.
 - **Never chase a received-but-unbooked invoice.** Exclude, evidence, narrate.
 - **Never chase a customer not in the books' AR.** No reminders from memory.
 - **Never write to QuickBooks.** Narrate the payment application.
+- **Never mention another customer, threaten collections, or quote the tone
+  label to the customer.**
 
-## Unattended
+## Scheduled runs
 
-`ar-chase-agent` (a Monday-morning scheduled version) is **not in this
-build**. If a schedule ever runs this skill, it follows
+If a schedule ever runs this skill, follow
 [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md): `sessionType:
-"scheduled"` + `taskId`, drafts only for invoices > 7 days late, an output
-file with dedupe, no questions, no sends.
+"scheduled"` plus a stable `taskId`, drafts only for invoices more than 7
+days late, an output file with dedupe, no questions, no sends.
 
 ## Reference
 
-- [`../ar-health/SKILL.md`](../ar-health/SKILL.md) — the analysis (aging, DSO, profiles); this skill is the action.
-- [`reference/tone-matching.md`](reference/tone-matching.md) — profile → tone, subject lines, body rules
+- [`reference/tone-matching.md`](reference/tone-matching.md) — aging bucket → tone, subject lines, body rules
 - [`reference/gotchas.md`](reference/gotchas.md) — known failure modes
-- [`reference/examples/gentle-reminder.md`](reference/examples/gentle-reminder.md), [`reference/examples/firm-reminder.md`](reference/examples/firm-reminder.md) — example drafts
+- [`reference/examples/gentle-reminder.md`](reference/examples/gentle-reminder.md), [`reference/examples/firm-reminder.md`](reference/examples/firm-reminder.md) — example drafts (illustrative only)
+- [`../cash-bridge/SKILL.md`](../cash-bridge/SKILL.md) — when the owner asks why cash lags profit

@@ -17,7 +17,7 @@ description: >
 
 # Big Purchase Decision
 
-A profitable year on paper does not mean the van fits. This skill answers
+A profitable year on paper does not mean the purchase fits. This skill answers
 from the bank: the balance today, where cash actually sat at each month-end
 this year, and the payroll that must clear regardless. Five calls, one
 reply, under half a minute.
@@ -47,11 +47,11 @@ when it's done — this drives Cowork's progress display.
    month-end to a later one (the year's drawdown) and the average monthly
    debits.
 3. `query_transactions {accountNumbers: [Operating], direction: "debit",
-   descriptionContains: "<payroll processor stem, e.g. GUSTO>", limit: 6}` →
+   descriptionContains: "<the payroll processor's name as it appears on the statement>", limit: 6}` →
    the last payroll run (net + tax debits on the same day). **Cushion** = one
    payroll run + one week of average debits (from call 2). Not a percentage.
-4. `search_threads` in Gmail with the vehicle or dealer name (one query, e.g.
-   "Transit"). The dealer quote, the lender's term sheet and the insurer's
+4. `search_threads` in Gmail with the item or seller name (one query, e.g. the
+   model name or the dealer). The dealer quote, the lender's term sheet and the insurer's
    quote normally sit in one thread; take the thread id from the hit.
 
 Then one `get_thread` on that thread (the fifth call). Capture: all-in price
@@ -97,8 +97,8 @@ net monthly impact = payment + insurance delta (+ fuel/maintenance if quoted)
 {Yes / No / Yes, if financed} — {one sentence with the deciding number}.
 {One sentence: deadline from the dealer's email, and what to say at the appointment.}
 
-Van decision — {date}
-Quote ${price} all-in ({dealer}, good through {date}) · Finance ${down} down, ${principal} at {apr}% / {n} mo → ${pmt}/mo ({lender}) · Insurance +${x}/mo
+Purchase decision — {date}
+Quote ${price} all-in ({seller}, good through {date}) · Finance ${down} down, ${principal} at {apr}% / {n} mo → ${pmt}/mo ({lender}) · Insurance +${x}/mo
 Net monthly cash impact: ${net}
 
 Cash today:   ${spendable} − ${price} = ${afterCash}  vs cushion ${cushion} (payroll + a week)  → {clears / does not}
@@ -108,7 +108,7 @@ Financed:     ${spendable} − ${down}  = ${afterDown}  → {clears}; ${net}/mo 
 | Highest | {Mon} ${a} · {Mon} ${b} · {Mon} ${c}  ← safest to buy |
 | Lowest  | {Mon} ${d} · {Mon} ${e} · {Mon} ${f}  ← a second payment stream would land here |
 
-Second van: {defer / fits} — {one clause}.
+Second unit: {defer / fits} — {one clause}.
 Recommendation: {one or two sentences}.
 Want the package for the bank meeting on {date}? (credit-readiness)
 Not financial or tax advice — confirm terms with the lender and your accountant.
@@ -123,10 +123,10 @@ which the P&L cannot show.
 |---|---|
 | "Cash or finance?" | The two lines above, side by side; the cushion decides. |
 | "When is the safest month?" | The highest three month-ends, with amounts; avoid the lowest three. |
-| "What about a second van?" | Two payment streams against the three lows. |
+| "What about a second one?" | Two payment streams against the three lows. |
 | "What if I put $10k down?" | Recompute PMT with the new principal; one-time hit and monthly delta. |
 | "What should I bring to the bank?" | Hand off to `credit-readiness`. |
-| "Run the 13-week forecast" | Hand off to `cash-flow-snapshot`; not part of the default answer. |
+| "Show me the next 13 weeks" | Build a week-by-week table from open invoices, open bills and the payroll pattern; no skill, and not part of the default answer. |
 
 ## Degraded modes
 
