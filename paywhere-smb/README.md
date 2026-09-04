@@ -9,7 +9,7 @@ runs. Version **1.0.13**:
 
 | | What it is | In this plugin |
 |---|---|---|
-| **Assistant** | Interactive chat; skills fire from what you ask — each one runs in six tool calls or fewer and answers in about half a minute | `pay-bills`, `ap-timing`, `invoice-chase`, `plan-payroll`, `tax-reserve-check`, `cash-bridge`, `big-purchase-decision`, `credit-readiness`, `tax-season-organizer` |
+| **Assistant** | Interactive chat; skills fire from what you ask — each one runs in six tool calls or fewer and answers in about half a minute | `pay-bills`, `ap-timing`, `sweep-to-savings`, `plan-payroll`, `tax-reserve-check`, `cash-bridge`, `big-purchase-decision`, `credit-readiness`, `tax-season-organizer` |
 | **Agent** | Cowork scheduled tasks that run while you're away | `daily-cash-brief` (weekdays 7:30am), `tax-sweep-agent` (Fridays 4pm) |
 
 Plain questions need no skill: "show my balances", "what's in Operating",
@@ -89,7 +89,7 @@ turn and stays within six tool calls.
 | **pay-bills** | Open bills only: overdue + due within 7 days selected, not-yet-due left for their due date, saved payees by name, a dry run, one table, then ONE mixed-rail batch (ACH + wire) staged → `/confirm` link. | "pay the bills due this week" | Paywhere + QBO |
 | **plan-payroll** | Headroom = Operating − next payroll (from the bank's processor debits) − bills due by payday − reserve shortfall; stages a savings → operating top-up when short. | "am I good for payroll Friday" | Paywhere + QBO |
 | **tax-reserve-check** | Sales tax collected on received payments (one `get_sales_tax_collected` call) vs the Tax Reserve; the sweeps that were missed; true available cash; stages the catch-up transfer. | "how much of my balance is actually mine", "is the tax reserve short" | Paywhere + QBO |
-| **invoice-chase** | Aging ranked by cash impact, invoices whose cash already landed excluded, up to three Gmail **drafts** you send. | "who do I call first", "chase overdue invoices" | QBO + Paywhere + Gmail |
+| **sweep-to-savings** | Safe-to-sweep = Operating − committed outflows through the next pay cycle − a buffer set by your own worst recent week − anything earmarked; stages ONE transfer to savings. | "how much can I move to savings", "how much spare cash do I have" | Paywhere + QBO |
 
 ### Know
 

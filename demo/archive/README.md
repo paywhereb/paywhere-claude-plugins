@@ -26,6 +26,17 @@ Archived under [`skills/`](skills/), with the reason and what replaces it:
 | `month-end-prep` | Real reconciliation method, but over 30 s even stripped of the packet | Revive as a scheduled agent if wanted |
 | `subscription-audit` | Recurring-debit detection needs one bank call grouped by counterparty, which the bank query does not offer yet | Revive when `query_transactions` gains `groupBy: "counterparty"` |
 
+## 2026-09-04 — the bank has to be essential
+
+A fourth rule from the product owner: if QuickBooks alone answers the
+question, it is a QuickBooks demo and not worth iterating on. The Paywhere
+connector must be what makes the beat possible — real balances, rails, saved
+payees, or money actually moving.
+
+| Skill | Why | Instead |
+|---|---|---|
+| `invoice-chase` | The bank contributes nothing: an aging report plus a ranking is a QuickBooks answer. It also fanned out to 16–19 calls per run, chasing invoices one at a time, and in two runs of three missed the deposited check that already covered an "open" invoice | `get_aged_receivables` answers "who owes me money" in one call. Revive only with a bank-side reason — matching deposits against open invoices, say — and one parallel read turn |
+
 To revive one: copy it back under `paywhere-smb/skills/`, rewrite it to the
 rules above (one parallel read turn, ≤ 6 calls, markdown only, no demo
 entities), bump its `version:` and the plugin version.
