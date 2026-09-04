@@ -217,12 +217,14 @@ When is the safest month?
 What about a second van before next summer?
 ```
 ```
-What should I bring to the bank?
+/credit-readiness I'm going to the bank about financing the van.
 ```
-→ `credit-readiness`: the package written to the working folder
-(`bank/credit-readiness-<date>.pdf` + `.xlsx`). This follow-up is long
-(two files, ~2 minutes); show it from a saved transcript unless the room
-has time.
+→ `credit-readiness`: the loan-application package written to the working
+folder (`bank/credit-readiness-<date>.md`). **Type the slash command** — the
+skill is `disable-model-invocation` as of 1.0.16, so no question routes to it
+and asking "what should I bring to the bank" will not start it; the van skill
+answers short and names it instead. This is the long beat (~2 minutes): show
+it from a **saved transcript**, not live.
 
 **FI seat (paywhere-admin → Intents):** with the project prompt in place,
 the `intent` on every call in this beat is Nick's question in his own words
