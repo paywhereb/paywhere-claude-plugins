@@ -1,6 +1,6 @@
 ---
 name: sweep-to-savings
-version: 1.0.3
+version: 1.0.4
 description: >
   Answers "how much can I move to savings without getting tight" for a
   business whose operating account carries a cushion it never actually
@@ -64,6 +64,14 @@ books are not connected, skip the tax call, subtract nothing for earmarked
 money, and say in one line that the figure does not account for collected tax.
 
 ## The four terms
+
+Defined once in [`../_shared/AVAILABLE-CASH.md`](../_shared/AVAILABLE-CASH.md)
+and shared with `plan-payroll`, which answers the other half of the same
+question. That skill asks *will payroll clear* and subtracts committed and
+earmarked; this one asks *can I take money out* and subtracts the buffer too.
+Same definitions, same figures — the demo must never show two numbers for the
+same money. The summary below is the local restatement; the shared file wins
+if they ever drift.
 
 **operating** — the operating account's current balance from
 `list_accounts`. It already nets pending card authorizations; do not subtract

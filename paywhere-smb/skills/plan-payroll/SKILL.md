@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 1.0.5
+version: 1.0.6
 description: >
   Answers "am I good for payroll?" from the bank: the live Operating balance
   made reserve-aware (minus the sales-tax reserve shortfall; pending
@@ -43,7 +43,8 @@ User: "am I good for payroll?"
     get_vendor_payment_timing                                                              (open bills with due dates; which vendors are habitually paid early)
     get_aged_receivables                                                                   (open AR — the recovery path, never cash)
     query_transactions {accountNumbers:[<Operating>], direction:"credit", dateFrom:<14 days ago>, status:["posted"]}   (landed-but-unbooked)
-→ headroom = Operating − reserve shortfall − next payroll − bills due on/before the pay date
+→ headroom = operating − committed(through the pay date) − earmarked        (terms: ../_shared/AVAILABLE-CASH.md)
+             i.e. Operating − (next payroll + bills due on/before the pay date + recurring debits landing by then) − reserve shortfall
 → Reply: the headroom first, the equation, "Next up", the options if short, "Stage the top-up?"
 User: "yes"
 → ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Business Savings>,
@@ -53,6 +54,14 @@ User: "yes"
 
 Nothing else is read: no email, no journal entries, no calendar, no forecast.
 If `list_accounts` lacks balances, `get_account_balance` joins the same turn.
+
+**The terms are shared** with every other skill that answers "how much of this
+balance can I use" — operating, committed, earmarked and the buffer are defined
+once in [`../_shared/AVAILABLE-CASH.md`](../_shared/AVAILABLE-CASH.md). This
+skill answers *will it clear*, so it subtracts committed and earmarked and no
+buffer; `sweep-to-savings` answers *can I take money out* and subtracts the
+buffer as well. Same definitions, same figures, different question — never
+give the owner two numbers for the same money.
 Budget: about 30 seconds; seven calls at most including the stage.
 
 ## Sources of truth
