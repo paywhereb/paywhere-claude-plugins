@@ -1,6 +1,6 @@
 ---
 name: sweep-to-savings
-version: 1.0.1
+version: 1.0.3
 description: >
   Answers "how much can I move to savings without getting tight" for a
   business whose operating account carries a cushion it never actually
@@ -39,15 +39,16 @@ payroll, so the skill rounds DOWN and says what the number is net of.
 > fromAccountNumber, toAccountNumber, amount}` item, **never
 > `transfer_funds`**. Full path: [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
 
-## Quick start — three reads in one turn, one staged transfer
+## Quick start — four reads in one turn, one staged transfer
 
 ```
 User: "how much can I move to savings without getting tight?"
-→ In ONE turn, in parallel (all three at once — never one after another):
+→ In ONE turn, in parallel (all four at once — never one after another):
     list_accounts                                                          (roles, balances, exact unmasked numbers)
     query_transactions {accountNumbers:[<operating>], direction:"debit",
                         dateFrom:<90 days ago>, status:["posted"], limit:400}   (recurring debits, payroll cadence, average weekly outflow)
     search_bills {status:"open", due_before:<window end>}                  (ONLY bills due inside the window)
+    get_sales_tax_collected {date_from:<1st of the month last remitted>}   (earmarked: collected, not yet swept)
 → Window = today through the next payroll date + 7 days (payroll cadence comes from the processor debits)
 → safeToSweep = operating − committed − buffer − earmarked, floored at 0, rounded DOWN
 → Reply: the figure first, the three things it is net of, ONE transfer line, "Stage it?"
@@ -58,7 +59,9 @@ User: "yes"
 ```
 
 Nothing else is read: no balance sheet, no P&L, no per-invoice loop, no
-calendar. Budget: about 30 seconds, at most six calls including the stage.
+calendar. Four reads plus the stage is five calls; the budget is six. If the
+books are not connected, skip the tax call, subtract nothing for earmarked
+money, and say in one line that the figure does not account for collected tax.
 
 ## The four terms
 
@@ -96,46 +99,72 @@ two different floors. Do **not** use the worst week in the quarter: the worst
 week contains a payroll AND the month's supplier statements, so it
 double-counts payroll and quietly swallows the entire answer.
 
-**earmarked** — money sitting in the operating account that belongs to
-someone else and has not moved yet. The common case is collected sales tax
-not yet swept to a reserve; see
-[`../tax-reserve-check/reference/true-available.md`](../tax-reserve-check/reference/true-available.md)
-for the short form. If a reserve account exists and this skill cannot
-establish the shortfall inside its budget, say so in one line and subtract
-nothing — then name `tax-reserve-check` as the follow-up rather than
-guessing.
+**earmarked** — money sitting in the operating account that belongs to someone
+else and has not moved yet. The common case is sales tax collected and not yet
+swept to a reserve.
+
+**Use ONE definition of that shortfall, the reserve skill's**, so two skills
+can never put two different numbers for the same money on the same screen:
+
+```
+earmarked = max(0, sales tax collected on RECEIVED payments not yet remitted − reserve balance)
+```
+
+The window, the one call that produces the collected figure, and the traps are
+in [`../tax-reserve-check/reference/true-available.md`](../tax-reserve-check/reference/true-available.md)
+— follow it exactly. In particular:
+
+- **Never derive the shortfall by adding up the sweeps that were missed.** Two
+  skipped Fridays is a symptom, not the amount: the sweeps are approximations
+  of a week's tax, and summing them lands near the right number while
+  disagreeing with `tax-reserve-check` by a few hundred. Name the missed dates
+  as evidence, then state the shortfall from the formula above.
+- The window is the **months not yet remitted**, not "since the last sweep"
+  and not "since the last remittance debit".
+
+If the shortfall cannot be established inside this skill's budget, say so in
+one line, subtract nothing, and name `tax-reserve-check` as the follow-up
+rather than guessing.
 
 `safeToSweep = max(0, operating − committed − buffer − earmarked)`, rounded
 DOWN to the nearest 100 of the account's currency. A figure at or below zero
 is a legitimate answer: say the operating account has no spare cash this
 cycle and why, and stage nothing.
 
-## Output
+## Output — the figure, then how you got there
 
-Lead with the number and the transfer, then the arithmetic — never the other
-way round.
+Lead with the number and the transfer. Then **show your work**: the owner is
+being asked to move real money, often reading this the next morning with
+nobody to ask, so a bare figure is not actionable. The derivation is required,
+and it is three or four lines — not three or four sections.
 
-1. **One line:** the safe-to-sweep figure, and the destination account.
-2. **What it is net of** — three or four lines, one per term, each with its
-   figure: committed outflows through `<date>`, the buffer and where it came
-   from ("one payroll run plus a week of normal outflows"), anything earmarked.
+1. **One line:** the safe-to-sweep figure and the destination account.
+2. **"That's net of:"** one line per term, each with its amount:
+   - **Committed through `<window end>`** — the total, then the pieces in a
+     clause: the payroll run (say it is the mean of the last three), the bills
+     due inside the window (name the vendors), the recurring debits landing in
+     that window.
+   - **Operating buffer** — the amount, and its basis in the owner's own words
+     ("one payroll run plus about a week of normal outflows"), never a round
+     number with no story.
+   - **Earmarked, not yours to sweep** — sales tax collected and not yet
+     swept, with the sweep days that were missed if the history shows them.
 3. **The transfer line:** from, to, amount.
 4. **"Stage it?"** — and stop. Do not stage on the same turn as the figure.
+   One extra line offering `tax-reserve-check` for the earmarked shortfall is
+   welcome; anything more is not.
 5. After the owner agrees: the staged transfer, the `/confirm` URL verbatim,
    and one line saying nothing has moved yet.
 
-Keep the whole first reply under about 150 words — the figure, the three or
-four terms with their amounts, the transfer line, and the question. **No
-itemized bill list, no forecast table, no month-by-month history, no offer of
-adjacent work.** The owner asked one question; a long answer costs more than
-it explains, and it is the single biggest reason a beat misses its half
-minute.
+It stays a **reply, not a report**: no 13-week forecast, no month-by-month
+history, no per-invoice ledger, no unrelated analysis. Naming four vendors
+inline is right; itemising four bills as a table is not.
 
 **Sanity-check a zero before you report it.** A healthy operating account
 should usually have something to sweep. If the figure lands at or below zero,
-re-check the two mistakes that cause a false zero — counting every open bill
-instead of only those due inside the window, and using a worst-case week as
-the buffer — before telling the owner there is nothing spare.
+re-check the two mistakes that cause a false zero — counting open bills that
+fall due after the window, and using a worst-case week as the buffer — before
+telling the owner there is nothing spare.
 
 ## Guardrails
 
