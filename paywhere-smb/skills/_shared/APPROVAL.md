@@ -47,17 +47,22 @@ everything the agent proposed.
    calling any money tool. One batch, one URL.
 2. **Stage in the same turn you present the set — do not ask "stage these?".**
    A staged proposal is inert; the owner reviews it on the bank's confirm page
-   and the passkey there is the one approval, so an in-chat "yes, pay these"
-   is a second confirmation for nothing. The owner sees two steps in total:
-   the table with its approval link, then the bank's page. Ask before staging
-   only when the skill cannot decide alone: a possible duplicate, or a payee
-   with no saved rail. If the owner trims the set afterwards, stage a fresh
+   and the passkey there is the one approval. In a conversation the owner
+   sees the table first (from the dry run), says yes, and then gets the bank's
+   card and link — the card is a tool result, so anything written after the
+   real call lands below it; keep that to a line or two. Ask nothing else
+   before staging unless the skill cannot decide alone: a possible duplicate,
+   or a payee with no saved rail. If the owner trims the set afterwards, stage a fresh
    batch; the old one expires unused. Unattended runs stage what the skill
    defines and surface the URL (see [`AUTONOMY.md`](AUTONOMY.md)).
-3. **No dry run in the normal flow.** A rejected batch comes back as
-   `{ error, invalid_items[] }` naming the line and the reason; fix that line
-   and re-submit once. `dryRun: true` exists for the rare case of a brand-new
-   inline payee whose details the owner just dictated.
+3. **The dry run is the interactive gate; agents skip it.** In a
+   conversation, `make_batch_payment {dryRun: true}` validates every line and
+   returns `status: "validated_not_proposed"` — no proposal, no card, no URL —
+   so the skill can show the table and ask "Stage these?" *before* the bank's
+   card renders; the owner's yes then triggers the one real call, and the reply
+   after it is a line or two under the card. Unattended runs stage directly.
+   Either way a rejected batch comes back as `{ error, invalid_items[] }`
+   naming the line and the reason; fix that line and re-submit once.
 4. **Stage with ONE `make_batch_payment`.** Pay saved payees **by name**
    (`recipientId` = the payee's name; `list_saved_payees` tells you the rail).
    Transfers use the `transfer` rail with **exact, unmasked** account numbers

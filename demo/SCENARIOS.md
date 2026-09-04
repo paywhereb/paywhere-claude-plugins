@@ -38,7 +38,7 @@ The bank's page is where the approval happens."*
    (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
    signed in as **demo-nick@paywhere.com** for the Google pair
    ([`presenter-kit.md`](presenter-kit.md) §1).
-3. Side-load `dist/paywhere-smb-1.0.11.plugin` (presenter-kit §2).
+3. Side-load `dist/paywhere-smb-1.0.12.plugin` (presenter-kit §2).
 4. Then, in the project:
 
 ```
@@ -142,23 +142,25 @@ deposited this week but not yet applied in the books
 (`ar.unbookedReceipt`; **received-but-unbooked credit**). FI:
 `accounts_receivable`.
 
-### 1.4 — Due this week / paying early → one batch
-```
-What's due this week, and am I paying anyone early?
-```
-You should see: bills due within 7 days with rails (`ap.dueThisWeek` — the
-three staged bills plus any generated bill that falls due in the window, a
-smaller Trane bill in September), the equipment bill **held** to its due
-date with the vendor's early-payment history in days and dollars
-(`ap.holdCandidates[0]` = Trane $11,400, `ap.earlyPaymentPattern`).
-Then:
+### 1.4 — Pay the bills due this week → one batch
 ```
 Pay the bills due this week
 ```
-You should see: ONE batch — ACH lines and a wire line — paid by payee name,
-a `/confirm` link with its title. Open it on the bank, approve with the
-passkey. **One approval, on the bank's surface.** FI: Money Movement shows
-the batch awaiting → approved.
+You should see (one turn, ~15 s): a table of the bills due within 7 days with
+rails (`ap.dueThisWeek` — Johnstone and Voltage by ACH, Ironclad by wire, the
+smaller Trane bill), the batch total against Operating and the balance after,
+the **$11,400 Trane bill listed as not yet due** (due 9/17 — "pay it on the
+due date, not two weeks early"), and the question **"Stage these?"**. The
+dry run behind the table renders no card.
+```
+Yes
+```
+You should see: the bank's batch card with its `/confirm` link and title,
+then one or two lines: staged, nothing has moved, what QuickBooks would book.
+Open the link on the bank, approve with the passkey. **One approval, on the
+bank's surface.** FI: Money Movement shows the batch awaiting → approved.
+Six tool calls in total; open bills only, never the year's history. "Am I
+paying anyone early?" is a separate beat (`ap-timing`, not in the live show).
 
 ### 1.5 — Payroll
 ```
@@ -211,38 +213,38 @@ must be the verdict:
 ```
 Can I afford to buy a van this week for $58,500?
 ```
-You should see, up front: **"Not in cash this week — yes, financed."** A
-$58,500 cash purchase drops the 13-week minimum to
-`van.cashPurchaseMinBalanceAfter` (`forecast13w.minBalance.amount` − 58,500,
-≈ $11k in September), below the payroll-plus-bills cushion, with the Tax
-Reserve and Business Savings excluded from spendable cash; financed at the
-term sheet's terms it fits (`van.recommendation`). Then the support: the
-quote, term sheet and insurance quote from Gmail and the dealer appointment
-from Calendar; historical lows and their causes (`lows[]` — the Jan–Feb
-collision is the year's minimum at $14,000); the monthly payment
-(`van.financing.monthlyPayment` = $989.22) net of insurance, fuel and the
-mileage offset (`van.netMonthlyCashImpact`). **Historical minimums,
-seasonality of cash.** Follow-ups, one at a time:
+Five tool calls, four of them in one parallel turn (balance, 12 monthly
+nets, the payroll debits, one mailbox search) plus the thread read; no
+calendar call — the dealer's email names the Tuesday appointment and says
+the quote is good through it, the lender's names the Thursday meeting.
+You should see, up front: **"Not in cash this week — yes, financed."**
+$58,500 in cash leaves about $11k against a payroll-plus-a-week cushion of
+~$13k, and last year's cash fell ~$55k from a month like this one to
+February; $10,000 down leaves ~$59k and $989.22/mo (`van.financing.
+monthlyPayment`) plus $165 insurance is a small share of an average month's
+debits. Then a twelve-month-end table: the highest three months are the
+safest to buy (`van.safestPurchaseMonths`, Aug/Mar/Jun in September), the
+lowest three (`van.riskyMonths`, Jan/Jul/Dec) are where a second payment
+stream would land — so **defer van #2** (`van.secondVanVerdict`). The Tax
+Reserve and Business Savings are excluded from spendable cash; the reserve
+shortfall is not computed here (that is 1.6). **Historical month-ends,
+seasonality of cash — what the P&L cannot show.** Follow-ups, one at a time:
 ```
 Cash or finance?
 ```
 ```
 When is the safest month?
 ```
-→ `van.safestPurchaseMonths` / `van.riskyMonths` (Aug/Mar/Jun vs Jan/Jul/Dec
-in September), each risky month with its collision named.
 ```
 What about a second van before next summer?
 ```
-→ `van.secondVanVerdict`: defer unless collections improve, Trane/Ferguson
-are paid on due date, or the bank extends a line of credit — each quantified
-from `whatIf[]`.
 ```
 What should I bring to the bank?
 ```
-→ `credit-readiness`: working-capital gap, months short, LOC and card sizing,
-and the package written to the working folder
-(`bank/credit-readiness-<date>.pdf` + `.xlsx`).
+→ `credit-readiness`: the package written to the working folder
+(`bank/credit-readiness-<date>.pdf` + `.xlsx`). This follow-up is long
+(two files, ~2 minutes); show it from a saved transcript unless the room
+has time.
 
 **FI seat (paywhere-admin → Intents):** with the project prompt in place,
 the `intent` on every call in this beat is Nick's question in his own words
@@ -393,7 +395,7 @@ Pending card authorizations cannot be injected (posted rows only).
 
 ## Rehearsal checklist
 
-- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.11 side-loaded.
+- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.12 side-loaded.
 - [ ] `/demo-setup` completed; readback ✓ ×4; credentials recorded; `dateModelSource: "provided"`.
 - [ ] Gmail (`demo-nick@paywhere.com`) and Calendar connected in Cowork; the Google seed ran this week (`seed-google.mjs --check`).
 - [ ] Bare-connector session (1.0) signed in on a second window with the same bank user.

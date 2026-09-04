@@ -1,79 +1,68 @@
 # Method — big-purchase-decision
 
-## The simple test (answer this first)
+## Month-end balances from one aggregate call
+
+`query_transactions {aggregate: true, groupBy: "month", dateFrom: <12 months
+ago>}` returns, per calendar month, `{sumCredits, sumDebits, net}`. Walk
+backwards from today's balance:
 
 ```
-spendable        = Operating balance − pending authorizations − reserve shortfall
-cushion          = next payroll run (net + tax, from the last two processor debits)
-                 + bills due within 7 days
-min13w           = 13-week forecast minimum close (Operating only; Tax Reserve and
-                   Business Savings excluded), from cash-flow-snapshot
-minAfterCash     = min13w − price            (price in the purchase week; if the purchase
-                                              week is after the minimum's week, use the
-                                              lowest close at or after the purchase week)
-minAfterFinanced = min13w − down − net_monthly × (weeks remaining ÷ 4.3)
+monthEnd[current month]  = balance today            (partial month; label it)
+monthEnd[m]              = monthEnd[m+1] − net[m+1]
 ```
 
-| Result | Verdict (first two sentences) |
+Rank the twelve completed month-ends. Highest three = safest purchase months;
+lowest three = risky months. Drawdown = max over pairs (i < j) of
+`monthEnd[i] − monthEnd[j]` — the most cash the business gave back inside the
+year. Average monthly debits = mean of `sumDebits` over the completed months.
+
+## Cushion
+
+```
+payroll run = the last processor debits on one pay date (net + tax)
+cushion     = payroll run + average monthly debits ÷ 4.3
+```
+
+Actual obligations, not a percentage. Say the two parts.
+
+## The tests
+
+```
+afterCash   = Operating − price
+afterDown   = Operating − down payment
+```
+
+| Verdict | Condition |
 |---|---|
-| `minAfterCash ≥ cushion` | **Yes, in cash** — "the 13-week low would be $m, $d above the payroll-plus-bills cushion." |
-| `minAfterCash < cushion` and `minAfterFinanced ≥ cushion` | **Yes, if financed** — "$price in cash would take the 13-week low to $m, below the $c cushion; $down down and $pmt/mo keeps it at $m′." |
-| both below | **Not this week** — name the first safe month and the smallest change that makes it fit. |
+| **Yes, in cash** | `afterCash ≥ cushion` and `afterCash − drawdown ≥ cushion` |
+| **Yes, if financed** | cash fails, `afterDown ≥ cushion`, and the net monthly impact is a small share of average monthly debits |
+| **Not now** | otherwise — name the first high month and the smallest change that makes it fit |
 
-Spendable cash never includes the Tax Reserve or Business Savings: the first
-is customers' sales tax awaiting the 20th, the second is the cushion the
-owner keeps by choice. Say so once when the verdict is close.
+Spendable cash never includes the Tax Reserve or Business Savings. Pending
+authorizations are already netted by the bank; report them, never subtract.
 
-## Monthly payment (when the term sheet gives only rate and term)
+## Monthly payment
 
 ```
-r   = APR / 12 / 100
+r   = APR / 12
 n   = term in months
 PMT = P × r / (1 − (1 + r)^−n)
 ```
-`P` = principal after the down payment. Show `P`, `r`, `n` and the result;
-if the term sheet quotes a payment, use the quoted figure and note any
-difference from the computed one (fees, rounding).
+`P` = principal after the down payment. Prefer the term sheet's quoted
+payment; show the formula only when computing.
 
 ## Net monthly cash impact
 
 ```
-net = PMT + Δinsurance + Δfuel_maintenance − mileage_offset − owner_stated_offsets
+net = PMT + Δinsurance (+ Δfuel/maintenance if quoted) − reimbursement replaced
 ```
-Mileage offset = the trailing-3-month average reimbursement paid to the tech
-who would drive the vehicle (payroll journal reimbursement lines or the
-payroll-summary email). If two techs share, use the one the owner names.
+The reimbursement replaced is the mileage the owner pays today to the tech who
+would drive the vehicle — owner-stated; if not given, omit it and say the
+impact is before that offset.
 
-## Month scoring (safest purchase month)
+## Second vehicle
 
-For each candidate month `M` in the next 12:
-
-1. Projected Operating balance path: weeks inside the 13-week forecast use
-   its closes; months beyond use last year's same-month month-end balance ×
-   (1 + trailing-3-month growth ratio) with this year's known one-offs added.
-2. Apply the outlay: cash → −price in `M`; financed → −down in `M`, then −net
-   each month from `M+1`.
-3. `M` is **safe** if the adjusted balance stays ≥ cushion for `M`, `M+1`,
-   `M+2`. Otherwise **risky**, with the worst shortfall.
-4. Prefer safe months that precede the historically strongest quarter and
-   avoid months that contain a historical low or a known collision (annual
-   insurance, quarterly estimate, quarterly distribution, large remittance)
-   — name the reason. The strongest month-ends are typically the end of the
-   peak season and the month after a large collection; the weakest are the
-   collision month and the seasonal-investment month.
-
-## Second-vehicle test
-
-Repeat month scoring with two payment streams and two insurance deltas but a
-single mileage offset per vehicle. Report the earliest safe month, if any,
-and the three conditions that would create one, each quantified with
-`what-if`: collections faster by N days, pay-on-due, LOC of $X.
-
-## Historical-lows check
-
-For each of the lowest three month-ends in the trailing 12 months, subtract
-the financed net monthly impact (times the months elapsed since a hypothetical
-purchase at the strongest month) and report whether the low would have gone
-below the cushion. This is the "would the payment have hurt last January"
-answer.
-
+Two payment streams and two insurance deltas. Land them on the three lowest
+month-ends: if `lowest month-end − 2 × net × months elapsed ≥ cushion` for all
+three, it fits; otherwise defer and name the change that would create room
+(faster collections, a line of credit, paying vendors on the due date).
