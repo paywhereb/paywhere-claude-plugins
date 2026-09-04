@@ -1,6 +1,6 @@
 ---
 name: big-purchase-decision
-version: 1.0.6
+version: 1.0.7
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit, in five tool calls:
@@ -58,7 +58,10 @@ markdown package; do not start assembling one here.
 Step 1, `TaskUpdate` to `in_progress` when you begin a step and `completed`
 when it's done — this drives Cowork's progress display.
 
-## Step 1 — Read everything in ONE turn (four calls, in parallel)
+## Step 1 — Three reads in one turn, then the thread
+
+The whole answer is a verdict and one number, so read only what the verdict
+needs. **Turn one, all three in parallel:**
 
 1. `list_accounts` → Operating (primary checking by role). Spendable cash is
    **Operating only**; the Tax Reserve holds customers' sales tax and Business
@@ -68,34 +71,31 @@ when it's done — this drives Cowork's progress display.
    at tax-reserve-check.
 2. `query_transactions {accountNumbers: [Operating], aggregate: true, groupBy:
    "month", dateFrom: <first day of the month 12 months ago>}` → twelve monthly
-   nets. **Month-end balance** for each month = today's balance minus the net
-   of every later month (walk backwards from today). Rank the twelve
-   month-ends: the **three highest** are the safest purchase months, the
-   **three lowest** are the risky months. Also note the deepest drop from any
-   month-end to a later one (the year's drawdown) and the average monthly
-   debits.
-3. `query_transactions {accountNumbers: [Operating], direction: "debit",
-   descriptionContains: "<the payroll processor's name as it appears on the statement>", limit: 6}` →
-   the last payroll run (net + tax debits on the same day). **Cushion** = one
-   payroll run + one week of average debits (from call 2). Not a percentage.
-4. `search_threads` in Gmail with the item or seller name (one query, e.g. the
-   model name or the dealer). The dealer quote, the lender's term sheet and the insurer's
-   quote normally sit in one thread; take the thread id from the hit.
+   nets: the average month's debits (what the new payment is measured against),
+   the lowest month-ends, and the deepest drop from any month-end to a later
+   one. One call covers all three; do not follow it with per-month queries.
+3. `search_threads` in Gmail with the item or seller name (one query, e.g. the
+   model name or the dealer). The dealer quote, the lender's term sheet and the
+   insurer's quote normally sit in one thread; take the thread id from the hit.
 
-Then one `get_thread` on that thread (the fifth call). Capture: all-in price
-(vehicle + upfit + wrap + fees), down payment, principal, APR, term, quoted
-monthly payment, the insurance delta per month, and **the deadline** — the
-dealer names the appointment date and how long the quote is good; the lender
-names the meeting. No calendar call: the dates are in the mail. If the owner's
-stated price differs from the quote, use the owner's for the verdict and show
-the quote's beside it. Anything missing → ask once, label it owner-stated.
+**Turn two:** one `get_thread` on that thread. Capture the all-in price, down
+payment, principal, APR, term, quoted monthly payment, and the insurance delta
+per month. Ignore appointment dates and deadlines — they are not part of this
+answer. If the owner stated a price or a monthly figure themselves, use it and
+skip the thread entirely. Anything missing → ask once, label it owner-stated.
 **Never fill a price or rate from general knowledge.**
+
+**Four calls, two round trips, and no more.** The payroll-debit read that used
+to size a cushion is gone from the default path: the short verdict measures the
+new monthly payment against an average month's debits, which call 2 already
+gives. Read the payroll debits ONLY if the verdict is genuinely marginal — the
+payment is a large share of an average month — and say why you looked.
 
 ## Step 2 — Compute (method in `reference/method.md`)
 
 ```
 spendable          = Operating balance
-cushion            = last payroll run + one week of average debits
+cushion            = last payroll run + one week of average debits (marginal cases only)
 afterCash          = spendable − price
 afterDown          = spendable − down payment
 payment            = term sheet's figure, or PMT(principal, APR/12, months)
