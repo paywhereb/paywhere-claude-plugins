@@ -1,99 +1,105 @@
 # Worked Example: Year-End 1099 Prep
 
-**Scenario:** Marcus owns a digital marketing agency. He asks: "I need to send out
-my 1099s — can you pull together a list of who needs one?"
+**Scenario:** Marcus owns a small marketing agency. In early January of
+`Y+1` he asks: "I need to send out my 1099s — can you pull together a list
+of who needs one?" The tax year is `Y`. Figures are illustrative.
 
 ---
 
-## Step 1: Pull contractor payments from all sources
+## Step 1: Read payments from both sources in one turn (5 calls)
 
-**QuickBooks** (Jan 1 – Dec 31, 2024):
+**QuickBooks** — `search_vendors` ∥ `search_bill_payments {Y}` ∥
+`search_purchases {Y}`, summed per vendor:
 
-| Vendor | Total paid | 1099 eligible? | EIN/SSN on file? |
-|--------|-----------|----------------|-----------------|
+| Vendor | Total paid | is1099 | Tax id on file? |
+|---|---|---|---|
 | Jenna Torres (copywriter) | $8,400 | Yes | Yes |
 | Apex Web Solutions | $15,200 | Yes | Yes |
 | Bob Nguyen | $550 | No | No |
-| FedEx | $320 | No | No |
+| Parcel carrier | $320 | No | No |
 | Spark Digital Inc. | $6,000 | Yes | Yes |
 
-**Paywhere** (ACH/wire outflows, 2024 — counterparty extracted from `description`):
+**Paywhere** — `query_transactions {direction: "debit", dateFrom: "Y-01-01",
+dateTo: "Y-06-30"}` ∥ the same for `Y-07-01` → `Y-12-31`; ACH and wire rows
+kept, card / payroll / transfers dropped; counterparty from the descriptor
+stem:
 
 | Counterparty | Total sent | Type | Notes |
-|--------------|-----------|------|-------|
-| Jenna Torres | $1,200 | ACH | Likely same as QuickBooks vendor |
+|---|---|---|---|
+| Jenna Torres | $1,200 | ACH | Likely the same as the QuickBooks vendor |
 | Design by Mike | $2,100 | ACH | Not in QuickBooks |
 | Bob Nguyen | $480 | ACH | |
+
+No `get_transaction_detail` needed — every descriptor was readable.
 
 ---
 
 ## Step 2: Aggregate and deduplicate
 
-Cross-referencing QuickBooks and Paywhere:
-
-| Payee | QuickBooks | Paywhere | Total | Notes |
-|-------|-----------|----------|-------|-------|
-| Jenna Torres | $8,400 | $1,200 | **$9,600** | Same person — counterparty match |
+| Payee | QuickBooks | Bank | Total | Notes |
+|---|---|---|---|---|
+| Jenna Torres | $8,400 | $1,200 | **$9,600** | Same person — counterparty match; confirm the books have all $9,600 |
 | Apex Web Solutions | $15,200 | — | **$15,200** | |
 | Spark Digital Inc. | $6,000 | — | **$6,000** | |
-| Design by Mike | — | $2,100 | **$2,100** | Not in QuickBooks; payee name from `description` |
-| Bob Nguyen | $550 | $480 | **$1,030** | Combined > $600; flagged |
-| FedEx | $320 | — | $320 | Below threshold; goods/shipping — exempt |
+| Design by Mike | — | $2,100 | **$2,100** | Bank only; name from the descriptor |
+| Bob Nguyen | $550 | $480 | **$1,030** | Combined crosses $600 |
+| Parcel carrier | $320 | — | $320 | Goods/shipping, below threshold — exempt |
 
 ---
 
-## Step 3: Apply $600 threshold and W-9 check
+## Step 3: Threshold and W-9 status
 
-- Jenna Torres: $9,600 ✅ → **1099-NEC required** · W-9 on file (EIN recorded in QB)
-- Apex Web Solutions: $15,200 ✅ → **1099-NEC candidate** · W-9 on file · Note: may be a corp (confirm)
-- Spark Digital Inc.: $6,000 ✅ → **1099-NEC candidate** · W-9 on file · "Inc." — likely corp exempt (confirm)
-- Design by Mike: $2,100 ✅ → **1099-NEC required** · W-9 not on file — must collect; payment was Paywhere-only with no QB record, so the accountant should also confirm the QB booking
-- Bob Nguyen: $1,030 ✅ → **1099-NEC required** · W-9 not on file — must collect
-- FedEx: $320 → below threshold; goods/shipping — not required
+- Jenna Torres — $9,600 → **1099-NEC** · W-9 on file
+- Apex Web Solutions — $15,200 → **1099-NEC candidate** · W-9 on file · may be a corporation (confirm)
+- Spark Digital Inc. — $6,000 → **1099-NEC candidate** · W-9 on file · "Inc." — likely corporate-exempt (confirm)
+- Design by Mike — $2,100 → **1099-NEC** · W-9 **missing** · bank-only, not booked
+- Bob Nguyen — $1,030 → **1099-NEC** · W-9 **missing**
+- Parcel carrier — $320 → not required
 
 ---
 
-## Step 4: Output delivered to Marcus
+## Step 4: The file — `tax/1099-prep-Y.md`
 
 ```
-## 1099 prep list — 2024
-Prepared January 10, 2025 · For review by your accountant · Not tax advice
+## 1099 prep list — Y
+Prepared January 10, Y+1 · For review by your accountant — not tax advice
 
 ### Summary
-- Contractors paying: 5 candidates identified
-- Require 1099-NEC (≥$600 for services): 5
-- Missing W-9: 2 — action required before January 31
-- Corporation exemption review needed: 2 (Apex, Spark)
-- Paywhere-only contractor payments needing accountant review: 1 (Design by Mike)
+- Payees paid for services: 5 candidates
+- Require 1099-NEC (≥ $600 for services): 5
+- Missing W-9: 2 — collect before filing (deadline January 31, Y+1)
+- Corporation exemption to confirm: 2 (Apex, Spark)
+- Bank-only payments with no vendor record: 1 (Design by Mike)
 
 ### 1099-NEC candidates
 
 | Payee | Total paid | Source(s) | W-9 status | Notes |
-|-------|-----------|-----------|------------|-------|
-| Jenna Torres | $9,600 | QB + Paywhere ACH | ✅ EIN on file | Confirm QB has the full $9,600 booked |
-| Apex Web Solutions | $15,200 | QuickBooks | ✅ EIN on file | "Solutions" — may be corp; confirm exemption with accountant |
-| Spark Digital Inc. | $6,000 | QuickBooks | ✅ EIN on file | "Inc." — likely corp-exempt; confirm with accountant |
-| Design by Mike | $2,100 | Paywhere ACH only | ⚠️ Missing W-9 | Full name unknown — obtain before filing; not in QB |
-| Bob Nguyen | $1,030 | QB + Paywhere ACH | ⚠️ Missing W-9 | Combined QB ($550) + Paywhere ($480) = $1,030 |
+|---|---|---|---|---|
+| Jenna Torres | $9,600 | Books + bank ACH | On file | Confirm the books carry the full $9,600 |
+| Apex Web Solutions | $15,200 | Books | On file | May be a corporation; confirm exemption |
+| Spark Digital Inc. | $6,000 | Books | On file | "Inc." — likely exempt; confirm |
+| Design by Mike | $2,100 | Bank ACH only | Missing | Full legal name unknown; not in the books |
+| Bob Nguyen | $1,030 | Books + bank ACH | Missing | $550 booked + $480 bank-only |
 
 ### Missing W-9 action list
-These contractors must provide a W-9 before you can file:
+1. **Design by Mike** — paid $2,100 by ACH. Obtain the full legal name and a W-9.
+2. **Bob Nguyen** — paid $1,030 across both sources. W-9 not on file.
 
-1. **Design by Mike** — paid $2,100 via Paywhere ACH. Obtain full legal name and W-9.
-   IRS W-9 form: https://www.irs.gov/pub/irs-pdf/fw9.pdf
-2. **Bob Nguyen** — paid $1,030 (QB + Paywhere). W-9 not on file for either source.
-
-### Paywhere reconciliation note
-Design by Mike received $2,100 via ACH from your Paywhere operating account
-but has no QuickBooks vendor record. Confirm with your accountant whether
-this should also be booked in QB before filing.
+### Bank reconciliation note
+Design by Mike received $2,100 by ACH from Operating and has no vendor
+record in the books. Bob Nguyen's $480 bank payment is also unbooked.
+Confirm with your accountant whether these should be entered before filing.
 
 ### Next steps for your accountant
-- [ ] Collect W-9 from Design by Mike (full legal name needed first)
+- [ ] Collect W-9 from Design by Mike (full legal name first)
 - [ ] Collect W-9 from Bob Nguyen
-- [ ] Confirm corporation exemption for Apex Web Solutions
-- [ ] Confirm corporation exemption for Spark Digital Inc.
-- [ ] Book Design by Mike's $2,100 in QuickBooks (Paywhere ACH out, not in QB)
-- [ ] File 1099-NECs by January 31, 2025
-- [ ] File 1096 transmittal with IRS by January 31, 2025
+- [ ] Confirm corporation exemption for Apex Web Solutions and Spark Digital Inc.
+- [ ] Book the two bank-only payments in the books
+- [ ] File 1099-NECs and the 1096 transmittal by January 31, Y+1
 ```
+
+## Step 5: Reply (chat)
+
+> Five 1099-NEC candidates, two missing W-9s (Design by Mike, Bob Nguyen),
+> one payee paid from the bank with no vendor record. Written to
+> `tax/1099-prep-Y.md`. Five tool calls; nothing filed.

@@ -1,4 +1,28 @@
-# Demo Script — Paywhere MCP (copy/paste run-of-show)
+# Demo Script
+
+**The current demo is Nick's HVAC.** The run-of-show with the exact prompts
+for every beat (Act 0 setup, Act 1 assistant, Act 2 application, Act 3
+scheduled agents, Act 4 FI seat), the live injects, the rehearsal checklist
+and the deferred items is **[`SCENARIOS.md`](SCENARIOS.md)**. Connector
+setup, side-load, the never-send safeguards and troubleshooting are in
+**[`presenter-kit.md`](presenter-kit.md)**. Seeding is in
+[`seed.md`](seed.md); the world is described in
+[`../paywhere-smb/DATASET.md`](../paywhere-smb/DATASET.md).
+
+Everything below this line is the **previous** demo, kept for reference.
+
+---
+
+# Staffing vertical (frozen, D9) — Meridian Staffing & Advisory
+
+> **Frozen 2026-09-02; skills removed 2026-09-03.** The Meridian world is no
+> longer reseeded or maintained, and `pay-and-bill` / `pay-commissions` left
+> the plugin package in 1.0.8 (git history before that). The script is kept
+> verbatim so the beats can be revived against a spare sandbox company. Note
+> that its money steps predate the propose-only approval path: on the current
+> demo deployment the payment tools stage a `/confirm` proposal instead of
+> executing, and `/demo-setup` now builds the Nick's HVAC world, not this one.
+
 
 The live demo is driven by **free-text prompts you paste into the chat** (Claude
 Cowork), not slash commands — it should feel like a real owner talking to their

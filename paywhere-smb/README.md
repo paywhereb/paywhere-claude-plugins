@@ -1,253 +1,167 @@
 # Paywhere SMB Plugin
 
-Pre-built small-business **finance** workflows that run against your
-**Paywhere bank account** + QuickBooks. Install it once and you get a set
-of ready-to-use workflows — cash-flow forecasting, month-end close, payroll
-planning, invoice chasing, and commission payouts across ACH, Wire, and
-Stablecoin — plus a router that understands plain English.
+Finance workflows for an owner-operated small business, run against your
+**bank through the Paywhere connector** plus QuickBooks, Gmail and Google
+Calendar. Tell Claude what you need in plain English — "how is my business
+doing," "who do I call first," "am I good for payroll Friday," "how much of
+my balance is actually mine," "can I afford the van" — and the right skill
+runs. Version **1.0.13**:
 
-You don't need to memorize anything. Just tell Claude what you need — "I'm
-stressed about making payroll," "close the books," "pay my reps for last
-week" — and it figures out the right workflow and walks you through it.
-Every workflow pauses before taking action, so nothing happens without
-your say-so.
+| | What it is | In this plugin |
+|---|---|---|
+| **Assistant** | Interactive chat; skills fire from what you ask — each one runs in six tool calls or fewer and answers in about half a minute | `pay-bills`, `ap-timing`, `sweep-to-savings`, `plan-payroll`, `tax-reserve-check`, `cash-bridge`, `big-purchase-decision`, `credit-readiness`, `tax-season-organizer` |
+| **Agent** | Cowork scheduled tasks that run while you're away | `daily-cash-brief` (weekdays 7:30am), `tax-sweep-agent` (Fridays 4pm) |
 
-> **Important**: This plugin assists with small business finance workflows
-> but does not provide financial, tax, or legal advice. All outputs should
-> be reviewed by you (and where appropriate, a qualified professional)
-> before use.
+Plain questions need no skill: "show my balances", "what's in Operating",
+"when is the next payroll", "who owes me money" are answered straight from the
+connectors. Anything Claude can work out from the data — a what-if, a
+forecast, a summary — it does without a skill; skills exist for procedures
+worth encoding (moving money behind one approval, a reconciliation method, a
+scheduled agent's contract).
+
+**Nothing moves money from chat.** Every payment or transfer is staged as a
+proposal and approved by you on the bank's `/confirm` page with a passkey.
+Scheduled runs stage too; they never execute. Email is **drafts only** —
+the plugin never sends. See
+[`skills/_shared/APPROVAL.md`](skills/_shared/APPROVAL.md) and
+[`skills/_shared/AUTONOMY.md`](skills/_shared/AUTONOMY.md).
+
+> This plugin assists with small-business finance workflows and does not
+> provide financial, tax or legal advice. Review outputs with a qualified
+> professional before acting.
 
 ## Installation
 
-The Anthropic plugin system runs in two clients:
-[Claude Code](https://claude.com/product/claude-code) and
-[Cowork](https://claude.com/product/cowork). Claude Desktop and
-claude.ai chat do **not** support plugins — they only support raw MCP
-servers via the Custom Connectors UI.
+The plugin system runs in **Claude Code** and **Cowork**. Claude Desktop and
+claude.ai chat do not load plugins — they host raw MCP servers only (the
+bare Paywhere connector, no skills).
+
+### Cowork — side-load the `.plugin` archive
+
+```bash
+git clone https://github.com/paywhereb/paywhere-claude-plugins.git
+cd paywhere-claude-plugins
+./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.13.plugin
+                                         #   and dist/paywhere-smb-1.0.13-poc.plugin (Paywhere → PoC stack)
+```
+
+In Cowork, use the "side-load a plugin file" picker and select the `.plugin`
+file. Connect the four connectors below, pick a working folder, and start
+with "set me up" (or `/demo-setup` on the hosted sandbox — see Demo setup).
 
 ### Claude Code — install from the marketplace
-
-From inside a Claude Code session:
 
 ```
 /plugin marketplace add paywhereb/paywhere-claude-plugins
 /plugin install paywhere-smb@paywhere-claude-plugins
 ```
 
-Once installed, ask Claude to "set me up" — it'll run the `smb-onboard`
-skill, walk you through connecting Paywhere (OAuth at
-<https://demo.dev.paywhere.com/mcp>) and QuickBooks, and run a demo recipe.
+### Claude Desktop / claude.ai — bare connector only
 
-### Cowork — side-load the `.plugin` archive
+Settings → Connectors → Add custom connector → your bank's Paywhere MCP URL
+(`https://demo.dev.paywhere.com/mcp` on the hosted sandbox) — every Paywhere
+tool works, no skills load. Add QuickBooks, Gmail and
+Google Calendar the same way if you want them without the plugin.
 
-Cowork supports side-loading a plugin from a packaged `.plugin` file
-(any plugin packaged as a `.plugin` file can be installed directly
-without going through the curated marketplace).
+## Connectors
 
-1. Clone this repo and build the artifact:
+Wired in [`.mcp.json`](.mcp.json):
 
-   ```bash
-   git clone https://github.com/paywhereb/paywhere-claude-plugins.git
-   cd paywhere-claude-plugins
-   ./scripts/package.sh paywhere-smb
-   ```
+| Connector | Role | Notes |
+|---|---|---|
+| **Paywhere** — `https://demo.dev.paywhere.com/mcp` | Your bank: balances, 12 months of cleared and pending activity, saved payees, ACH / wire / batch payments and transfers (staged for passkey approval), transaction enrichment | Staged moves are approved on the bank's `/confirm` page |
+| **quickbooks** — `https://qbo.dev.paywhere.com/mcp` | Your books: invoices, payments, deposits, bills, bill payments, purchases, journal entries, estimates, aging, P&L, balance sheet, customers/vendors/employees | **Read-only**; skills narrate any booking they would make |
+| **gmail** — `https://gmailmcp.googleapis.com/mcp/v1` | Reminder drafts; vendor invoices, quotes, payroll summaries, renewal notices as evidence | **Drafts only** — never send/reply/forward |
+| **google calendar** — `https://calendarmcp.googleapis.com/mcp/v1` | Dated obligations: payroll Fridays, the 20th remittance, estimates, renewals, appointments | Read; a reminder event only when you ask, no attendees |
 
-   This writes `dist/paywhere-smb-<version>.plugin`.
+No Google Drive. Files are written into the Cowork working folder.
 
-2. In Cowork, use the "side-load a plugin file" flow and select the
-   `.plugin` file you just built.
+## Skills
 
-> The `.plugin` file is a zip archive of the plugin folder contents,
-> matching the same layout Claude Code accepts via
-> `claude --plugin-dir <archive.zip>`. The script also emits a
-> `.zip` copy with identical contents under `dist/`.
+Say it in your own words; Cowork picks the skill from its description.
+Trigger phrases are examples. Every interactive skill reads in one parallel
+turn and stays within six tool calls.
 
-### Claude Desktop / claude.ai (MCP server only — no skills, no slash commands)
+### Act (one passkey approval on the bank)
 
-> Claude Desktop and claude.ai do **not** support the plugin system.
-> They have no `/plugin` slash command, and the packaged skills
-> (`cash-flow-snapshot`, `month-end-prep`, etc.) and command shortcuts
-> (`/close-month`, `/plan-payroll`, …) won't load.
+| Skill | What it does | Just say… | Needs |
+|---|---|---|---|
+| **pay-bills** | Open bills only: overdue + due within 7 days selected, not-yet-due left for their due date, saved payees by name, a dry run, one table, then ONE mixed-rail batch (ACH + wire) staged → `/confirm` link. | "pay the bills due this week" | Paywhere + QBO |
+| **plan-payroll** | Headroom = Operating − next payroll (from the bank's processor debits) − bills due by payday − reserve shortfall; stages a savings → operating top-up when short. | "am I good for payroll Friday" | Paywhere + QBO |
+| **tax-reserve-check** | Sales tax collected on received payments (one `get_sales_tax_collected` call) vs the Tax Reserve; the sweeps that were missed; true available cash; stages the catch-up transfer. | "how much of my balance is actually mine", "is the tax reserve short" | Paywhere + QBO |
+| **sweep-to-savings** | Safe-to-sweep = Operating − committed outflows through the next pay cycle − a buffer set by your own worst recent week − anything earmarked; stages ONE transfer to savings. | "how much can I move to savings", "how much spare cash do I have" | Paywhere + QBO |
 
-You *can* still connect the bare **Paywhere MCP server** as a custom
-connector. You'll lose the packaged workflow scaffolding, but Claude
-can call every Paywhere tool (`list_accounts`, `get_account_balance`,
-`get_account_transactions`, ACH/wire/stablecoin flows, etc.) when you
-ask it to.
+### Know
 
-**claude.ai:** Settings → Connectors → Add custom connector. Paste the
-server URL:
+| Skill | What it does | Just say… | Needs |
+|---|---|---|---|
+| **ap-timing** | Which vendors you habitually pay early and what to hold to its due date (one `get_vendor_payment_timing` call). | "am I paying anyone early", "what should I hold" | QBO |
+| **cash-bridge** | Profit → cash for a month: net income, ΔAR, ΔAP, owner draws, reserve sweeps, equipment, reconciled to what cleared. | "QuickBooks says I made money, why is my cash lower" | Paywhere + QBO |
+| **big-purchase-decision** | Can I afford it, cash or financed, safest months, a second unit — from today's balance, twelve month-ends from the bank, the payroll cushion and the seller's / lender's emails. Verdict first. | "can I afford the van / a new truck / this equipment" | Paywhere + Gmail |
+| **credit-readiness** | Working-capital gap from twelve month-ends, the troughs and why, a sized line-of-credit request, the lender's document checklist — one markdown package in `bank/`. | "what should I bring to the bank", "how much credit do I need" | Paywhere + QBO + Gmail |
+| **tax-season-organizer** | Owner income-tax prep: estimated payments, 1099 candidates, what the CPA needs, as markdown (sales tax lives in `tax-reserve-check`). | "estimated taxes", "1099s" | Paywhere + QBO |
 
-```
-https://demo.dev.paywhere.com/mcp
-```
+### Run for me (Cowork scheduled tasks)
 
-For QuickBooks, Gmail, and Google Drive, add each one separately as its
-own custom connector. The full URL list lives in [`.mcp.json`](.mcp.json).
+| Skill | Schedule / prompt | What it stages |
+|---|---|---|
+| **daily-cash-brief** | `Every weekday at 7:30am` — "Run my morning cash brief" | `briefs/YYYY-MM-DD.md` and ONE batch (reserve top-up + due bills) with the `/confirm` link |
+| **tax-sweep-agent** | `Every Friday at 4:00pm` — "Run the Friday tax sweep" | `sweeps/YYYY-MM-DD.md`, the Operating → Tax Reserve transfer staged for approval |
 
-## What you'll need to connect
+Both stamp `sessionType: "scheduled"`, dedupe on the output file, degrade
+gracefully, and never execute or send.
 
-Run `/smb-onboard` or ask Claude to "set me up."
+### Getting started
 
-**Core tools** (connect these first for the best experience):
-- **Paywhere** — your bank. Powers cash position, settled bank lines, the
-  reconciliation flow at the heart of month-end close, and the three
-  payment rails (ACH, Wire, Stablecoin) used by commission payouts. Connect
-  via OAuth at <https://demo.dev.paywhere.com/mcp>.
-- **QuickBooks** — your books. Powers the bookkeeping layer (AR, AP, P&L,
-  invoice register, customer payments) that Paywhere reconciles against. The
-  demo connector is **read-only** (the shared demo books reseed server-side
-  daily): skills read the books freely and narrate any bookkeeping write —
-  Bill Payments, invoices, commission bills — that would happen outside a
-  demo.
+| Skill | Just say… |
+|---|---|
+| **smb-onboard** | "set me up", "what can you do", "how do approvals work" |
 
-**Supporting tools:**
-- **Gmail / Outlook** — invoice-reminder and payroll mail drafts; the real-data
-  read path for worker hour reports in `/pay-and-bill`.
-- **Google Drive** — worker hour-report notes (demo path for
-  `/pay-and-bill`); stores close packets and QBR exports.
+### Demo setup (hosted sandbox only)
 
-**Demo environments only:**
-- On demo deployments, the **Paywhere** connector also carries the
-  demo-seeder tools (`seed_demo_world`, `reset_demo`, …) that power the
-  `/demo-setup` command (reset + seed the sandbox) — one connector, one
-  sign-in. The seeder tools only exist on demo deployments; real accounts
-  never see them.
+The hosted sandbox (`demo.dev.paywhere.com`) carries seeder tools that build a
+per-presenter bank world for Nick's HVAC, a Kansas City owner-operator; the
+shared QuickBooks sandbox, mailbox and calendar are seeded to match. The demo
+persona lives in server data ([`DATASET.md`](DATASET.md)); no skill hardcodes
+it.
 
-You don't need all of these to start. Connect Paywhere + QuickBooks and
-you'll immediately see value — the plugin tells you when connecting another
-tool would unlock more.
+| Skill | What it does |
+|---|---|
+| **demo-setup** | Builds your own Nick's HVAC bank world (async seed, polled), reads it back through the connector, reports the answer-key summary. See [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md) and [`../demo/presenter-kit.md`](../demo/presenter-kit.md). |
+| **demo-inject** | Ready prompts for live moments: "Westport just paid", an emergency-call settlement, a failed autopay. |
+
+To try it: create a Cowork project, paste
+[`../demo/cowork-project-prompt.md`](../demo/cowork-project-prompt.md) as its
+instructions, connect the sandbox connectors, run `/demo-setup` (≈ 5 minutes),
+then walk [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md). The same skills run
+on real accounts; what they surface depends entirely on the data present.
+
+### Archived in 1.0.13
+
+Nine skills left the package after an audit against three rules: a skill must
+work as-is for any small business, it must encode a procedure Claude cannot
+improvise from the data, and a live-demo skill must finish in six tool calls
+and about thirty seconds. Archived (in
+[`demo/archive/skills/`](../demo/archive/skills/), with the audit): `what-if`,
+`business-pulse`, `ar-health`, `cash-flow-snapshot`, `build-cash-dashboard`,
+`quarterly-review`, `smb-router`, `month-end-prep`, `subscription-audit`.
+A dashboard returns only as a live artifact that calls the connectors;
+`subscription-audit` returns when the bank query can group by counterparty.
+Six older skills were removed in 1.0.8 and are in git history.
 
 ## How it works
 
-Three layers working together:
-
-1. **Skills** — the building blocks. Each skill knows how to do one thing
-   really well (forecast cash, reconcile a month, draft an invoice
-   reminder, pay one commission).
-
-2. **Commands** — the workflows. Commands chain skills together into
-   multi-step recipes with checkpoints where you approve before anything
-   happens.
-
-3. **The Router** — the front door. You talk to Claude in plain English.
-   The router listens, figures out which workflow fits, and gets you
-   there. You never need to memorize a command name.
-
-## Commands
-
-Commands are workflows that chain skills together. Each one pauses at
-checkpoints for your approval before taking action.
-
-### Money & finance
-
-| Command | What it does | Just say... | Skills used | Required | Optional |
-|---|---|---|---|---|---|
-| `/plan-payroll` | Payroll readiness: with Paywhere connected, real-time balance + settlement detection (never chases a customer who paid this morning), shortfall projection, reminder drafts; without it, a QuickBooks-only forecast. | "can I make payroll", "am I good for payroll", "cash is tight", "who owes me money" | plan-payroll, cash-flow-snapshot, invoice-chase | QuickBooks | Paywhere, Gmail |
-| `/pay-bills` | AP catch-up: pulls QuickBooks AP aging, selects overdue bills, one approval, pays the whole batch across mixed rails, narrates the QBO bill-payment booking (demo books are read-only), verifies settlement. | "pay my bills", "what's overdue", "AP aging" | pay-bills | QuickBooks | Paywhere (without it: analysis + drafted list only) |
-| `/pay-and-bill` | Hours-to-cash: aggregates worker hours from QuickBooks, presents each client's billing (narrating the QBO invoicing), pays the workers in one batch, narrates the bill booking, reconciles. | "bill clients for hours", "pay my contractors" | pay-and-bill | QuickBooks, Paywhere | Gmail, Google Drive |
-| `/month-heads-up` | 30-day cash outlook with early risk flags. | "what does next month look like", "cash forecast", "runway" | cash-flow-snapshot | QuickBooks | Paywhere |
-| `/close-month` | Month-end close: reconcile Paywhere bank lines vs QuickBooks, flag gaps, write P&L, export close packet. | "close the books", "month-end", "reconcile" | month-end-prep | QuickBooks, Paywhere | Google Drive |
-| `/price-check` | Margin-by-product table and three pricing scenarios. | "what are my margins", "should I raise prices", "cost per unit" | (self-contained) | QuickBooks | — |
-| `/tax-prep` | Tax prep materials for your accountant (quarterly estimates or year-end 1099s). | "tax stuff", "estimated taxes", "1099s", "accountant needs..." | tax-season-organizer | QuickBooks | Paywhere |
-
-### Commissions
-
-| Command | What it does | Just say... | Skills used | Required | Optional |
-|---|---|---|---|---|---|
-| `/pay-commissions` | Pays commissions on payments you actually received, across ACH/Wire/Stablecoin: applies the commission policy (client → rate → payee → rail), matches Paywhere credits to QBO payments, dedupes against the COMM- markers carried at the bank, and — after you approve — disburses the whole batch (`make_batch_payment`), narrating the Bill + Bill Payment booking per commission. | "pay commissions", "pay my reps", "run commissions for last week" | pay-commissions | QuickBooks, Paywhere | — |
-
-### Demo setup (sales/sandbox only)
-
-`/demo-setup` stands up the caller's **own** repeatable demo bank world in one
-server-side seeding call against the hosted sandbox connectors. The QuickBooks
-demo books are **shared and read-only** — reseeded server-side daily, never
-seeded from here; the command reads their `dateModel` (via `get_demo_dates`)
-so the bank world lands on the same dates. Per-user worlds mean parallel demos
-and re-runs are both supported. It needs a Paywhere connector pointed at a
-**demo deployment** (where the seeder tools are present) and is not meant for
-real accounts. See [`../demo/seed.md`](../demo/seed.md) and
-[`../demo/demo-script.md`](../demo/demo-script.md).
-
-| Command | What it does | Skills used | Required |
-|---|---|---|---|
-| `/demo-setup` | Builds your own demo bank world (Meridian Staffing & Advisory LLC, scaled ~0.30×): `seed_demo_world` resets your mock bank + seeds ~6 months of date-relative history + pre-configures recipients + writes enrichment, date-aligned to the standing QBO books via `get_demo_dates`. Accepts an optional username label for the bank login. Readies every Phase-1 and Phase-2 beat in one run. | demo-setup | Paywhere (demo deployment), QuickBooks |
-
-### Weekly & quarterly briefs
-
-| Command | What it does | Just say... | Skills used | Required | Optional |
-|---|---|---|---|---|---|
-| `/friday-brief` | Friday end-of-week pulse: revenue vs last week, top sellers, wins and watches. | "end of week", "how'd we do", "Friday recap" | business-pulse | QuickBooks or Paywhere | -- |
-| `/quarterly-review` | Full QBR narrative: revenue, margin, customer concentration, opportunities, risks. | "quarterly review", "board deck", "QBR" | business-pulse | QuickBooks | Paywhere |
-
-> The **Monday / weekly check-in** brief is handled directly by the
-> `business-pulse` skill (below) — just say "Monday brief", "weekly
-> check-in", or "what's on my plate". It produces the one-page snapshot and
-> can save a dated file to your drive.
-
-## Building-block skills
-
-Skills are the atomic building blocks. Each one does one thing well; the
-commands above compose them.
-
-| Skill | What it does | Just say... | Required | Optional |
-|---|---|---|---|---|
-| **cash-flow-snapshot** | 30/60/90-day cash forecast with confidence bands and named risk flags. Chat summary + XLSX. | "forecast my cash flow", "will I make payroll", "runway", "cash crunch" | QuickBooks, Paywhere | CSV upload |
-| **invoice-chase** | Drafts overdue-invoice reminders matched to each customer's payment history and tone. Cross-references Paywhere credits so customers who already paid don't get chased. | "who owes me money", "overdue invoices", "follow up on unpaid" | QuickBooks, Paywhere | Gmail |
-| **month-end-prep** | Month-end close: reconciles the QB transaction register against Paywhere bank lines, flags gaps, writes a P&L narrative, exports a close packet. | "close the month", "reconcile", "P&L", "why revenue changed" | QuickBooks, Paywhere | Google Drive |
-| **tax-season-organizer** | Quarterly estimated tax calc or year-end 1099-NEC prep with accountant handoff packet. | "quarterly taxes", "estimated tax payment", "1099s", "1099-NEC", "year-end tax prep" | QuickBooks | Paywhere |
-| **pay-commissions** | Pays sales commissions across ACH/Wire/Stablecoin from the commission policy (client → rate → payee → rail), matching Paywhere credits to QBO customer payments, deduping against the COMM- markers carried at the bank, batch-disbursing after one approval, and narrating the Bill + Bill Payment booking per commission. | "pay commissions", "pay my reps", "run commissions" | QuickBooks, Paywhere | — |
-| **pay-bills** | AP batch bill-pay: QBO AP aging → overdue-bill selection → one approval → mixed-rail batch payment (saved payees) → bill-payment booking narrated (demo books are read-only) → settlement verified against the bank. | "pay my bills", "AP aging", "what's overdue" | QuickBooks | Paywhere |
-| **pay-and-bill** | Hours-to-cash loop: read last week's hours from QBO time-activities → present each client's billing (invoicing narrated) → pay workers in one batch → narrate the worker-bill booking → reconcile. | "bill clients for hours", "pay my contractors" | QuickBooks, Paywhere | — |
-| **plan-payroll** | Payroll readiness with real-time bank data when Paywhere is connected (settlement detection, shortfall projection, reminder drafts); QBO-only forecast otherwise. | "can I make payroll", "am I good for payroll" | QuickBooks | Paywhere, Gmail |
-| **demo-setup** | Repeatable sandbox setup in one server-side seeding call: builds your own mock-bank world with deterministic, date-relative demo data (identical Monday through Friday), date-aligned to the shared read-only QBO books (reseeded server-side daily). Sales/demo use only. | "set up the demo", "reset the demo" | Paywhere (demo deployment), QuickBooks | — |
-| **business-pulse** | One-page financial snapshot: cash, revenue trend, pending money movement, watch-list, and the single most important thing needing attention today. Doubles as the Monday / weekly check-in (top-3 actions + dated file save). | "how's the business doing", "snapshot", "weekly summary", "Monday brief", "weekly check-in", "catch me up" | -- (degrades gracefully) | QuickBooks, Paywhere, Gmail |
-| **smb-onboard** | Walks you through connecting tools, runs a demo recipe, captures your business context, and sets a weekly check-in cadence. | "set me up", "setup", "get started", "help me get set up", "I'm new to this", "what can you do" | -- | All connectors |
-
-## Trying it out
-
-The skills read **live data** from your connected accounts and never assume
-specific records — point them at your real books or at a sandbox. To explore
-end-to-end before going live, [`demo/seed.md`](../demo/seed.md) walks through
-standing up an example scenario (a QuickBooks sandbox via the hosted fork at
-`qbo.dev.paywhere.com` paired with the hosted Paywhere demo MCP at
-`demo.dev.paywhere.com`). What each flow surfaces depends entirely on the data
-present — the figures vary, the behavior is the same:
-
-- **`/close-month`** — reconciles the month's Paywhere bank lines against the
-  QBO register, flags any gaps (e.g. bank-side credits not in QB, or fee
-  deltas), writes a P&L narrative, and exports the close packet.
-- **`/plan-payroll`** — pulls QBO AR/AP and Paywhere balances, runs the
-  30/60/90 forecast, flags any upcoming payroll or cash crunch, and stages a
-  ranked invoice-chase batch as Gmail drafts.
-- **`/demo-setup` → `/pay-commissions "last week"`** — the seed includes the
-  qualifying inbound bank credits, QBO customer-payment history, the
-  server-side commission policy, and pre-configured/verified payees; the flow
-  then matches Paywhere credits to QBO payments, shows the commission table,
-  gates on your approval, disburses across ACH / Wire / Stablecoin (stablecoin
-  previewed to surface the 1% fee), and narrates the marker Bill + Bill
-  Payment that would be booked outside a demo. A second run surfaces every
-  prior disbursement as "already paid" — dedupe from the COMM- marker each
-  payment carries at the bank.
-- **`/demo-setup` → `/pay-bills`** — overdue AP scenario (overdue + due-this-week
-  open bills with saved payees): aging table, one approval,
-  mixed-rail batch payment, the QBO bill-payment booking narrated (the demo
-  books are read-only), settlement verified against the bank.
-- **`business-pulse`** ("Monday brief" / "weekly check-in") — cross-connector
-  synthesis: QBO revenue trend, Paywhere balances + 7-day inflow, and any
-  payment pending past its expected clearing window.
+1. **Skills** do one thing each and read live data — they never assume a
+   record, a name or an amount.
+2. **Conventions** are written once in `skills/_shared/` and repeated inline
+   where they matter: propose → `/confirm` → passkey; scheduled runs propose
+   and never execute; drafts only.
+3. **Cowork routes** from the skill descriptions; plain questions stay plain.
 
 ## Customizing
 
-These workflows are generic starting points. They become much more useful
-when you customize them for how your business actually works:
-
-- **Add business context** — Drop your industry, products, customers, and
-  processes into skill files so Claude understands your world.
-- **Adjust thresholds** — Tune the alert thresholds in `business-pulse`
-  and `cash-flow-snapshot` to match your scale.
-- **Set your commission policy** — Who gets commission, at what rate, and on
-  which rail is the commission policy `/pay-commissions` applies (client → rate
-  → payee → rail). On real books, capture it where your team keeps comp rules
-  and tell the skill; in the demo it is server-seeded (see
-  [`DATASET.md`](DATASET.md)).
+Hold rules live in `ap-timing/SKILL.md` (the tool's definitions: paid early
+= 5+ days before the due date; habitual = 3+ such bills), the reserve method
+in `tax-reserve-check/reference/`, and the payroll cushion in
+`plan-payroll/SKILL.md`. Bump the plugin version on any change (plugin.json +
+marketplace.json + the skill's `version:`).

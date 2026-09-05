@@ -6,6 +6,8 @@
 - **Session type:** First session ("get me started")
 - **Connectors before start:** None connected
 
+Figures are illustrative.
+
 ---
 
 ## Transcript
@@ -18,19 +20,19 @@
 
 **Maria:** Cash flow. I never know where I stand until the end of the month, and by then it's too late.
 
-**Claude:** That's the most common one. Let's connect Paywhere first — that's your bank, and it'll let me show you your cash position across every account in real time. Here's how to authorize the connection…
+**Claude:** That's the most common one. Let's connect your bank first — once it's live I can show you where you stand any time, not just at month-end. Here's how to authorize the connection…
 
 *[Maria connects Paywhere — ~2 minutes]*
 
-**Claude:** Paywhere is live. Let me pull your balances and last 30 days of activity right now.
+**Claude:** Your bank is live. Let me pull your balances and where cash sat at each month-end this year — two calls.
 
-*[runs cash-flow-snapshot]*
+*[`list_accounts` + `query_transactions {aggregate: true, groupBy: "month", dateFrom: <12 months ago>}`]*
 
-**Claude:** Here's your snapshot: $14,800 across your operating and reserve accounts, $4,200 net inflow over the last 30 days, and $6,100 in outstanding invoices from QuickBooks once that's connected. Two contractor accounts owe most of it. Does that match what you're seeing?
+**Claude:** Operating $21,400, Tax Reserve $3,900, Business Savings $8,000. Over the last twelve months your Operating balance ran between about $9,000 (February) and $31,000 (August) — the low months are when the spring stocking orders clear before the season's sales land. That's the picture you were waiting until month-end for; you can ask for it any time with "show my balances" or "how did cash move this year". Does it match what you're seeing?
 
 **Maria:** Yes, exactly. I didn't know I could see that so fast.
 
-**Claude:** That's available anytime. Second tool: let's connect QuickBooks so I can pair the bank lines with your invoice book and run month-end close.
+**Claude:** Second tool: your books. With QuickBooks connected I can tell you who owes you and what's due, and stage this week's bills for one approval.
 
 *[Maria connects QuickBooks — ~3 minutes]*
 
@@ -48,7 +50,7 @@
 
 **Claude:** Which tools do you already use day-to-day?
 
-**Maria:** Paywhere and QuickBooks, which we just connected. Also Gmail for everything email.
+**Maria:** The bank and QuickBooks, which we just connected. Also Gmail for everything email.
 
 **Claude:** Got it. Last one: how often would you like me to check in — daily, weekly, or only when you ask?
 
@@ -69,22 +71,22 @@ Look right?
 
 **Maria:** Yep, that's it.
 
-**Claude:** Saved. Every skill from here will know your business. Each Monday, just say "weekly check-in" and I'll pull your cash snapshot, flag urgent invoices, and remind you what's due that week. Want to try the invoice reminder skill right now? Say "invoice chase."
+**Claude:** Saved. Every skill from here will know your business. Each Monday, just say "weekly check-in" and I'll pull your balances, who owes you and what's due, and flag anything urgent. Since slow-paying contractors are on your list — want to try the invoice reminders now? Say "chase my overdue invoices"; I only write drafts, nothing is sent.
 
 ---
 
 ## Pass criteria
 
 - [ ] Triggered on "get me started"
-- [ ] Asked headache question before recommending connectors
-- [ ] Recommended Paywhere first (matched cash-flow headache)
-- [ ] Ran `cash-flow-snapshot` immediately after Paywhere connected, before interview
-- [ ] Connected second tool (QuickBooks) before starting interview
+- [ ] Asked the headache question before recommending connectors
+- [ ] Recommended the bank first (matched the cash-flow headache)
+- [ ] Answered the cash question plainly (`list_accounts` + the 12-month aggregate, two calls, no skill) immediately after the bank connected, before the interview
+- [ ] Connected the second tool (QuickBooks) before starting the interview
 - [ ] Asked all 5 interview questions one at a time
-- [ ] Showed profile draft before writing
-- [ ] Wrote context under `## Business context` in `~/.claude/CLAUDE.md`
+- [ ] Showed the profile draft before writing
+- [ ] Wrote context under `## Business context` in Cowork's memory for this project
 - [ ] Named the weekly cadence trigger phrase explicitly
-- [ ] Offered a next skill naturally at the end
+- [ ] Offered a next skill naturally at the end, with its trigger phrase
 
 ---
 
@@ -94,35 +96,35 @@ Look right?
 
 - **Owner:** Dev, freelance design studio (2 people)
 - **Session type:** First session
-- **Primary headache:** Month-end close / reconciliation
+- **Primary headache:** Profitable on paper, never much cash in the bank
 - **Current books:** Xero (no Cowork connector)
 
 ## Transcript
 
-**Claude:** What are your biggest day-to-day headaches — making payroll, closing the books, paying people, taxes, or something else?
+**Claude:** What are your biggest day-to-day headaches — making payroll, paying people, taxes, cash, or something else?
 
-**Dev:** Closing the books. Reconciling the bank against my accounting at month-end takes a whole weekend.
+**Dev:** The books say I made money last year. The bank account doesn't look like it.
 
-**Claude:** For month-end close, the two pieces I'd want are your books and your bank. Are you on QuickBooks today, or something else?
+**Claude:** For that one the two pieces I'd want are your books and your bank. Are you on QuickBooks today, or something else?
 
 **Dev:** Xero.
 
-**Claude:** Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get cash-flow and payment work straight from your bank, but I couldn't reconcile your books against the bank or run month-end close from inside Claude. If you'd be open to QuickBooks, here's what'd unlock: a one-pass reconciliation against your Paywhere bank lines, a P&L narrative, and an exported close packet. Up to you — want to try it, or skip the books for now?
+**Claude:** Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get balances, the year's cash by month and staged payments straight from your bank, but I couldn't reconcile the profit in your books against the cash that actually moved, or tell you who owes you. If you'd be open to QuickBooks, here's what'd unlock: the profit-to-cash bridge ("where did the cash go"), this week's bills staged for one approval, and overdue-invoice reminder drafts. Up to you — want to try it, or skip the books for now?
 
 **Dev:** Skip for now. I'll stick with Xero.
 
-**Claude:** No problem. Then let's connect Paywhere — that'll still let me show your cash position across accounts and flag any payments pending past their clearing window. Sound good?
+**Claude:** No problem. Then let's connect your bank — that still gives you balances any time and where cash sat each month, which is half of your question. Sound good?
 
 **Dev:** Yeah.
 
 *[Dev connects Paywhere — ~2 minutes]*
 
-**Claude:** Paywhere is live. Let me pull your balances and last 30 days of activity…
+**Claude:** Your bank is live. Let me pull your balances and the last twelve months by month…
 
 ## Pass criteria
 
 - [ ] Named the function ("your books and your bank"), not the platform
 - [ ] Asked what the owner uses before pitching anything
-- [ ] On unsupported tool, listed gain/loss concretely without pushing
+- [ ] On the unsupported tool, listed gain/loss concretely, naming only skills that exist, without pushing
 - [ ] Accepted the owner's decision and pivoted to the next supported tool
 - [ ] No paragraph-long descriptions of QuickBooks, Paywhere, or Xero
