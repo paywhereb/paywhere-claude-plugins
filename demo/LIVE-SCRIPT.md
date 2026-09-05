@@ -7,7 +7,7 @@ troubleshooting and beats that are not in this cut.
 **Before the room:** Cowork project with
 [`cowork-project-prompt.md`](cowork-project-prompt.md) pasted into the
 instructions · four connectors signed in as demo-nick · side-load
-`dist/paywhere-smb-1.0.20-poc.plugin` · **model Claude Sonnet 5 at MEDIUM
+`dist/paywhere-smb-1.0.22-poc.plugin` · **model Claude Sonnet 5 at MEDIUM
 effort** · `/demo-setup`, wait for it to finish · `/demo-inject` (the Friday
 tax sweep needs it, or it correctly sweeps nothing).
 
