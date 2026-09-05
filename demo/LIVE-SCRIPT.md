@@ -84,7 +84,8 @@ van — all one question away, and none of it volunteered.
 # The agents (scheduled tasks)
 
 Both are set up in **Cowork Desktop → scheduled tasks**. Show the schedule
-first, then the run — from a saved transcript, or live with the same prompt.
+first, then the run — scroll back to the last real run in Cowork, or fire it
+live with the same prompt.
 
 ## 4 — Friday tax sweep
 
@@ -115,7 +116,14 @@ the line to say out loud; it is why an overnight agent is trustworthy at all.
 
 ---
 
-# Saved transcripts (too long to type live)
+# The long ones
+
+Nothing here is checked in: there are no saved transcript files in this repo.
+Show these from the scrollback of a real Cowork run, or run them live and let
+the room wait. The eval writes its own transcripts under
+`paywhere-mcp-api/evals/out/scenario-*/transcripts/` in paywhere-mcp, but that
+directory is untracked and every run overwrites it — it is a debugging
+artefact, not a presentation asset.
 
 ## 6 — Payroll headroom
 

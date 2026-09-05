@@ -88,7 +88,8 @@ Every beat below is six tool calls or fewer and lands in about thirty
 seconds; a beat that cannot is not in this list. "How is my business doing?"
 is a plain question now (balances, aging, P&L in a few calls, no skill), as
 are "show my balances" and "who owes me money". Longer showpieces — the bank
-package after 1.8, the daily brief — are shown from saved transcripts.
+package after 1.8, the daily brief — are shown from the scrollback of an
+earlier Cowork run; no transcript files are checked in.
 
 Bank-only fact in **bold** — say it out loud; it is the reason the FI is
 buying the connector.
@@ -231,7 +232,8 @@ folder (`bank/credit-readiness-<date>.md`). **Type the slash command** — the
 skill is `disable-model-invocation` as of 1.0.16, so no question routes to it
 and asking "what should I bring to the bank" will not start it; the van skill
 answers short and names it instead. This is the long beat (~2 minutes): show
-it from a **saved transcript**, not live.
+it from **an earlier run's scrollback**, not live. Nothing is checked in, so
+run it once before the demo and leave it on screen.
 
 **FI seat (paywhere-admin → Intents):** with the project prompt in place,
 the `intent` on every call in this beat is Nick's question in his own words
