@@ -7,11 +7,14 @@ folder. Nobody is in the chat to answer a question, so every `*-agent` skill
 (and any skill a schedule might call) follows these conventions. Each agent
 skill links here **and** repeats the load-bearing sentences inline.
 
-> **Unattended, a skill proposes and never executes.** Payments and transfers
-> are staged with `make_batch_payment` (transfers as `{rail: "transfer", …}`
-> items, never `transfer_funds`) and the `/confirm` URL is printed in the run
-> output as the approval step — the owner opens it and approves with a
-> passkey. Every tool call carries `sessionType: "scheduled"` and a stable
+> **Unattended, a skill proposes by default and never executes a payment.**
+> Payments, and the transfers that go with them, are staged with
+> `make_batch_payment` (transfers as `{rail: "transfer", fromAccountNumber,
+> toAccountNumber, amount, description}` items) and the `/confirm` URL is
+> printed in the run output as the approval step — the owner opens it and
+> approves with a passkey. An internal transfer runs directly with
+> `transfer_funds` only where the owner has opted that schedule in. Every
+> tool call carries `sessionType: "scheduled"` and a stable
 > `taskId`. The run writes its output file, skips if today's already exists,
 > degrades gracefully when a connector is missing, and creates **drafts only**
 > (Gmail `create_draft`; never send, reply or forward).
@@ -45,14 +48,21 @@ actual current date. **If today's file already exists, stop and say so** in
 one line ("Today's brief exists at briefs/2026-09-02.md — skipping."). A
 re-run that must regenerate is an owner's explicit ask, not a schedule.
 
-## 4. Propose, never execute
+## 4. Propose by default
 
-- The only money tools are `make_ach_payment` / `make_wire_payment` /
-  `make_batch_payment`; they stage lines and return a confirmation URL. See [`APPROVAL.md`](APPROVAL.md).
+- Vendor payments only ever stage: `make_ach_payment` / `make_wire_payment` /
+  `make_batch_payment` append lines and return a confirmation URL. See
+  [`APPROVAL.md`](APPROVAL.md).
 - Internal transfers (reserve top-up, sweep, savings) are staged as
-  `{rail: "transfer", fromAccountNumber, toAccountNumber, amount}` items in
-  the same `make_batch_payment` call as any bills — **never `transfer_funds`**,
-  which executes immediately.
+  `{rail: "transfer", fromAccountNumber, toAccountNumber, amount, description}`
+  items — in the same `make_batch_payment` call as any bills, or on their
+  own — so the morning notification carries a review link and the owner
+  approves the run's money in one place. That is the default because it is
+  what an unattended run's owner expects to find, not because a transfer is
+  dangerous: `transfer_funds` moves money between the owner's own accounts,
+  is reversible and needs no approval, and a schedule may be switched to it
+  when the owner says so (the run then reports the move and the new balance
+  instead of a link).
 - Stage only what the skill defines (e.g. bills due within 7 days that are
   not habitually-early, plus the computed reserve top-up). Never stage a
   discretionary or judgment-call payment unattended — list it under "needs

@@ -1,6 +1,6 @@
 ---
 name: pay-bills
-version: 1.0.6
+version: 1.0.7
 description: >
   Pays this week's vendor bills as ONE mixed-rail batch the owner approves on
   the bank's page: pulls the OPEN bills from QuickBooks (never the year's
@@ -25,9 +25,10 @@ Open bills in, one batch out, one approval on the bank's surface.
 > confirmation URL of the form `https://<bank host>/confirm/<id>/<nonce>`.
 > **Print that URL verbatim as the approval step**; the owner opens it and
 > approves with a passkey, and only then does money move. **Never claim money
-> has moved** — say "staged" / "awaiting your approval". Internal transfers
-> are staged the same way as a `{rail: "transfer", fromAccountNumber,
-> toAccountNumber, amount}` item, **never `transfer_funds`**. Full path:
+> has moved** — say "staged" / "awaiting your approval". A savings top-up
+> rides in the same batch as a `{rail: "transfer", fromAccountNumber,
+> toAccountNumber, amount, description}` line, so bills and top-up share one
+> approval. Full path:
 > [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
 
 ## Quick start — six calls, two owner turns
@@ -115,7 +116,8 @@ One `make_batch_payment` with `dryRun: true` over the whole selection
 (`rail: "ach"` items with `recipientId` = payee name, `paymentAmount`,
 `paymentName` = "Bill {DocNumber} {vendor}"; `rail: "wire"` items with
 `recipientId`, `amount`, `purposeOfWire`; any top-up as `rail: "transfer"`
-with exact unmasked account numbers). It returns per-line validation and
+with exact unmasked account numbers and a `description` such as "Top-up for
+this week's bills"). It returns per-line validation and
 `status: "validated_not_proposed"` — no proposal, no card, no URL. A line
 that fails is fixed (or excluded and listed) before the table is shown.
 
@@ -187,7 +189,9 @@ on the day's output file — see [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.
 - **Never invent payment details.** Unconfirmed → excluded and listed.
 - **Never stage a possible duplicate** without the owner's explicit yes on
   that row.
-- **Never `transfer_funds`.** Top-ups are `transfer` lines in the batch.
+- **Top-ups ride in the batch** as `transfer` lines, so the bills and the
+  money that funds them share one approval page; do not split the top-up
+  into a separate `transfer_funds` call.
 - **Never raid the Tax Reserve** for a top-up.
 
 ## Reference

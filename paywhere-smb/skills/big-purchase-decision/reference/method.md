@@ -19,11 +19,15 @@ year. Average monthly debits = mean of `sumDebits` over the completed months.
 ## Cushion
 
 ```
-payroll run = the last processor debits on one pay date (net + tax)
-cushion     = payroll run + average monthly debits ÷ 4.3
+payroll run = mean of the last three processor runs (net + tax on one pay date each)
+cushion     = payroll run + average monthly debits ÷ 4.33
 ```
 
-Actual obligations, not a percentage. Say the two parts.
+The same buffer every skill uses — defined once in
+[`../../_shared/AVAILABLE-CASH.md`](../../_shared/AVAILABLE-CASH.md): one
+payroll run plus one week of average outflows, where a week is the 12-month
+aggregate's mean `sumDebits` ÷ 4.33 with no exclusions. Actual obligations,
+not a percentage. Say the two parts.
 
 ## The tests
 

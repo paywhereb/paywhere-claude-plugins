@@ -71,7 +71,7 @@ Look right?
 
 **Maria:** Yep, that's it.
 
-**Claude:** Saved. Every skill from here will know your business. Each Monday, just say "weekly check-in" and I'll pull your balances, who owes you and what's due, and flag anything urgent. Since slow-paying contractors are on your list — want to try the invoice reminders now? Say "chase my overdue invoices"; I only write drafts, nothing is sent.
+**Claude:** Saved. Every skill from here will know your business. Each Monday, just say "weekly check-in" and I'll pull your balances, who owes you and what's due, and flag anything urgent. Since slow-paying contractors are on your list — want me to draft reminders for the overdue ones? I only write drafts in Gmail; you send them.
 
 ---
 

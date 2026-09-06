@@ -1,14 +1,16 @@
 ---
 name: tax-sweep-agent
-version: 1.0.3
+version: 1.0.4
 description: >
   The weekly sales-tax sweep, automated (scheduled agent). On the owner's
   sweep day it totals the sales tax inside the payments RECEIVED this week
   (one QuickBooks cash-basis report, cross-checked against the bank's
   credits), writes sweeps/YYYY-MM-DD.md, and STAGES one Operating to Tax
   Reserve transfer for the owner to approve on the bank's /confirm page with
-  a passkey. Five calls: four reads in one turn, one staged transfer.
-  Proposes, never executes; never transfer_funds. Use when the owner says
+  a passkey. Five calls: four reads in two rounds, one staged transfer.
+  Stages by default so the owner approves on the bank's /confirm page; a
+  direct transfer_funds only if the owner opts the schedule in. Use when the
+  owner says
   "run the tax sweep," "sweep this week's sales tax," "tax sweep," "move this
   week's sales tax to the reserve," or schedules "every Friday at 4pm run the
   tax sweep" (any weekday the owner picks).
@@ -24,9 +26,10 @@ repeated because this file is loaded on its own:
 
 > Stamp `sessionType: "scheduled"` and `taskId: "tax-sweep-agent"` on every
 > tool call. Write `sweeps/YYYY-MM-DD.md`; if today's exists, stop and say
-> so. **Propose, never execute**: the transfer is staged as ONE
+> so. **Stage by default**: the transfer is staged as ONE
 > `make_batch_payment` with a single `{rail: "transfer", fromAccountNumber,
-> toAccountNumber, amount}` item — never `transfer_funds` — and the returned
+> toAccountNumber, amount, description}` item (direct `transfer_funds` only if
+> the owner has opted this schedule in) — and the returned
 > `/confirm/<id>/<nonce>` URL is printed verbatim with its
 > `confirmation_title` and *"Nothing has moved until you approve this on the
 > bank's page."* Never say "swept" or "transferred". A missing connector
@@ -73,7 +76,8 @@ Schedule fires (or: "run the tax sweep")
    back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
    from the wide number, and do not narrate the correction to the owner.
 → amount = collected.total − tax on booked payments with no bank credit − transfers already into the reserve this week
-→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Operating>, toAccountNumber:<Tax Reserve>, amount}], sessionType:"scheduled", taskId:"tax-sweep-agent"}
+→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Operating>, toAccountNumber:<Tax Reserve>, amount,
+                                     description:"Weekly sales-tax sweep <Mon>–<today>"}], sessionType:"scheduled", taskId:"tax-sweep-agent"}
 → Write sweeps/<today>.md · print the run output with the URL
 ```
 
@@ -97,9 +101,10 @@ If `sweeps/YYYY-MM-DD.md` exists → "Today's sweep exists at
 sweeps/YYYY-MM-DD.md — skipping." and stop. Every Paywhere call carries
 `sessionType: "scheduled"` and `taskId: "tax-sweep-agent"`.
 
-### 2. Pull — four reads, one turn
+### 2. Pull — four reads, two rounds
 
-Issue the four reads in the Quick start together. Accounts by role, never by
+Issue the four reads as the Quick start lays them out: two in round 1, the
+two scoped bank reads the moment `list_accounts` returns. Accounts by role, never by
 number: Operating = the primary checking; Tax Reserve = the savings account
 named for tax or reserve. If Paywhere is unreachable: one-line file, stop.
 If QuickBooks is unreachable: the sweep cannot be computed (the bank has no
@@ -133,13 +138,17 @@ nothing.
 { "payments": [ { "rail": "transfer",
                   "fromAccountNumber": "<Operating, unmasked>",
                   "toAccountNumber":   "<Tax Reserve, unmasked>",
-                  "amount": <this week's received tax> } ],
+                  "amount": <this week's received tax>,
+                  "description": "Weekly sales-tax sweep <Mon>–<today>" } ],
   "sessionType": "scheduled", "taskId": "tax-sweep-agent" }
 ```
 
 Keep `confirmation_url`, `confirmation_title`, `expires_at`. If the amount
 is $0 (nothing received, or already swept), stage nothing and say so. If
-the response is `{ error }`, record it in the file. Never `transfer_funds`.
+the response is `{ error }`, record it in the file. Staging is the default so
+the run's notification carries a review link; if the owner has switched this
+schedule to a direct move, call `transfer_funds` with the same fields, read
+the reserve balance back, and report the move rather than a link.
 
 ### 5. Write `sweeps/YYYY-MM-DD.md`
 
@@ -181,8 +190,10 @@ waiting for a human approval.
 ## Guardrails
 
 - One transfer line; never a vendor payment from this skill.
-- Never `transfer_funds`; never claim the reserve is funded until the owner
-  approves and the credit posts (`query_transactions` on the Tax Reserve).
+- Never claim the reserve is funded until the money is there: after a staged
+  transfer, only once the owner approves and the credit posts
+  (`query_transactions` on the Tax Reserve); after a direct `transfer_funds`,
+  only once the balance read confirms it.
 - Never guess tax on an unbooked credit; list it.
 - Never write to QuickBooks (the transfer entry is narrated, not posted).
 - Never ask a question unattended; degrade and list under "needs you".

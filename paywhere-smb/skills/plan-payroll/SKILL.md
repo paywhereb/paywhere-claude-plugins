@@ -1,6 +1,6 @@
 ---
 name: plan-payroll
-version: 1.0.7
+version: 1.0.8
 description: >
   Answers "am I good for payroll?" from the bank: the live Operating balance
   made reserve-aware (minus the sales-tax reserve shortfall; pending
@@ -8,10 +8,11 @@ description: >
   processor's debit pattern at the bank, every open bill due on or before the
   pay date (not-yet-due bills from habitually-early vendors excluded), and a
   landed-but-unbooked check so a customer whose money already arrived is
-  never chased. Six reads in one turn, the headroom equation with every
+  never chased. Six reads in two rounds, the headroom equation with every
   number shown, then the recovery options if short: collect named invoices,
-  hold what is not yet due, or a Business Savings to Operating top-up staged
-  as a transfer line for passkey approval. No verdict without the bank. Use
+  hold what is not yet due, or a Business Savings to Operating top-up moved
+  with one transfer_funds on the owner's yes and confirmed with a balance
+  read. No verdict without the bank. Use
   when the owner says "am I good for payroll Friday," "can I make payroll,"
   "will payroll clear," "am I good for payroll," or "is payroll covered." NOT
   for "when is payroll" or "what was the last payroll" — those are one bank
@@ -24,15 +25,16 @@ One question, one equation, from cleared cash. The bank says what is in the
 account and what payroll costs; the books say what else is due before payday
 and what is owed to the business. No unlanded inflow is ever counted.
 
-> Payments and transfers are only ever **staged**: `make_batch_payment`
-> returns a `https://<bank host>/confirm/<id>/<nonce>` URL, which is printed
-> verbatim as the approval step — the owner approves with a passkey and only
-> then does money move. **Never claim money has moved.** A savings top-up is a
-> `{rail: "transfer", fromAccountNumber, toAccountNumber, amount}` batch
-> item, **never `transfer_funds`**. See
+> This skill moves money in exactly one case: the owner says yes to the savings
+> top-up. That is an internal transfer between the owner's own accounts —
+> reversible, no counterparty — so it runs directly as ONE `transfer_funds`
+> `{fromAccountNumber, toAccountNumber, amount, description}` and is confirmed
+> with `get_account_balance`; report the new Operating balance, never a move
+> the call did not confirm, and never move anything before the yes. Vendor
+> payments are different and are not staged here. See
 > [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
 
-## Quick start — six reads in one turn, one call on yes
+## Quick start — six reads in two rounds, two calls on yes
 
 ```
 User: "am I good for payroll?"
@@ -53,11 +55,12 @@ User: "am I good for payroll?"
    from the wide number, and do not narrate the correction to the owner.
 → headroom = operating − committed(through the pay date) − earmarked        (terms: ../_shared/AVAILABLE-CASH.md)
              i.e. Operating − (next payroll + bills due on/before the pay date + recurring debits landing by then) − reserve shortfall
-→ Reply: the headroom first, the equation, "Next up", the options if short, "Stage the top-up?"
+→ Reply: the headroom first, the equation, "Next up", the options if short, "Move the top-up?"
 User: "yes"
-→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Business Savings>,
-                                     toAccountNumber:<Operating>, amount:<top-up>}]}   → confirmation_url renders
-→ One closing line: staged, nothing has moved.
+→ ONE transfer_funds {fromAccountNumber:<Business Savings>, toAccountNumber:<Operating>,
+                      amount:<top-up>, description:"Payroll top-up from savings"}
+→ get_account_balance {accountNumber:<Operating>}   → the new balance, read back
+→ One closing line: moved, Operating now $X, headroom now $Y.
 ```
 
 Nothing else is read: no email, no journal entries, no calendar, no forecast.
@@ -70,12 +73,12 @@ skill answers *will it clear*, so it subtracts committed and earmarked and no
 buffer; `sweep-to-savings` answers *can I take money out* and subtracts the
 buffer as well. Same definitions, same figures, different question — never
 give the owner two numbers for the same money.
-Budget: about 30 seconds; seven calls at most including the stage.
+Budget: about 30 seconds; eight calls at most including the transfer and its balance read.
 
 ## Sources of truth
 
 - **Paywhere** says what is in the account, what the last payroll runs cost
-  and when they hit, what landed from customers, and stages the top-up.
+  and when they hit, what landed from customers, and moves the top-up.
 - **QuickBooks** (read-only) says what is due before payday
   (`get_vendor_payment_timing`), what is owed to the business
   (`get_aged_receivables`) and how much of the reserve is spoken for
@@ -167,26 +170,26 @@ whether to chase outstanding AR anyway. If negative, rank the options:
 
 - **(a) Collect named invoices** — the genuinely outstanding invoices (step
   5) that would close the gap, by amount and days late; reminder **drafts**
-  via [`../invoice-chase`](../invoice-chase/SKILL.md) if the owner wants them
-  (Gmail `create_draft` only; the owner sends). Lead with this.
+  in Gmail if the owner wants them (`create_draft` only; the owner sends).
+  Lead with this.
 - **(b) Hold what is not yet due** — the not-yet-due bills the owner would
   normally pay this week (step 4) and what holding them to the due date
   keeps in the account.
 - **(c) Business Savings → Operating top-up** — quote the savings balance and
   the exact amount that brings the headroom to zero (or the owner's cushion).
-  End the reply with exactly **"Stage the top-up of $X from savings?"**
+  End the reply with exactly **"Move $X from savings to Operating?"**
 
-### 7. Stage — ONE `make_batch_payment`
+### 7. Move — ONE `transfer_funds`, then read the balance
 
-On the owner's yes: `{payments:[{rail:"transfer", fromAccountNumber:<Business
-Savings, exact unmasked>, toAccountNumber:<Operating, exact unmasked>,
-amount}]}`. A single internal transfer needs no dry run; the line in the
-reply is the gate. The bank's card and link render from the result, so the
-reply after it is one to three lines: `confirmation_title` over
-`confirmation_url`, the URL in plain text too, and *"Nothing has moved —
-open the link and approve with your passkey."* A rejected call comes back
-as `{ error, invalid_items[] }` — fix the line and re-submit once. Never
-invent a URL. Never from the Tax Reserve; never `transfer_funds`.
+On the owner's yes: `transfer_funds {fromAccountNumber:<Business Savings,
+exact unmasked>, toAccountNumber:<Operating, exact unmasked>, amount,
+description:"Payroll top-up from savings"}`. An internal transfer between the
+owner's own accounts executes at once — no proposal, no `/confirm` page — and
+is reversible, which is why the yes in the reply is the only gate. Then
+`get_account_balance` on Operating and report what the bank now shows, in one
+to three lines: the amount moved, the new Operating balance, the headroom it
+produces. If the call returns `{ error }`, say so in one line and do not
+claim a move. Never from the Tax Reserve; never before the owner's yes.
 
 ## Reply template (under 25 lines; the number first)
 
@@ -206,7 +209,7 @@ Next up (not in the headroom): {item ${v} on {d}, …}
 Business Savings ${bs} · pending authorizations ${p} already netted by the bank
 
 If short: (a) collect {invoice, customer, ${amt}, {days} late} … (b) hold {…} keeps ${…}
-          (c) transfer Business Savings → Operating ${X}. Stage the top-up of ${X} from savings?
+          (c) move Business Savings → Operating ${X}. Move ${X} from savings to Operating?
 ```
 
 ## Edge cases
@@ -225,10 +228,10 @@ If short: (a) collect {invoice, customer, ${amt}, {days} late} … (b) hold {…
 
 ## Gates
 
-- **Transfers are staged, never executed here** — a transfer line in
-  `make_batch_payment`, URL printed, passkey on the bank. Never
-  `transfer_funds`; never from the Tax Reserve.
-- **Drafts only** — if invoice-chase is used, Gmail `create_draft`; never send.
+- **The top-up moves only on the owner's yes** — one `transfer_funds`
+  between the owner's own accounts, then a balance read; never before the
+  yes, never from the Tax Reserve, never a vendor payment from this skill.
+- **Drafts only** — any reminder is a Gmail `create_draft`; never send.
 - **No QuickBooks writes** — narrate the payment application.
 - **No unlanded inflow in the verdict** — outstanding AR is the recovery
   path, never cash.
@@ -238,4 +241,4 @@ If short: (a) collect {invoice, customer, ${amt}, {days} late} … (b) hold {…
 
 - [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md) · [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md)
 - [`../tax-reserve-check/reference/true-available.md`](../tax-reserve-check/reference/true-available.md) — the reserve shortfall, short form; [`../tax-reserve-check/SKILL.md`](../tax-reserve-check/SKILL.md) in full
-- [`../invoice-chase/SKILL.md`](../invoice-chase/SKILL.md) — reminder drafts for option (a) · [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — vendor payment habits behind option (b)
+- [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — vendor payment habits behind option (b); option (a)'s reminders are plain Gmail drafts (`create_draft` only; the owner sends), no skill

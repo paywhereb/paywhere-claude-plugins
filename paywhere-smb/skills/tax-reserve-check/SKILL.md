@@ -1,6 +1,6 @@
 ---
 name: tax-reserve-check
-version: 1.0.6
+version: 1.0.7
 description: >
   Answers "how much of my balance is actually mine" for a business that
   collects sales tax and parks it in a separate reserve account: the sales
@@ -8,9 +8,9 @@ description: >
   QuickBooks cash-basis report, split by tax item) against the Tax Reserve
   balance at the bank, the shortfall, the sweep days that were skipped, true
   available cash (Operating minus the shortfall), and the catch-up transfer
-  Operating to Tax Reserve staged as a proposal the owner approves on the
-  bank's /confirm page. Four reads in one turn, one staged transfer. Not tax
-  advice. Use when the owner says "how much of my balance is actually mine,"
+  Operating to Tax Reserve, moved with one transfer_funds on the owner's yes
+  and confirmed with a balance read. Four reads in two rounds, one transfer.
+  Not tax advice. Use when the owner says "how much of my balance is actually mine,"
   "how much of my cash is really mine," "what's reserved for taxes," "is my
   tax reserve enough," "am I holding enough for sales tax," "what do I owe on
   the next remittance," or "did I miss a tax sweep." NOT for "show my
@@ -23,7 +23,7 @@ description: >
 The bank knows how much actually sits in the Tax Reserve today. The books
 know how much sales tax was inside the payments that landed. This skill puts
 the two together, names the gap, names the sweep days that caused it, and
-stages the fix for approval. It owns the full method;
+offers the fix: one transfer the owner says yes to. It owns the full method;
 [`reference/true-available.md`](reference/true-available.md) is the short
 form other skills link to.
 
@@ -31,16 +31,16 @@ form other skills link to.
 > the books (the tax items on the invoices). Say so in the output; the
 > owner's CPA owns the rules.
 
-> `make_batch_payment` **never moves money**: it stages the transfer on the
-> owner's open proposal and returns a confirmation URL of the form
-> `https://<bank host>/confirm/<id>/<nonce>`. **Print that URL verbatim as
-> the approval step**; the owner approves with a passkey, and only then does
-> money move. **Never claim money has moved** — say "staged" / "awaiting your
-> approval". Internal transfers are staged as a `{rail: "transfer",
-> fromAccountNumber, toAccountNumber, amount}` item, **never
-> `transfer_funds`**. Full path: [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
+> This skill moves money in exactly one case: the owner says yes to the
+> catch-up. That is an internal transfer between the owner's own accounts —
+> reversible, no counterparty — so it runs directly as ONE `transfer_funds`
+> `{fromAccountNumber, toAccountNumber, amount, description}` and is
+> confirmed with `get_account_balance` on the Tax Reserve. Report what the
+> bank shows after the read; never claim a move the call did not confirm, and
+> never move anything before the yes. Vendor payments are different and are
+> not staged here. Full path: [`../_shared/APPROVAL.md`](../_shared/APPROVAL.md).
 
-## Quick start — four reads in one turn, one staged transfer
+## Quick start — four reads in two rounds, one transfer on yes
 
 ```
 User: "how much of my balance is actually mine?"
@@ -60,17 +60,18 @@ User: "how much of my balance is actually mine?"
    back somewhere else. If you have already read unscoped, re-read scoped rather than reasoning
    from the wide number, and do not narrate the correction to the owner.
 → Window from the remittance debit · collected = the report cut to the window · shortfall = collected − reserve, floor 0
-→ Reply: true available first, the terms, the missed sweep days, ONE transfer line, "Stage the catch-up?"
+→ Reply: true available first, the terms, the missed sweep days, ONE transfer line, "Move the catch-up?"
 User: "yes"
-→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<Operating>,
-                                     toAccountNumber:<Tax Reserve>, amount:<shortfall>}]}   → confirmation_url renders
-→ One closing line: staged, nothing has moved.
+→ ONE transfer_funds {fromAccountNumber:<Operating>, toAccountNumber:<Tax Reserve>,
+                      amount:<shortfall>, description:"Sales-tax catch-up: sweeps missed <dates>"}
+→ get_account_balance {accountNumber:<Tax Reserve>}   → the reserve balance, read back
+→ One closing line: moved, Tax Reserve now $X and covers the next remittance (or still short by $Y).
 ```
 
 If `list_accounts` does not carry balances, add `get_account_balance` for
 Operating and the Tax Reserve to the **same** turn. Nothing else is read: no
 balance sheet, no ledger, no calendar, no per-invoice loop, no pending pull.
-Budget: about 30 seconds, at most six calls including the stage.
+Budget: about 30 seconds, at most six calls including the transfer and its balance read.
 
 ## Sources of truth
 
@@ -81,7 +82,7 @@ Budget: about 30 seconds, at most six calls including the stage.
   `byPayment[]`. Never rebuild it from `search_payments` + `read_invoice`.
 - **Paywhere**: the reserve balance, the remittance debits (which month was
   last paid, and on what day), the sweep credits (which weekday the owner
-  sweeps, and which weeks were skipped), and the staged transfer.
+  sweeps, and which weeks were skipped), and the catch-up transfer.
 
 ## Workflow
 
@@ -97,7 +98,7 @@ Issue the four reads in the Quick start in **one turn**. Identify accounts by
 role, never by number: **Operating** (the primary checking), **Tax Reserve**
 (the savings account whose name mentions tax or reserve), **Business
 Savings** (any other savings — reported, never touched). If no account reads
-as a tax reserve, run the rest as "collected vs nothing set aside" and stage
+as a tax reserve, run the rest as "collected vs nothing set aside" and propose
 nothing.
 
 The remittance stem is the revenue agency's name as it appears on the
@@ -163,34 +164,34 @@ available figure, name it in one clause; never spend a call on it and never
 subtract it. Owner income-tax estimates are paid from Operating, not the
 reserve — `../tax-season-organizer` covers them; do not compute them here.
 
-### 6. Propose the catch-up — ONE `make_batch_payment`
+### 6. Propose the catch-up — one line, one question
 
 If `shortfall > 0`, the reply ends with one line — Operating → Tax Reserve,
-amount = shortfall, why (the missed sweep days) — and exactly **"Stage the
-catch-up?"** A single internal transfer needs no dry run; the line in the
-reply is the gate. On the owner's yes, ONE call:
+amount = shortfall, why (the missed sweep days) — and exactly **"Move the
+catch-up?"** The yes in the reply is the gate: an internal transfer between
+the owner's own accounts is reversible and needs no approval page, so nothing
+is staged and nothing moves until the owner answers. If `shortfall == 0`, say
+the reserve is funded and by how much it exceeds what is owed. Never propose
+moving money **out** of the reserve for anything but a remittance; never
+touch Business Savings here.
+
+### 7. Move — ONE `transfer_funds`, then read the balance
+
+On the owner's yes, ONE call:
 
 ```json
-{ "payments": [ { "rail": "transfer",
-                  "fromAccountNumber": "<Operating, exact unmasked from list_accounts>",
-                  "toAccountNumber":   "<Tax Reserve, exact unmasked>",
-                  "amount": <shortfall> } ] }
+{ "fromAccountNumber": "<Operating, exact unmasked from list_accounts>",
+  "toAccountNumber":   "<Tax Reserve, exact unmasked>",
+  "amount": <shortfall>,
+  "description": "Sales-tax catch-up: sweeps missed <dates>" }
 ```
 
-The bank's card and link render from the result; the reply after it is one
-to three lines: `confirmation_title` over `confirmation_url`, the URL in
-plain text too, and *"Nothing has moved. Approve on the bank's page with
-your passkey; I can verify the transfer posted afterwards."* A rejected call
-comes back as `{ error, invalid_items[] }` — fix the line and re-submit once.
-Never invent a URL. If `shortfall == 0`, say the reserve is funded and by
-how much it exceeds what is owed. Never propose moving money **out** of the
-reserve for anything but a remittance; never touch Business Savings here.
-
-### 7. After the owner approves — verify on request
-
-"I approved it" → `query_transactions {accountNumbers:[<Tax Reserve>],
-direction:"credit", dateFrom:<today>}` once, match the amount, report what
-posted. Never report this before the owner approves.
+It executes at once. Then `get_account_balance` on the Tax Reserve and report
+what the bank now shows, in one to three lines: the amount moved, the reserve
+balance after it, and that it now covers the next remittance (or by how much
+it still falls short). If the call returns `{ error }`, say so in one line and
+do not claim a move. Never before the yes; never from any account but
+Operating; never to any account but the Tax Reserve.
 
 ## Reply template (under 25 lines; the number first)
 
@@ -204,21 +205,21 @@ Shortfall                        ${s}   ← {n} {weekday} sweeps missed: {dates}
 Due {next remittance date}: ${t} — reserve {covers it / short ${s}, {k} days to go}
 Business Savings ${b} (not in the formula) · pending authorizations ${p} already netted by the bank
 
-Catch-up: transfer Operating → Tax Reserve ${s}. Stage the catch-up?
+Catch-up: move Operating → Tax Reserve ${s}. Move the catch-up?
 ```
 
-After the stage, under the card:
+After the move and the balance read:
 
 ```
-Staged for approval: Operating → Tax Reserve ${s} — {confirmation_title}
-{confirmation_url}
-Nothing has moved until you approve this on the bank's page.
+Moved Operating → Tax Reserve ${s}. Tax Reserve now ${r+s} — covers the ${t} due {next remittance date}.
 ```
 
 ## Scheduled runs
 
-No owner present: stage the catch-up without asking, print the URL in the run
-output, dedupe on the day's output file — see
+No owner present: nobody can say yes, so stage the catch-up instead — a
+`{rail: "transfer", …, description}` line in `make_batch_payment` — print the
+URL in the run output so the notification carries a review link, and dedupe
+on the day's output file — see
 [`../_shared/AUTONOMY.md`](../_shared/AUTONOMY.md). The weekly sweep itself
 is [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md).
 
@@ -226,16 +227,17 @@ is [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md).
 
 | Missing | Effect |
 |---|---|
-| Paywhere | Stop — no reserve balance, no sweep history, nothing to stage. |
-| quickbooks | Report the reserve balance, the sweep history and the next remittance day; say the collected figure cannot be computed; stage nothing. |
-| No reserve account | Report collected vs "nothing set aside"; stage nothing; suggest opening one. |
+| Paywhere | Stop — no reserve balance, no sweep history, nothing to move. |
+| quickbooks | Report the reserve balance, the sweep history and the next remittance day; say the collected figure cannot be computed; propose nothing. |
+| No reserve account | Report collected vs "nothing set aside"; propose nothing; suggest opening one. |
 
-## Approval gates
+## Gates
 
-- **Money moves only on the bank's `/confirm` page with a passkey.** This
-  skill stages; it never executes and never says it did.
-- **Never `transfer_funds`.** The catch-up is a `transfer` line in
-  `make_batch_payment`.
+- **The catch-up moves only on the owner's explicit yes** — one
+  `transfer_funds`, Operating → Tax Reserve, then a balance read. Never
+  before the yes; never claim a move the read did not confirm.
+- **No vendor payment from this skill.** Anything that is not an internal
+  transfer stages through `make_batch_payment` and is another skill's job.
 - **Never move money out of the reserve** except a remittance the owner
   asked for; **never touch Business Savings** here.
 - **Exact, unmasked account numbers** from `list_accounts`, never typed.

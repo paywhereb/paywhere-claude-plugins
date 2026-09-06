@@ -218,7 +218,8 @@ paywhere-claude-plugins/
 │   └── marketplace.json     # marketplace manifest
 ├── README.md                # you are here
 ├── demo/
-│   └── seed.md              # demo / sales-asset sandbox seeding notes
+│   ├── LIVE-SCRIPT.md       # the Nick's HVAC live demo: what to type, in order
+│   └── SCENARIOS.md         # setup, the FI seat, the live injects
 ├── paywhere-smb/            # the SMB plugin
 │   ├── .claude-plugin/
 │   │   └── plugin.json
@@ -278,10 +279,10 @@ the config schema and field reference.
 
 ## Demo
 
-See [`demo/seed.md`](demo/seed.md) for instructions on standing up a
-QuickBooks Online sandbox company + a seeded Paywhere mock-dev
-environment for end-to-end demos of `/pay-bills`, `/plan-payroll` and
-`/daily-cash-brief`.
+The Nick's HVAC demo: [`demo/LIVE-SCRIPT.md`](demo/LIVE-SCRIPT.md) is what to
+type, in order; [`demo/SCENARIOS.md`](demo/SCENARIOS.md) covers the Cowork
+project setup (`/demo-setup` on the hosted sandbox), the FI seat and the live
+injects.
 
 ## Provenance
 

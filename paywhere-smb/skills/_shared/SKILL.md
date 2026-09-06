@@ -1,6 +1,6 @@
 ---
 name: conventions
-version: 1.0.2
+version: 1.0.3
 description: >
   (Reference skill) Explains how money moves and how unattended runs behave in
   this plugin: every payment or transfer is staged as a proposal and approved

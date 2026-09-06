@@ -1,6 +1,6 @@
 ---
 name: smb-onboard
-version: 1.0.3
+version: 1.0.4
 description: >
   Claude as the trainer. Walks a small-business owner through connecting
   their first two tools, answers one real question against live data to

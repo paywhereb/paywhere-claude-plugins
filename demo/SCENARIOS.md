@@ -1,316 +1,177 @@
-# Nick's HVAC — run-of-show (SCENARIOS.md)
+# Nick's HVAC — setup, the FI seat and the injects (SCENARIOS.md)
 
-Copy-paste prompts for every beat in blueprint §8, what the presenter should
-see (and which answer-key field it comes from), the live injects, the
-rehearsal checklist, and what is not in this build. Persona and data:
-[`../paywhere-smb/DATASET.md`](../paywhere-smb/DATASET.md). Setup and
-troubleshooting: [`presenter-kit.md`](presenter-kit.md). The blueprint is
-`paywhere-mcp/docs/plans/nicks-hvac-demo-blueprint.md`.
+What the presenter needs that is not a prompt. The prompts, in order, with
+timings and what to point at, are [`LIVE-SCRIPT.md`](LIVE-SCRIPT.md). Persona
+and data: [`../paywhere-smb/DATASET.md`](../paywhere-smb/DATASET.md).
 
 **How to read the answer key.** `/demo-setup` prints `answerKeySummary`; its
 paths are the `AnswerKey` shape in
 `paywhere-mcp-api/src/demo/world/types.ts`, and the full key for a demo date
-is `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`
-(`answer-key-2026-09-02.json` for the September 2026 run). Every "you should
-see" below names the path. Numbers roll with the date model, so read them
-from the setup report or the fixture, not from this file. The **fixed**
-figures — agreement amounts and the staged live-surface amounts: Westport
-**$7,200** overdue, Trane **$11,400** to hold, bills due this week Johnstone
-**$6,850** / Voltage **$2,150** / Ironclad **$1,900**, the St. Anselm **$520**
-agreement check **#4471**, the Angi **$349** debit — are in DATASET.md. Every
-other figure in this file is marked ≈ and is the September 2026 value.
+is `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`.
+Numbers roll with the date model, so read them from the setup report or the
+fixture, never from a document. The **fixed** figures — agreement amounts and
+the staged live-surface amounts — are in DATASET.md.
 
-**Voice.** Acts 1–3 are the owner talking to their finance agent in Claude
-Cowork. Only `/demo-setup` and the injects are presenter commands. Every
-money beat ends the same way: a `/confirm/<id>/<nonce>` link, opened on the
-bank, approved with a passkey. Say once, early: *"Nothing moves from chat.
+**Voice.** In the room the owner is talking to his finance agent in Claude
+Cowork; only `/demo-setup` and the injects are presenter commands. A vendor
+payment ends with a `/confirm/<id>/<nonce>` link, opened on the bank,
+approved with a passkey. Say once, early: *"Nothing pays a vendor from chat.
 The bank's page is where the approval happens."*
 
 ---
 
 ## Act 0 — Setup (presenter, before the meeting)
 
+### Accounts and connectors
+
+| Connector | What it is | Sign in as |
+|---|---|---|
+| **Paywhere** (`https://demo.dev.paywhere.com/mcp`) | The demo bank via the Paywhere MCP; carries the demo-seeder tools | The bank user `/demo-setup` returns (rotates per run; also posted to the demo Slack channel and kept in 1Password) |
+| **quickbooks** (`https://qbo.dev.paywhere.com/mcp`) | Custom, read-only QBO MCP over the shared sandbox company; reseeds daily 5am ET | QBO sandbox OAuth (1Password) |
+| **gmail** (`https://gmailmcp.googleapis.com/mcp/v1`) | Google's Gmail MCP | **demo-nick@paywhere.com** ("Nick Adler (Nick's HVAC)") |
+| **google calendar** (`https://calendarmcp.googleapis.com/mcp/v1`) | Google's Calendar MCP | demo-nick@paywhere.com |
+
+No Google Drive. Files (briefs, sweep records, the bank package — all
+markdown) are written into the **Cowork working folder** by Cowork itself.
+
+The mailbox and calendar are **shared** across presenters (like the books);
+only the bank world is per presenter. Mail and events are inserted by the
+Google seed script (`paywhere-qbo-mcp/scripts/seed-google.mjs`, runbook
+`paywhere-mcp/docs/runbooks/demo-gmail-token.md`) with dates relative to the
+same `dateModel`; run `--check` in the demo week.
+
+### The Cowork project
+
 1. In Cowork, create a project for the demo and paste
    [`cowork-project-prompt.md`](cowork-project-prompt.md) into its
    instructions (persona, answer style, money-movement rules, tool-field
-   hygiene — the steer the skills deliberately do not carry).
-2. Connect the four connectors in that project — Paywhere
-   (`demo.dev.paywhere.com/mcp`), quickbooks, Gmail and Google Calendar —
-   signed in as **demo-nick@paywhere.com** for the Google pair
-   ([`presenter-kit.md`](presenter-kit.md) §1).
-3. Side-load `dist/paywhere-smb-1.0.17.plugin` (presenter-kit §2).
-4. **Set the model to Claude Sonnet 5 at MEDIUM effort** (Brett, 2026-09-04).
-   This is measured, not a preference: across the whole suite medium landed
-   5 of 10 beats and was the only setting where the pay-bills beat passed
-   every run; low landed 4 and degraded even a plain balance question, and
-   the API default (high) put every beat over the wall clock. The scenario
-   eval is locked to the same setting, so the grading run and the demo behave
-   alike — do not change one without the other.
+   hygiene — the steer the skills deliberately do not carry; the scenario
+   eval reads the same file as its system prompt).
+2. Connect the four connectors above in that project, signed in as
+   **demo-nick@paywhere.com** for the Google pair.
+3. Build and side-load the plugin:
+
+   ```bash
+   git clone https://github.com/paywhereb/paywhere-claude-plugins.git
+   cd paywhere-claude-plugins
+   ./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.23.plugin
+   ```
+
+   In Cowork, use the "side-load a plugin file" picker and choose
+   `dist/paywhere-smb-1.0.23.plugin`; pick a working folder (the skills write
+   `briefs/`, `sweeps/`, `savings/` and `bank/` under it). Any plugin change
+   bumps the version, or clients keep the old behaviour.
+4. **Set the model to Claude Sonnet 5 at MEDIUM effort.** This is measured,
+   not a preference: medium was the only setting where the pay-bills beat
+   passed every run; low degraded even a plain balance question, and high
+   put every beat over the wall clock. The scenario eval is locked to the same
+   setting so the grading run and the demo behave alike — do not change one
+   without the other.
 5. Then, in the project:
 
-```
-/demo-setup
-```
-(optional: `/demo-setup username: brett`)
+   ```
+   /demo-setup
+   ```
+   (optional: `/demo-setup username: brett`)
 
-Approve the gate. The seed is **asynchronous**: the skill polls
-`get_demo_world` for ≈ 4–6 minutes and shows progress. Then it reads the
-world back through the connector and reports. Record the **bank
-username/password** (also posted to the demo Slack channel).
+   Approve the gate. The seed is **asynchronous**: the skill polls
+   `get_demo_world` for ≈ 4–6 minutes and shows progress, then reads the
+   world back through the connector and reports. Record the **bank
+   username/password** (also posted to the demo Slack channel).
 
-You should see, from the report:
+   You should see, from the report:
 
-| Report line | Answer-key path |
-|---|---|
-| Operating / Tax Reserve / Business Savings balances (read back == `expectedClosing`) | `balances.operating`, `balances.taxReserve`, `balances.savings` |
-| True available cash and its formula | `trueAvailable.amount`, `trueAvailable.formula` |
-| Reserve balance, collected-not-remitted, **shortfall**, missed Fridays, next remittance | `tax.reserveBalance`, `tax.collectedNotRemitted.total`, `tax.shortfall`, `tax.missedSweeps`, `tax.nextRemittance` |
-| Largest overdue invoice; the received-but-unbooked check | `ar.largestOverdue`, `ar.unbookedReceipt` |
-| Bills due this week with rails; hold candidates | `ap.dueThisWeek`, `ap.holdCandidates` |
-| Friday payroll date, estimate, headroom | `payroll.nextPayDate`, `payroll.estimatedTotal`, `payroll.headroomAfterPayroll` |
-| Subscriptions monthly total | `subscriptions.monthlyTotal` |
-| Readback ✓ ×4: balances, payees (count + wire/ACH spot-check), enrichment, unbooked check | — |
-| `dateModelSource: "provided"` | — |
+   | Report line | Answer-key path |
+   |---|---|
+   | Operating / Tax Reserve / Business Savings balances (read back == `expectedClosing`) | `balances.operating`, `balances.taxReserve`, `balances.savings` |
+   | True available cash and its formula | `trueAvailable.amount`, `trueAvailable.formula` |
+   | Reserve balance, collected-not-remitted, **shortfall**, missed sweeps, next remittance | `tax.reserveBalance`, `tax.collectedNotRemitted.total`, `tax.shortfall`, `tax.missedSweeps`, `tax.nextRemittance` |
+   | Largest overdue invoice; the received-but-unbooked check | `ar.largestOverdue`, `ar.unbookedReceipt` |
+   | Bills due this week with rails; hold candidates | `ap.dueThisWeek`, `ap.holdCandidates` |
+   | Payroll date, estimate, headroom | `payroll.nextPayDate`, `payroll.estimatedTotal`, `payroll.headroomAfterPayroll` |
+   | Readback ✓ ×4: balances, payees (count + wire/ACH spot-check), enrichment, unbooked check | — |
+   | `dateModelSource: "provided"` | — |
 
-If `get_demo_dates` says `seeded: false`, the books have not reseeded yet —
-wait or ping the QBO demo owner; do not demo on unaligned dates.
+   If `get_demo_dates` says `seeded: false`, the books have not reseeded yet —
+   wait or ping the QBO demo owner; do not demo on unaligned dates.
 
-Optional: pick the prospect's brand at `/poc-admin`.
+6. Run `/demo-inject` ("simulate Westport paying") if the tax sweep is on the
+   agenda — the demo bank posts nothing after the most recent Sunday, so
+   without a deposit this week the sweep is a correct but dull $0.
+7. **Pre-run the agents** (`Run the tax sweep`, `Run the savings sweep`) so
+   their files and staged proposals exist before the room fills; do not
+   approve them yet. Enrol the passkey for the demo bank user by opening any
+   `/confirm` page once.
+8. For the opener, sign a claude.ai or Claude Desktop window in with the same
+   bank user and only the Paywhere custom connector — no plugin loads there,
+   which is the point of the beat.
 
-**Pre-run Act 3** now (see Act 3) so the brief, the sweep file and their
-staged proposals exist before the room fills.
+### The never-send safeguards (a demo never sends email)
 
----
+Three layers; all three must be in place before a live demo:
 
-## Act 1 — The assistant (interactive, in Cowork)
+1. **Skills.** Every skill uses Gmail `create_draft` only; the eval fails any
+   transcript that calls send/reply/forward. Calendar events (only when the
+   owner asks for a reminder) are created without attendees.
+2. **Workspace.** The Google Workspace admin restricts outbound delivery for
+   `demo-nick@paywhere.com` (Gmail "Restrict delivery" to paywhere.com, or a
+   routing rule rejecting outbound for its OU) so an accidental send bounces
+   inside Google.
+3. **Client.** Deny the send tools at the client: in Claude Code,
+   `permissions.deny` for the Gmail `send_message`, `reply`, `forward` tools
+   (and the Drive tools, which are not used); in Cowork, uncheck those tools
+   in the Gmail connector's permissions for the demo profile.
 
-Every beat below is six tool calls or fewer and lands in about thirty
-seconds; a beat that cannot is not in this list. "How is my business doing?"
-is a plain question now (balances, aging, P&L in a few calls, no skill), as
-are "show my balances" and "who owes me money". Longer showpieces — the bank
-package after 1.8, the daily brief — are shown from the scrollback of an
-earlier Cowork run; no transcript files are checked in.
+Drafts pile up in the shared mailbox; the Google reseed clears the previous
+day's demo drafts.
 
-Bank-only fact in **bold** — say it out loud; it is the reason the FI is
-buying the connector.
+### Troubleshooting
 
-### 1.0 Warm-up — bare connector, no plugin (claude.ai or Claude Desktop)
-
-Add only the Paywhere custom connector (`https://demo.dev.paywhere.com/mcp`),
-sign in as the demo bank user. Paste, one at a time:
-
-```
-What's my balance?
-```
-```
-What have I spent at Johnstone this year?
-```
-```
-Pay Voltage Electric $2,150 by ACH
-```
-
-You should see: three accounts; a 12-month spend figure for the parts
-supplier from descriptor search; the saved payee resolving **by name**, a
-staged proposal and a `/confirm` link — open it, approve with the passkey.
-**The connector stands alone before skills add judgment.** FI seat:
-Connections + Money Movement show the session and the batch.
-
-### 1.2 — Profit to cash
-```
-QuickBooks says I made about $14k in August. Why doesn't my bank balance move with my profit?
-```
-(Swap in the last complete month and `cashBridge.netIncome` rounded — the
-prompt is deliberately neutral about direction: for a September demo August
-cash rose by **more** than profit because the summer receivables were
-collected; in a slow month it falls while profitable. The skill answers
-either way.) You should see the bridge: `cashBridge.netIncome` → `deltaAR`
-(negative in September = prior months' invoices collected), `distributions`
-($9k quarterly, Aug 25), `ownerTaxes`, `taxSweepsToReserve`,
-`equipmentAndStocking`, `earlyVendorPayments` → `operatingCashChange`, with
-the top drivers named (`cashBridge.drivers`) and the line "that cash was
-earned in June–July; it swings back when invoicing rises". **What actually
-cleared and when.**
-
-### 1.3 — Who owes me
-```
-Who owes me money and who do I call first?
-```
-Four to six calls. You should see: the aging (`ar.aging`), a chase order
-ranked by cash impact and lateness (`ar.chaseOrder`) with the tone set by
-each customer's bucket mix, up to three Gmail **drafts** (never sent), and one
-customer **excluded** because their check landed at the bank this week but
-is not yet applied in the books (`ar.unbookedReceipt`; **received-but-
-unbooked credit** — only the bank knows). FI: `accounts_receivable`.
-
-### 1.4 — Pay the bills due this week → one batch
-```
-Pay the bills due this week
-```
-You should see (one turn, ~15 s): a table of the bills due within 7 days with
-rails (`ap.dueThisWeek` — Johnstone and Voltage by ACH, Ironclad by wire, the
-smaller Trane bill), the batch total against Operating and the balance after,
-the **$11,400 Trane bill listed as not yet due** (due 9/17 — "pay it on the
-due date, not two weeks early"), and the question **"Stage these?"**. The
-dry run behind the table renders no card.
-```
-Yes
-```
-You should see: the bank's batch card with its `/confirm` link and title,
-then one or two lines: staged, nothing has moved, what QuickBooks would book.
-Open the link on the bank, approve with the passkey. **One approval, on the
-bank's surface.** FI: Money Movement shows the batch awaiting → approved.
-Six tool calls in total; open bills only, never the year's history. "Am I
-paying anyone early?" is a separate beat (`ap-timing`, not in the live show).
-
-### 1.5 — Payroll
-```
-Am I good for payroll Friday?
-```
-You should see: the equation (available − reserve shortfall − obligations
-through Friday + 7 days) with the payroll date and estimate from the bank's
-processor debits (`payroll.nextPayDate`, `payroll.estimatedTotal` ≈ $11.1k,
-`payroll.headroomAfterPayroll`); if tight,
-"collect X" ranked first, never "raid the reserve". **Live posting** — now
-inject (below) and paste:
-```
-Westport just paid — check again
-```
-You should see the headroom move by exactly the injected amount.
-
-### 1.6 — How much is really mine
-```
-How much of my balance is actually mine?
-```
-You should see: sales tax collected on **received** payments since the last
-remittance, by state (`tax.collectedNotRemitted`), the Tax Reserve balance
-(`tax.reserveBalance`), the **shortfall** (`tax.shortfall`, ≈ $2.8k in
-September), the missed Fridays (`tax.missedSweeps` — the last two are this
-month's; the three Oct–Nov ones are the history), the 20th
-(`tax.nextRemittance`), and a proposed
-catch-up transfer Operating → Tax Reserve staged as a batch **transfer**
-line with a `/confirm` link. **The reserve balance is a bank fact.** FI:
-`tax_compliance`.
-
-### 1.8 — The van → what to bring the bank (the #1 beat)
-
-Paste exactly this first — a plain yes/no with an amount and a time. It must
-route to `big-purchase-decision`, and the first two sentences of the reply
-must be the verdict:
-```
-Can I afford to buy a van this week for $58,500?
-```
-Five tool calls, four of them in one parallel turn (balance, 12 monthly
-nets, the payroll debits, one mailbox search) plus the thread read; no
-calendar call — the dealer's email names the Tuesday appointment and says
-the quote is good through it, the lender's names the Thursday meeting.
-You should see, up front: **"Not in cash this week — yes, financed."**
-$58,500 in cash leaves about $11k against a payroll-plus-a-week cushion of
-~$13k, and last year's cash fell ~$55k from a month like this one to
-February; $10,000 down leaves ~$59k and $989.22/mo (`van.financing.
-monthlyPayment`) plus $165 insurance is a small share of an average month's
-debits. Then a twelve-month-end table: the highest three months are the
-safest to buy (`van.safestPurchaseMonths`, Aug/Mar/Jun in September), the
-lowest three (`van.riskyMonths`, Jan/Jul/Dec) are where a second payment
-stream would land — so **defer van #2** (`van.secondVanVerdict`). The Tax
-Reserve and Business Savings are excluded from spendable cash; the reserve
-shortfall is not computed here (that is 1.6). **Historical month-ends,
-seasonality of cash — what the P&L cannot show.** Follow-ups, one at a time:
-```
-Cash or finance?
-```
-```
-When is the safest month?
-```
-```
-What about a second van before next summer?
-```
-```
-/credit-readiness I'm going to the bank about financing the van.
-```
-→ `credit-readiness`: the loan-application package written to the working
-folder (`bank/credit-readiness-<date>.md`). **Type the slash command** — the
-skill is `disable-model-invocation` as of 1.0.16, so no question routes to it
-and asking "what should I bring to the bank" will not start it; the van skill
-answers short and names it instead. This is the long beat (~2 minutes): show
-it from **an earlier run's scrollback**, not live. Nothing is checked in, so
-run it once before the demo and leave it on screen.
-
-**FI seat (paywhere-admin → Intents):** with the project prompt in place,
-the `intent` on every call in this beat is Nick's question in his own words
-("decide whether to finance a $58,500 van or pay cash"), so the Intents
-screen shows **`financing_debt` rising** during the beat — the CRO's warm
-loan lead. If it stays flat, the calls did not carry the financing words:
-the skills no longer word that field, so check the Cowork project's
-instructions are [`cowork-project-prompt.md`](cowork-project-prompt.md)
-(§Tool fields).
-
-## Act 3 — The agent (Cowork scheduled tasks)
-
-Pre-run both before the meeting so outputs and staged proposals exist. In the
-room: show the schedule, open the output file, open the `/confirm` link,
-approve.
-
-### 3.1 — Daily cash brief
-
-Cowork → Scheduled tasks → new task:
-
-- **Schedule:** `Every weekday at 7:30am`
-- **Prompt:** `Run my morning cash brief`
-
-Run it once now. You should see `briefs/<today>.md`: balances, true
-available, today's calendar obligations, exceptions (overdue with no credit,
-due bills, not-yet-due bills from habitually-early vendors, reserve
-shortfall, pending), and ONE
-staged batch — reserve top-up transfer + due bills — with the `/confirm`
-link and *"Nothing has moved until you approve this on the bank's page."*
-FI: Intents shows `sessionType: scheduled`; Money Movement shows an
-agent-staged batch awaiting a human.
-
-### 3.5 — Friday tax sweep
-
-- **Schedule:** `Every Friday at 4:00pm`
-- **Prompt:** `Run the Friday tax sweep`
-
-You should see `sweeps/<date>.md`: this week's received payments matched to
-bank credits, the sales tax on them by state, and the staged Operating → Tax
-Reserve **transfer** with the `/confirm` link (`tax.lastSweep` after
-approval). This is Nick's manual Friday habit, automated and still approved
-by him.
-
-> **Presenter note.** The demo bank posts nothing after the most recent
-> Sunday, so on any weekday "this week's received payments" is empty and the
-> sweep is a correct but dull **$0**. Before this beat, run `/demo-inject`
-> ("simulate Westport paying") so a payment lands this week; the sweep then
-> has real tax to stage. The first live eval confirmed the $0 path behaves.
-
-### Not scheduled in this build (see "Not in this build")
-
-3.2 `ar-chase-agent` (Mon 8am), 3.3 `tax-remittance-agent` (18th), 3.4
-`settlement-reconcile-agent` (nightly). Their interactive equivalents exist:
-`invoice-chase`, `tax-reserve-check`, `month-end-prep`.
+| Symptom | Cause | Fix |
+|---|---|---|
+| `/demo-setup` stops at preflight: seeder tools absent | Not a demo deployment / wrong connector URL | Point Paywhere at `demo.dev.paywhere.com/mcp` |
+| `get_demo_dates` → `seeded: false` | Books not reseeded yet | Wait for 5am ET or ask the QBO demo owner to run the manual reseed |
+| Balances ≠ `expectedClosing` in readback | Seed job had failures, or the connector re-authorized with old credentials | Re-run `/demo-setup`; re-auth with the NEW credentials |
+| `get_transaction_detail` → `null` on the recurring debit | Enrichment keyed to another world (old creds) | Re-run `/demo-setup` |
+| A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch | Readback catches it; re-run `/demo-setup` |
+| `/confirm` link 404 | Nonce dropped after `?` or copied partially, or proposal expired | Copy the full path form `/confirm/<id>/<nonce>`; re-stage if expired |
+| Money tool returns `{ error: "…no proposal store (stdio mode)…" }` | Running against a local stdio server | Use the HTTP demo deployment |
+| A transfer line fails on the confirm page with `Upstream HTTP 500` | Old connector build: the bank requires a transfer `description` the connector did not send | Redeploy the connector with the ENG-437 fix; the skills pass a description on every transfer |
+| A skill says "paid ✓" for a staged payment | Stale skill text | You are on an old plugin build; rebuild and side-load the current version |
+| Intents shows no `financing_debt` move during the van beat | Project prompt missing — the skills do not word the `intent` field | Check the Cowork project's instructions carry `cowork-project-prompt.md` (§Tool fields) |
+| Gmail draft shows up as sent | Client denies not applied | Stop; check the never-send layers; the Workspace restriction should have bounced it |
+| Scheduled task did not fire | Cowork must be open; local schedule | Pre-run before the meeting; in the room show the schedule and the file |
+| Cowork picked the wrong skill | Phrase too far from the description triggers | Use the exact LIVE-SCRIPT.md text; or name the skill |
+| A beat runs long (> 6 calls, or well past its LIVE-SCRIPT timing) | Skill drifted from its call plan | Compare the tool calls with the skill's Quick start; report it — the eval budgets every case |
+| `query_transactions` → `truncated: true` | > 4,000 rows scanned | Skills read scoped and bounded; if it persists the world is oversized — report |
 
 ---
 
 ## Act 4 — The FI seat (paywhere-admin)
 
-Walk, in order:
+Everything in LIVE-SCRIPT is Nick's story; this is the bank's. Walk, in order:
 
-1. **Intents** — category mix over the session: `cash_flow_management`,
-   `accounts_receivable`, `tax_compliance`, `spend_analysis`, and the
-   **`financing_debt` spike from 1.8** (the classifier keys on loan / lease /
-   financ- / line of credit / debt in the `intent` text — the van beat's
-   calls carry those words). Filter `sessionType: scheduled` to show the
-   3.1/3.5 runs.
+1. **Intents** — category mix over the session: `cash_flow_management` from
+   the balance question, `accounts_payable` and `payment_operations` from
+   pay-bills, `payroll_compensation` from the payroll beat,
+   `transfers_treasury` / `tax_compliance` from the two sweeps, and the
+   **`financing_debt` rise during the van beat** (the classifier keys on loan
+   / lease / financ- / line of credit / debt in the `intent` text — with the
+   project prompt in place, the van beat's calls carry Nick's question in his
+   own words). Filter `sessionType: scheduled` to show the two agents' runs.
 2. **Connections** — the demo owner's consent grant to Claude; the bare
-   connector session from 1.0.
-3. **Money Movement** — the batches from 1.0, 1.4, 1.6, 3.1, 3.5: staged →
-   approved (passkey) → executed; the transfer lines alongside vendor lines.
-4. Fraud Review is left out this round (D11).
+   connector session from the opener.
+3. **Money Movement** — the batches from the opener and pay-bills: staged →
+   approved (passkey) → executed, the wire beside the ACH lines; the agents'
+   staged transfers awaiting a human; a direct transfer (a payroll top-up,
+   say) as an executed internal move with no proposal.
+4. Fraud Review is left out this round.
 
 Talking point: the bank sees aggregates and money movement, never
-conversation text. The screens' background is the generic multi-business
-snapshot; Nick's HVAC is one business in it, and everything just done is
-appended live.
+conversation text. `sessionType` is asserted by the client, not verified by
+the server — say so if asked. The screens' background is the generic
+multi-business snapshot; Nick's HVAC is one business in it, and everything
+just done is appended live.
 
 ---
 
@@ -321,13 +182,13 @@ connector; the skill resolves the Operating account and reads amounts from
 the live answer key). Injects are permanent for this world — re-run
 `/demo-setup` before the real demo if you inject in rehearsal.
 
-**Westport just paid** (use in 1.5):
+**Westport just paid** (before the tax sweep, or to move the payroll headroom live):
 ```
 Inject a deposit: simulate Westport paying its largest overdue invoice — post an ACH credit to Operating with the customer's AP descriptor.
 ```
 Then, owner voice: `Westport just paid — check again`. Effect:
 `ar.largestOverdue` clears; `trueAvailable` and payroll headroom rise by the
-amount.
+amount; the tax sweep has real tax to stage.
 
 **Emergency call invoice** (cash side only — the books are read-only):
 ```
@@ -345,33 +206,17 @@ Pending card authorizations cannot be injected (posted rows only).
 
 ---
 
-## Rehearsal checklist
+## Not in this build
 
-- [ ] Cowork project created; `cowork-project-prompt.md` pasted as its instructions; plugin 1.0.13 side-loaded.
-- [ ] `/demo-setup` completed; readback ✓ ×4; credentials recorded; `dateModelSource: "provided"`.
-- [ ] Gmail (`demo-nick@paywhere.com`) and Calendar connected in Cowork; the Google seed ran this week (`seed-google.mjs --check`).
-- [ ] Bare-connector session (1.0) signed in on a second window with the same bank user.
-- [ ] Passkey enrolled for the demo bank user on the `/confirm` page (or TOTP ready).
-- [ ] Act 3 pre-run: `briefs/<today>.md` and `sweeps/<last Friday>.md` exist; their `/confirm` links open.
-- [ ] paywhere-admin open on Intents with the demo business filter.
-- [ ] Never-send safeguards in place (presenter-kit.md): Gmail send/reply/forward denied in the client; outbound restricted on the mailbox.
-- [ ] Every Act 1 prompt pasted once this week; Cowork picked the intended skill from the catalog and each beat finished in about 30 s.
-- [ ] 1.8 specifically: "Can I afford to buy a van this week for $58,500?" reached `big-purchase-decision`, the verdict was in the first two sentences, and Intents showed `financing_debt` move.
-- [ ] 1.2 wording updated to last month's `cashBridge.netIncome`; the reply bridged the real direction.
-- [ ] Inject prompts tested once, then `/demo-setup` re-run.
-- [ ] Say-out-loud lines rehearsed: the bank-only fact per beat; "nothing moves from chat".
+Deferred agents, in the blueprint's priority order. None has an interim
+answer in the plugin; the interactive skills that once stood in for them were
+archived (see [`archive/README.md`](archive/README.md)).
 
----
-
-## Not in this build (deferred, blueprint §10.1 order)
-
-| Item | Why deferred | Interim |
-|---|---|---|
-| `settlement-reconcile-agent` (3.4 nightly) | time | `month-end-prep` / `close-month` do gross-to-net matching, unposted fees, unrecorded card purchases interactively |
-| `ar-chase-agent` (3.2 Mon 8am) | time | `invoice-chase` interactively; the drafts-only rule is the same |
-| `referral-fees` skill (partner → rule → trigger-on-collection) | time | `quarterly-review` names referral sources and fee bills; no owed-vs-not-yet-payable computation |
-| `tax-remittance-agent` (3.3 18th) | time | `tax-reserve-check` reports the 20th's amounts by state; remittance staging can be asked for interactively |
-| Pre-warmed world pool (instant `/demo-setup`) | server | async seed, ≈ 4–6 min |
-| `query_transactions groupBy: counterparty` | server | skills categorize from a bounded 12-month pull by descriptor stem |
-| Fraud beat | D11 | — |
-| Eval cases beyond the first 8–10 | time | rehearsal checklist |
+| Agent | Why deferred |
+|---|---|
+| `ar-chase-agent` (Monday 8am reminder drafts) | time; the bank contributes nothing to a chase list |
+| `tax-remittance-agent` (stages the remittance on the filing day) | time |
+| `settlement-reconcile-agent` (nightly gross-to-net matching) | time |
+| Pre-warmed world pool (instant `/demo-setup`) | server; the async seed is ≈ 4–6 min |
+| `query_transactions groupBy: counterparty` | server; recurring-debit detection needs it |
+| Fraud beat | left out this round |

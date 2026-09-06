@@ -65,10 +65,15 @@ inside the skill's call budget, say so in one line, subtract nothing, and name
 The floor the operating account should not drop below once money leaves.
 
 ```
-buffer = one payroll run (mean of the last three) + one week of average outflows
+buffer = mean of the last three payroll runs + one week of average outflows
 ```
 
-Not a percentage, not a round number, and **not the worst week in the
+**One week of average outflows** is the total posted debits on the operating
+account over the lookback ÷ the weeks in it: the 90-day debit list ÷ 12.9, or
+the 12-month monthly aggregate's mean `sumDebits` ÷ 4.33. No exclusions:
+payroll and the owner's own transfers stay in the average, which keeps the
+figure conservative and the same from either read. Not a percentage, not a
+round number, and **not the worst week in the
 quarter** — the worst week contains a payroll *and* the month's supplier
 statements, so it double-counts payroll and can swallow the entire answer.
 

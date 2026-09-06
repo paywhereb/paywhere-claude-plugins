@@ -24,7 +24,7 @@ Map the owner's stated headache to the best two connectors to link first, and to
 | "How much of this is actually mine" / sales tax | Paywhere | QuickBooks | `tax-reserve-check` | "how much of my balance is actually mine" |
 | Making payroll | Paywhere | QuickBooks | `plan-payroll` | "can I make payroll Friday" |
 | Paying vendors on time (not early) | QuickBooks | Paywhere | `ap-timing` → `pay-bills` | "what's due this week", "pay the bills due this week" |
-| Chasing unpaid invoices | QuickBooks | Gmail | `invoice-chase` (drafts only) | "chase my overdue invoices" |
+| Chasing unpaid invoices | QuickBooks | Gmail | `get_aged_receivables`, then reminder drafts in Gmail (`create_draft` only; the owner sends) | "who owes me money", "draft reminders for the overdue ones" |
 | Profit on paper, no cash in the bank | QuickBooks | Paywhere | `cash-bridge` | "where did the cash go" |
 | A big purchase or a bank meeting | Paywhere | Gmail | `big-purchase-decision`, then `credit-readiness` | "can I afford …", "what should I bring to the bank" |
 | Income taxes / 1099s | QuickBooks | Paywhere | `tax-season-organizer` | "quarterly taxes", "1099s" |

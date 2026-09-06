@@ -1,6 +1,6 @@
 ---
 name: big-purchase-decision
-version: 1.0.7
+version: 1.0.8
 description: >
   Answers "can I afford this?" for a large purchase (a work van, a truck,
   equipment) from cleared cash rather than book profit, in five tool calls:
@@ -108,7 +108,7 @@ payment is a large share of an average month — and say why you looked.
 
 ```
 spendable          = Operating balance
-cushion            = last payroll run + one week of average debits (marginal cases only)
+cushion            = mean of the last three payroll runs + mean monthly debits ÷ 4.33 (marginal cases only; _shared/AVAILABLE-CASH.md)
 afterCash          = spendable − price
 afterDown          = spendable − down payment
 payment            = term sheet's figure, or PMT(principal, APR/12, months)

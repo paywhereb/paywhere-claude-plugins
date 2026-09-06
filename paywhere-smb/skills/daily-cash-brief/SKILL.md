@@ -1,6 +1,6 @@
 ---
 name: daily-cash-brief
-version: 1.0.7
+version: 1.0.8
 description: >
   The scheduled morning cash brief (autonomous agent). Every weekday it reads
   the bank, the books and the calendar in one parallel turn, writes
@@ -31,8 +31,8 @@ repeated because this file is loaded on its own:
 > bank tool call. Write `briefs/YYYY-MM-DD.md`; if today's file already
 > exists, stop and say so. **Propose, never execute**: the reserve top-up and
 > the due bills are staged with ONE `make_batch_payment` (the transfer as a
-> `{rail: "transfer", fromAccountNumber, toAccountNumber, amount}` item —
-> never `transfer_funds`), and the returned `/confirm/<id>/<nonce>` URL is
+> `{rail: "transfer", fromAccountNumber, toAccountNumber, amount, description}`
+> item, so bills and top-up ship behind one approval), and the returned `/confirm/<id>/<nonce>` URL is
 > printed verbatim in the run output with its `confirmation_title` and the
 > sentence *"Nothing has moved until you approve this on the bank's page."*
 > Never say "paid" or "transferred". A missing connector removes a section,
@@ -157,7 +157,7 @@ Stage exactly these, nothing else:
 
 - **Reserve top-up**: if shortfall > 0, one transfer line Operating → Tax
   Reserve for the shortfall (exact unmasked account numbers from
-  `list_accounts`).
+  `list_accounts`; `description` "Sales-tax reserve top-up").
 - **Bills due within 7 days** that (a) have a saved payee (rail from
   `list_saved_payees`; `recipientId` = the payee's name; wire lines for wire
   payees), and (b) are not flagged as duplicates by the server (same payee +
@@ -168,9 +168,8 @@ Everything else goes under **Needs you**: due bills for vendors without a
 saved payee, the HOLD list with its pay-on dates, a batch that would exceed
 true available (stage nothing; list the conflict), a payroll date inside the
 week, and the customers the owner would chase — **this skill creates no
-Gmail drafts** unless the owner has told it to (then it follows
-[`../invoice-chase`](../invoice-chase/SKILL.md), drafts only). Say that in
-the brief.
+Gmail drafts** unless the owner has told it to (then reminder drafts in
+Gmail, `create_draft` only; the owner sends). Say that in the brief.
 
 ### 5. Stage — ONE `make_batch_payment`
 
@@ -245,7 +244,9 @@ was down.
 
 ## Guardrails
 
-- Never `transfer_funds`; never a money tool other than `make_batch_payment`.
+- One money tool, `make_batch_payment`: the top-up rides with the bills as a
+  `transfer` line so the owner approves the whole morning in one place; do
+  not split it into a separate `transfer_funds` call.
 - Never stage a HOLD bill, a not-yet-due bill, a bill without a saved payee,
   or a server-flagged duplicate; never invent payee details.
 - Never claim a payment posted; verification is a separate owner ask

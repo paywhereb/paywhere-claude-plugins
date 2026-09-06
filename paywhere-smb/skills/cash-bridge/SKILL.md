@@ -1,6 +1,6 @@
 ---
 name: cash-bridge
-version: 1.0.2
+version: 1.0.3
 description: >
   Reconciles "the books say I made money" with what the Operating balance
   actually did, in either direction: cash down while profitable, or cash up by
@@ -135,7 +135,7 @@ Net income (books, accrual)                              +${ni}
 Bank: Operating net for the month ${net} ({count} posted rows); books-vs-bank gap ${} {cause or "none"}.
 
 {One closing sentence: structural (draws, taxes — the profit is real but committed) or
- timing (receivables — it arrives later, and swings back). Offer invoice-chase if AR is the driver.}
+ timing (receivables — it arrives later, and swings back). If AR is the driver, offer reminder drafts in Gmail (`create_draft` only; the owner sends).}
 ```
 
 Omit $0 lines from the reply only when the table still foots and the reply
@@ -158,4 +158,4 @@ label it "unexplained" rather than forcing it to zero.
 
 - [`reference/method.md`](reference/method.md) — balance-sheet rows → bridge lines, signs, residual and books-vs-bank causes
 - [`../ap-timing/SKILL.md`](../ap-timing/SKILL.md) — when early vendor payments are the question
-- [`../invoice-chase/SKILL.md`](../invoice-chase/SKILL.md) — when receivables are the driver
+- When receivables are the driver: reminder drafts in Gmail (`create_draft` only; the owner sends) — no skill

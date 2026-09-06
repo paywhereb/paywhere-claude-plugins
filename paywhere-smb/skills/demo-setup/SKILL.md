@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 1.0.2
+version: 1.0.3
 disable-model-invocation: true
 description: >
   Builds the presenter's own Nick's HVAC demo bank world on the Paywhere
@@ -143,7 +143,7 @@ Never trust the seeder's own numbers; read them back on the same connector.
    days>}`. Assert a row exists whose amount equals
    `answerKeySummary.ar.unbookedReceipt.amount` and whose descriptor carries
    `answerKeySummary.ar.unbookedReceipt.checkNumber` (the received-but-
-   unbooked beat in invoice-chase and plan-payroll).
+   unbooked check in plan-payroll).
 
 If **any** assertion fails, the seed did not land — **do not report
 `beatsReady`**. Re-run from step 1 once; on a second failure report the
@@ -179,9 +179,9 @@ From the responses (never from memory), report:
     `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`.
 - **Readback checks:** balances ✓, payees ✓ (count + the two rails),
   enrichment ✓, unbooked check ✓.
-- **Beats ready** (`beatsReady`) and the pointer: the run-of-show with exact
-  prompts is [`../../../demo/SCENARIOS.md`](../../../demo/SCENARIOS.md); the
-  presenter kit is [`../../../demo/presenter-kit.md`](../../../demo/presenter-kit.md).
+- **Beats ready** (`beatsReady`) and the pointer: what to type, in order, is
+  [`../../../demo/LIVE-SCRIPT.md`](../../../demo/LIVE-SCRIPT.md); setup, the
+  FI seat and the injects are [`../../../demo/SCENARIOS.md`](../../../demo/SCENARIOS.md).
 - If Gmail or Calendar were not connected in preflight, one line saying the
   Gmail/Calendar beats (1.3 drafts, 1.8 quotes, 3.1 calendar overlay) need
   them.

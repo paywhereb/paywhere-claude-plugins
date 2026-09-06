@@ -1,6 +1,6 @@
 ---
 name: sweep-to-savings
-version: 1.1.1
+version: 1.1.2
 description: >
   The idle-cash sweep, automated (scheduled agent). On its run day it works
   out how much of the operating balance is genuinely spare — net of everything
@@ -8,8 +8,9 @@ description: >
   own history says it needs, and any money earmarked and not yet moved — then
   writes savings/YYYY-MM-DD.md and STAGES one operating-to-savings transfer
   for the owner to approve on the bank's /confirm page with a passkey. Four
-  reads in one turn, one staged transfer. Proposes, never executes; never
-  transfer_funds. Use when the owner says "run the savings sweep," "sweep the
+  reads in two rounds, one staged transfer. Stages by default so the owner
+  approves on the bank's /confirm page; a direct transfer_funds only if the
+  owner opts the schedule in. Use when the owner says "run the savings sweep," "sweep the
   spare cash to savings," "how much can I move to savings," "how much spare
   cash do I have," or schedules "every Friday at 6am run the savings sweep"
   (any day the owner picks). NOT for the sales-tax reserve — that is
@@ -29,9 +30,10 @@ repeated because this file is loaded on its own:
 
 > Stamp `sessionType: "scheduled"` and `taskId: "sweep-to-savings"` on every
 > tool call. Write `savings/YYYY-MM-DD.md`; if today's exists, stop and say so.
-> **Propose, never execute**: the transfer is staged as ONE
+> **Stage by default**: the transfer is staged as ONE
 > `make_batch_payment` with a single `{rail: "transfer", fromAccountNumber,
-> toAccountNumber, amount}` item — never `transfer_funds` — and the returned
+> toAccountNumber, amount, description}` item (direct `transfer_funds` only if
+> the owner has opted this schedule in) — and the returned
 > `/confirm/<id>/<nonce>` URL is printed verbatim with its
 > `confirmation_title` and *"Nothing has moved until you approve this on the
 > bank's page."* Never say "swept", "moved" or "transferred". A missing
@@ -73,8 +75,8 @@ Scheduled task fires: "Run the savings sweep"
 → Window = today through the next payroll date + 7 days (payroll cadence comes from the processor debits)
 → safeToSweep = operating − committed − buffer − earmarked, floored at 0, rounded DOWN
 → If safeToSweep is 0: write the file saying so, stage NOTHING, and stop.
-→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<operating>,
-                                     toAccountNumber:<savings>, amount:<safeToSweep>}]}   → confirmation_url renders
+→ ONE make_batch_payment {payments:[{rail:"transfer", fromAccountNumber:<operating>, toAccountNumber:<savings>,
+                                     amount:<safeToSweep>, description:"Idle-cash sweep to savings"}]}   → confirmation_url renders
 → write_file savings/YYYY-MM-DD.md — the figure, the arithmetic, the staged transfer, the /confirm URL
 → Run output: the figure, what it is net of, the transfer, the link, "nothing has moved until you approve it".
 ```
@@ -125,11 +127,15 @@ the window, from the debit history:
 **buffer** — the floor the operating account should not drop below:
 
 ```
-buffer = one payroll run (mean of the last three) + one week of average outflows
+buffer = mean of the last three payroll runs + one week of average outflows
 ```
 
-Same cushion the purchase decision uses, so two skills never give the owner
-two different floors. Do **not** use the worst week in the quarter: the worst
+One week of average outflows = total posted operating debits over the lookback
+÷ weeks in it (the 90-day debit list ÷ 12.9); no exclusions — payroll and the
+owner's own transfers stay in, which keeps it conservative and the same figure
+from either read. Same cushion the purchase decision uses, so two skills never
+give the owner two different floors. Do **not** use the worst week in the
+quarter: the worst
 week contains a payroll AND the month's supplier statements, so it
 double-counts payroll and quietly swallows the entire answer.
 
@@ -168,8 +174,8 @@ cycle and why, and stage nothing.
 ## Workflow
 
 **Progress tracking:** call `TaskCreate` once per numbered step below before
-starting step 1 (subject = the step's name, e.g. "2. Read — four calls, one
-turn"), then `TaskUpdate` it to `in_progress` when you begin that step and
+starting step 1 (subject = the step's name, e.g. "2. Read — four calls, two
+rounds"), then `TaskUpdate` it to `in_progress` when you begin that step and
 `completed` when it's done. This is what drives Cowork's visible progress
 display — it does not happen unless you do it explicitly. The owner reads the
 finished run in the morning, but the steps are what a presenter watches live.
@@ -180,11 +186,12 @@ Stamp `sessionType: "scheduled"` and `taskId: "sweep-to-savings"` on every
 call. If `savings/YYYY-MM-DD.md` already exists for today, the sweep has run:
 stop and say so. Never stage a second transfer for the same day.
 
-### 2. Read — four calls, one turn
+### 2. Read — four calls, two rounds
 
-The four reads in the quick start, issued together, never one after another:
-balances and roles, ninety days of operating debits, the open bills due inside
-the window, and the sales tax collected since the month last remitted.
+The four reads in the quick start: three together in round 1 (balances and
+roles, the open bills due inside the window, the sales tax collected since
+the month last remitted), then ninety days of operating debits the moment
+`list_accounts` returns the account number the scoped read needs.
 
 ### 3. Compute the safe figure
 
@@ -197,10 +204,13 @@ zero before reporting one.
 ### 4. Stage — ONE `make_batch_payment`
 
 A single `{rail: "transfer", fromAccountNumber: <operating>, toAccountNumber:
-<savings>, amount: <safeToSweep>}` item. No `dryRun` first — an agent has
-nobody to show a table to — and never `transfer_funds`. If the figure is zero,
-skip this step entirely and record why. Read back `confirmation_url`,
-`confirmation_title` and `expires_at`.
+<savings>, amount: <safeToSweep>, description: "Idle-cash sweep to savings"}`
+item. No `dryRun` first — an agent has nobody to show a table to. Staging is
+the default so the morning notification carries a review link; if the owner
+has switched this schedule to a direct move, call `transfer_funds` with the
+same fields instead, read the balance back, and report the move rather than a
+link. If the figure is zero, skip this step entirely and record why. Read back
+`confirmation_url`, `confirmation_title` and `expires_at`.
 
 ### 5. Write `savings/YYYY-MM-DD.md`
 

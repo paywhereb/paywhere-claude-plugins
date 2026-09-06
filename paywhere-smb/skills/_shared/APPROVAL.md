@@ -9,10 +9,12 @@ load-bearing sentences inline, because skills are loaded one at a time:
 >    confirmation URL of the form `https://<bank host>/confirm/<id>/<nonce>`.
 > 2. **Print that URL verbatim as the approval step.** The owner opens it and
 >    approves with a passkey (or TOTP); only then does money move.
-> 3. **Never claim money has moved.** Say "staged" / "awaiting your approval",
->    never "paid", "sent" or "transferred". Internal transfers are staged the
->    same way — a `{rail: "transfer", fromAccountNumber, toAccountNumber,
->    amount}` item in `make_batch_payment` — **never `transfer_funds`**.
+> 3. **Never claim a staged payment has moved.** Say "staged" / "awaiting your
+>    approval", never "paid" or "sent". Internal transfers between the owner's
+>    own accounts are different: `transfer_funds` moves them directly (see
+>    "Internal transfers" below), and a transfer that belongs with vendor
+>    payments rides in the batch as a `{rail: "transfer", fromAccountNumber,
+>    toAccountNumber, amount, description}` line.
 
 ## What the server does
 
@@ -27,12 +29,12 @@ accumulate until it is approved, cancelled or expires) and return:
   "proposal_id": "…",
   "status": "open",
   "confirmation_url": "https://<bank host>/confirm/<id>/<nonce>",
-  "confirmation_title": "Approve payment batch: $10,900.00 across 3 payments",
-  "expires_at": "2026-09-04T21:00:00.000Z",
+  "confirmation_title": "Approve payment batch: $6,000.00 across 3 payments",
+  "expires_at": "<ISO timestamp>",
   "line_count": 3,
-  "total_amount": 10900,
-  "by_rail": { "ach": { "lines": 2, "amount": 9000 }, "wire": { "lines": 1, "amount": 1900 } },
-  "lines": [ { "index": 0, "rail": "ach", "amount": 6850, "summary": "…" }, … ]
+  "total_amount": 6000,
+  "by_rail": { "ach": { "lines": 2, "amount": 4000 }, "transfer": { "lines": 1, "amount": 2000 } },
+  "lines": [ { "index": 0, "rail": "ach", "amount": 1000, "summary": "…" }, … ]
 }
 ```
 
@@ -66,7 +68,9 @@ everything the agent proposed.
 4. **Stage with ONE `make_batch_payment`.** Pay saved payees **by name**
    (`recipientId` = the payee's name; `list_saved_payees` tells you the rail).
    Transfers use the `transfer` rail with **exact, unmasked** account numbers
-   from `list_accounts`. Never type an ABA or account number from memory.
+   from `list_accounts` and a short `description` of what the move is for
+   (the bank records it; it defaults to `Transfer to ····<last 4>`). Never
+   type an ABA or account number from memory.
 5. **Print the approval step.** Render `confirmation_title` as the link text
    over `confirmation_url`, and the URL itself in plain text as well so a
    copy-paste survives. Say plainly: *"Nothing has moved. Open the link and
@@ -85,19 +89,30 @@ everything the agent proposed.
 
 | Say | Not |
 |---|---|
-| staged, proposed, awaiting your approval | paid, sent, executed, transferred |
+| staged, proposed, awaiting your approval (a payment) | paid, sent, executed (before the owner approves) |
 | "approve on the bank's page" | "confirm here and I'll pay" |
 | "after you approve, I can verify the debit" | "the debit has posted" |
+| "moved $X to savings; Operating is now $Y" (after `transfer_funds` and a balance read) | "moved" before the call and the read confirmed it |
 
-## Why transfers go through the batch tool
+## Internal transfers
 
-`transfer_funds` executes immediately with no out-of-band approval. An
-immediate transfer is unsafe unattended and skips the approval the owner
-expects on every other move. The batch tool's
-`transfer` rail stages the same move as a proposal line, so the reserve
-top-up in [`../tax-reserve-check`](../tax-reserve-check/SKILL.md) and the
-weekly tax sweep in [`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md) wait for
-the same passkey as the vendor payments.
+`transfer_funds` moves money between the owner's own accounts and executes
+directly: no proposal, no `/confirm` page. That is deliberate — an internal
+transfer is reversible (move it back) and low-risk (no counterparty), so it
+needs no approval. Use it when the owner asks for a move or says yes to one a
+skill proposes (the payroll top-up in [`../plan-payroll`](../plan-payroll/SKILL.md),
+the reserve catch-up in [`../tax-reserve-check`](../tax-reserve-check/SKILL.md)),
+then confirm with `get_account_balance` and report the new figure. Give it a
+`description` — what the move is for; the bank records it on both accounts.
+
+Put a transfer in `make_batch_payment` as a `{rail: "transfer", …}` line
+only when it belongs with vendor payments — a savings top-up that funds this
+week's bills — so the approval page shows the whole plan and one passkey
+covers it. The scheduled agents ([`../tax-sweep-agent`](../tax-sweep-agent/SKILL.md),
+[`../sweep-to-savings`](../sweep-to-savings/SKILL.md), [`../daily-cash-brief`](../daily-cash-brief/SKILL.md))
+stage their transfer this way by default so the morning notification carries
+a review link; that is a product choice, not a safety rule, and the owner may
+switch a schedule to direct `transfer_funds`.
 
 ## Session fields
 
