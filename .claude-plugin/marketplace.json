@@ -8,17 +8,18 @@
     {
       "name": "paywhere-smb",
       "source": "./paywhere-smb",
-      "description": "Small-business finance workflows (cash-flow forecasting, month-end close, payroll planning, AP batch bill-pay, hours billing + contractor payouts, invoice chasing, commission payouts across ACH/Wire/Stablecoin) running against Paywhere + QuickBooks, with a single repeatable /demo-setup command.",
-      "version": "0.8.0",
+      "description": "Small-business finance workflows run against your bank through the Paywhere connector plus QuickBooks (read-only), Gmail (drafts only) and Google Calendar: pay bills behind one approval, payroll headroom, the sales-tax reserve, sweeping spare cash to savings, vendor payment timing, profit-to-cash bridge, big-purchase decision, credit readiness, tax-season prep, and two scheduled agents. Six tool calls or fewer per skill; payments stage as proposals approved on the bank's /confirm page.",
+      "version": "1.0.23",
       "category": "finance",
       "tags": [
         "smb",
         "finance",
+        "cash flow",
         "payments",
-        "commissions",
         "banking",
         "paywhere",
-        "quickbooks"
+        "quickbooks",
+        "sales tax"
       ]
     },
     {

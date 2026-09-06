@@ -1,0 +1,30 @@
+> **Example only.** Names and amounts are illustrative; every real draft is filled from live QuickBooks data.
+
+# Firm Reminder — Aged Balance Example
+
+**Scenario:** a customer with one open invoice, $450, 47 days past due, and most of its aging row sitting past 60 days on earlier invoices.
+
+**Aging:** most of the balance 61+ · **Tone:** Firm
+
+---
+
+**Subject:** Past due notice: Invoice #1038 — $450 (47 days overdue)
+
+Hi Tom,
+
+Invoice #1038 for $450 is now 47 days past due. The original due date was March 11.
+
+Please remit payment by May 2. You can pay online here: [Pay Invoice #1038 — $450]
+
+If there's a question about this invoice, reply to this email and I'll sort it out quickly.
+
+[Owner name]
+
+---
+
+**Why this works:**
+- States the facts directly: amount, invoice number, days overdue, original due date
+- One clear deadline in the body
+- Leaves a professional out ("if there's a question") without being apologetic
+- Single call to action — one payment link
+- Firm but professional — no threats, no caps

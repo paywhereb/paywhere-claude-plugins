@@ -1,26 +1,32 @@
 # Tax Calculation Assumptions
 
-This file documents the math and assumptions used in quarterly estimated tax calculations.
-Always surface these assumptions in the output so the accountant can adjust.
+The math behind the quarterly estimate, and the assumptions every output
+must surface so the accountant can adjust. **No figure here is tied to a
+calendar year.** Let `Y` be the tax year the owner names (default: the
+current year for an estimate, the previous year for a January 1099 ask).
+Look up the published figures for `Y` — brackets, the Social Security wage
+base, the AGI threshold for the 110% safe harbor — and state them and their
+source in the Assumptions section. If you cannot confirm a figure for `Y`,
+say so and use the owner's or the accountant's number.
 
 ---
 
 ## Self-employment (SE) tax
 
-SE tax applies to sole proprietors, single-member LLCs, and partners. It does **not** apply
-to S-corp owners on their W-2 wages (only on distributions — and even that varies).
+Applies to sole proprietors, single-member LLCs and partners on earned
+income. It does **not** apply to an S-corp owner's W-2 wages (those carry
+payroll withholding) and not to K-1 distributions.
 
-**Formula:**
 ```
-SE tax base     = net profit × 92.35%
-                  (the 7.65% reduction accounts for the employer-equivalent deduction)
-SE tax          = SE tax base × 15.3%
-                  (12.4% Social Security + 2.9% Medicare)
-                  Note: Social Security only applies up to the wage base ($176,100 for 2025)
-Deductible half = SE tax ÷ 2   ← reduces taxable income
+SE tax base      = net profit × 92.35%
+Social Security  = min(SE tax base, wage base for Y) × 12.4%
+Medicare         = SE tax base × 2.9%
+SE tax           = Social Security + Medicare      (15.3% below the wage base)
+Deductible half  = SE tax ÷ 2                      ← reduces taxable income
 ```
 
-**Example:**
+Worked shape (figures illustrative, below the wage base):
+
 ```
 Net profit:      $80,000
 SE tax base:     $80,000 × 92.35% = $73,880
@@ -32,72 +38,79 @@ Deductible half: $11,304 ÷ 2      = $5,652
 
 ## Federal income tax estimate
 
-### Business types and how they're taxed
+### Entity types and how they are taxed
 
-| Business type | How income is taxed | SE tax applies? |
-|--------------|---------------------|-----------------|
-| Sole proprietor / single-member LLC | Schedule C → personal 1040 | Yes |
-| Partnership / multi-member LLC | Schedule K-1 → personal 1040 | Yes (on earned income) |
-| S-corporation | W-2 wages + K-1 distributions → 1040 | On wages only |
+| Entity | How income is taxed | SE tax applies? |
+|---|---|---|
+| Sole proprietor / single-member LLC | Schedule C → personal return | Yes |
+| Partnership / multi-member LLC | Schedule K-1 → personal return | Yes (on earned income) |
+| S-corporation | W-2 wages + K-1 distributions → personal return | On wages only, via payroll |
 | C-corporation | Separate corporate return | No (payroll taxes instead) |
 
-Default assumption: **sole proprietor** unless the user specifies otherwise. Always state this.
+Default assumption: **sole proprietor** unless the owner says otherwise.
+Always state it.
 
-### Federal income tax brackets (2025, single filer)
+### Rate
 
-| Taxable income | Rate |
-|---------------|------|
-| $0 – $11,925 | 10% |
-| $11,926 – $48,475 | 12% |
-| $48,476 – $103,350 | 22% |
-| $103,351 – $197,300 | 24% |
-| $197,301 – $250,525 | 32% |
-| $250,526 – $626,350 | 35% |
-| Over $626,350 | 37% |
+Federal brackets are progressive (the rates run 10% through 37%; the dollar
+thresholds are indexed every year and depend on filing status). For a
+**rough estimate** apply one effective rate to adjusted net income: **22%**
+by default for most owner-operators, or the rate the owner gives. Name the
+rate and the year's bracket table you checked it against.
 
-**For a rough estimate**, apply a single effective rate. Use 22% as the default for most SMB
-owners unless the user gives you more info. Note this assumption explicitly.
-
-**Adjusted net income** (for tax calculation):
 ```
-Adjusted net = net profit − (SE tax ÷ 2) − QBI deduction (if applicable)
+Adjusted net = net profit − (SE tax ÷ 2)
+Federal estimate = Adjusted net × assumed rate
 ```
-The QBI deduction (up to 20% of qualified business income) is significant for many SMBs —
-note that it's not included in the base estimate and the accountant should apply it.
+
+The QBI deduction (up to 20% of qualified business income) is significant
+for many small businesses — it is **not** applied in the base estimate; say
+so and let the accountant apply it.
 
 ---
 
-## Quarterly due dates (2025)
+## Estimated-tax due dates (relative to the tax year Y)
 
 | Quarter | Period covered | Payment due |
-|---------|---------------|-------------|
-| Q1 | Jan 1 – Mar 31 | April 15, 2025 |
-| Q2 | Apr 1 – May 31 | June 16, 2025 |
-| Q3 | Jun 1 – Aug 31 | September 15, 2025 |
-| Q4 | Sep 1 – Dec 31 | January 15, 2026 |
+|---|---|---|
+| Q1 | Jan 1 – Mar 31, Y | April 15, Y |
+| Q2 | Apr 1 – May 31, Y | June 15, Y |
+| Q3 | Jun 1 – Aug 31, Y | September 15, Y |
+| Q4 | Sep 1 – Dec 31, Y | January 15, Y+1 |
+
+A due date that falls on a weekend or federal holiday moves to the next
+business day — resolve it for `Y` and print the resolved date.
+
+**Quarters remaining** = the due dates in the table not yet passed as of
+today. **Annualization** = YTD net profit ÷ months elapsed × 12 (state it;
+seasonal businesses distort it).
 
 ---
 
 ## Safe harbor rule
 
-To avoid underpayment penalties, total estimated payments must be at least the lesser of:
-- **100%** of prior year tax liability (or **110%** if prior year AGI exceeded $150,000)
-- **90%** of current year tax liability
+To avoid an underpayment penalty, total estimated payments must be at least
+the lesser of:
 
-Always note this in output. The user's accountant should confirm prior-year tax figures.
+- **100%** of the prior year's (Y−1) tax — **110%** if Y−1 AGI exceeded the
+  threshold in force for that year;
+- **90%** of the current year's tax.
+
+Always note this; the accountant confirms the prior-year figure.
 
 ---
 
 ## What the estimate does NOT include
 
-Always list these exclusions in every output:
+List these exclusions in every output:
+
 - State and local income taxes
-- QBI deduction (Section 199A — can reduce federal tax by up to 20%)
+- QBI deduction (Section 199A)
 - Home office deduction
 - Vehicle deductions
 - Depreciation / Section 179
-- Retirement contributions (SEP-IRA, Solo 401k) — can significantly reduce SE tax base
-- Health insurance deduction for self-employed
+- Retirement contributions (SEP-IRA, Solo 401k)
+- Self-employed health insurance deduction
 - Prior-year net operating loss carryforward
 
-These can meaningfully reduce the final number. Flag them so the accountant applies them.
+Each can move the number materially. Flag them so the accountant applies them.

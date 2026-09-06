@@ -6,8 +6,9 @@ Public marketplace of Claude Code / Claude Desktop plugins maintained by
 Today this marketplace ships two plugins:
 
 - **[`paywhere-smb`](paywhere-smb/)** — Pre-built small-business workflows
-  (cash forecasting, month-end close, weekly briefs, growth campaigns,
-  invoice chase, tax prep) running against your Paywhere bank account,
+  (bill pay behind one approval, payroll headroom, the sales-tax reserve,
+  invoice chase, a big-purchase decision, scheduled cash briefs) running
+  against your Paywhere bank account,
   QuickBooks, HubSpot, and the rest of your stack.
 - **[`paywhere-eng-workflow`](paywhere-eng-workflow/)** — Shared
   engineering workflow for Paywhere repos: `/start`, `/finish`,
@@ -44,8 +45,17 @@ file picker:
 git clone https://github.com/paywhereb/paywhere-claude-plugins.git
 cd paywhere-claude-plugins
 ./scripts/package.sh paywhere-smb
-# → dist/paywhere-smb-<version>.plugin
+# → dist/paywhere-smb-<version>.plugin        (Paywhere → demo.dev)
+# → dist/paywhere-smb-<version>-poc.plugin    (Paywhere → the PoC stack)
 ```
+
+The `-poc` archive is the same plugin with the Paywhere connector in
+`.mcp.json` renamed **Paywhere POC** and pointed at the PoC stack (default
+`https://paywhere-mock-mcp.poc.dev.paywhere.com/mcp`; override with
+`PAYWHERE_POC_URL=…` / `PAYWHERE_POC_NAME=…`). The rename lets it install
+next to the regular plugin: Desktop cannot remove a connector, and two
+servers with the same name collide. Side-load that one to rehearse against
+a PoC deployment without editing the committed manifest.
 
 > Always build fresh with `package.sh` — the archives checked into
 > `dist/` lag the current plugin versions (stale at 0.3.1 while the
@@ -208,7 +218,8 @@ paywhere-claude-plugins/
 │   └── marketplace.json     # marketplace manifest
 ├── README.md                # you are here
 ├── demo/
-│   └── seed.md              # demo / sales-asset sandbox seeding notes
+│   ├── LIVE-SCRIPT.md       # the Nick's HVAC live demo: what to type, in order
+│   └── SCENARIOS.md         # setup, the FI seat, the live injects
 ├── paywhere-smb/            # the SMB plugin
 │   ├── .claude-plugin/
 │   │   └── plugin.json
@@ -229,7 +240,7 @@ Three layers:
 
 1. **Skills** — atomic building blocks (forecast cash, score leads, draft an invoice reminder).
 2. **Commands** — multi-step workflows that chain skills together with approval gates.
-3. **The Router** — front-door skill that parses plain English requests and routes to the right command.
+3. **Routing** — the client picks a skill from its description; plain questions are answered without one.
 
 Every workflow pauses before taking action — nothing moves money or
 sends to customers without explicit owner approval.
@@ -268,10 +279,10 @@ the config schema and field reference.
 
 ## Demo
 
-See [`demo/seed.md`](demo/seed.md) for instructions on standing up a
-QuickBooks Online sandbox company + a seeded Paywhere mock-dev
-environment for end-to-end demos of `/close-month`, `/plan-payroll`, and
-`/monday-brief`.
+The Nick's HVAC demo: [`demo/LIVE-SCRIPT.md`](demo/LIVE-SCRIPT.md) is what to
+type, in order; [`demo/SCENARIOS.md`](demo/SCENARIOS.md) covers the Cowork
+project setup (`/demo-setup` on the hosted sandbox), the FI seat and the live
+injects.
 
 ## Provenance
 

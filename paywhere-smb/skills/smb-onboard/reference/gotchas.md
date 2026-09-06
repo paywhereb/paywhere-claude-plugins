@@ -6,17 +6,33 @@
 
 ### ✗ Bad
 
-> "Great, QuickBooks is connected! Now let me ask you a few questions about your business."
+> "Great, your bank is connected! Now let me ask you a few questions about your business."
 
 Skips the recipe entirely. Owner leaves not knowing what they just enabled.
 
 ### ✓ Good
 
-> "QuickBooks is live. Let me pull your last 30 days of cash flow — takes about 10 seconds."
-> *[runs cash-flow-snapshot, shows results]*
-> "That's what we can do anytime you want a number check. Now, a few questions about your business…"
+> "Your bank is live. Let me pull your balances and where cash sat at each month-end this year — two calls, about ten seconds."
+> *[`list_accounts` + `query_transactions {aggregate, groupBy: "month"}`, shows the balances and the twelve monthly nets]*
+> "That's available any time you ask. Now, a few questions about your business…"
 
-The prove-value recipe runs before the interview, every time, without exception.
+The prove-value step runs before the interview, every time, without exception.
+
+---
+
+## Gotcha: Routing a plain question through a skill
+
+**Why it matters:** "Show my balances" is one call and two sentences. Wrapping it in a skill adds a confirmation turn, a progress list and a table the owner did not ask for — and teaches them that every question is slow.
+
+### ✗ Bad
+
+> "I'll run the tax reserve check to show your balances…" *[four calls, a table, a staging offer]*
+
+### ✓ Good
+
+> *[`list_accounts`]* "Operating $X, Tax Reserve $Y, Business Savings $Z. Want to know how much of the Operating balance is actually yours after sales tax? Say 'how much of my balance is actually mine'."
+
+Answer the question; offer the skill only when it adds something the question did not ask for.
 
 ---
 
@@ -52,7 +68,7 @@ No preview, no approval — owner doesn't know what was written.
 > Business: Lakewood Hardware — retail hardware store
 > Size: 4 people (including owner)
 > Top headaches: cash flow gaps · slow-paying contractors · scheduling part-timers
-> Connected tools: QuickBooks, Gmail
+> Connected tools: Paywhere, QuickBooks, Gmail
 > Weekly cadence: weekly check-in every Monday
 > Onboarded: 2026-04-23
 > ```
@@ -65,24 +81,24 @@ Show the block, wait for approval, then write.
 
 ## Gotcha: Pitching the platform instead of the capability
 
-**Why it matters:** Owners already know what QuickBooks, Paywhere, and Gmail do. When the recommendation reads like a product page ("QuickBooks — the all-in-one accounting platform for small business…"), it lands as an ad, not advice. The owner tunes out exactly when we need their attention.
+**Why it matters:** Owners already know what QuickBooks, their bank and Gmail do. When the recommendation reads like a product page, it lands as an ad, not advice. The owner tunes out exactly when we need their attention.
 
 ### ✗ Bad
 
 > "1. QuickBooks — the all-in-one accounting platform that tracks income and expenses, manages invoices and bills, runs payroll, and produces every financial report your accountant needs.
 >
-> 2. Paywhere — a modern business bank with multiple accounts, real-time balances, and ACH, wire, and stablecoin payments built in…"
+> 2. Paywhere — a modern business bank with multiple accounts, real-time balances, and ACH and wire payments built in…"
 
-Reads like marketing for QuickBooks and Paywhere. The owner is being sold to.
+Reads like marketing. The owner is being sold to.
 
 ### ✓ Good
 
-> "For month-end close, the two pieces I'd want are your books and your bank.
+> "For 'profit on paper but no cash in the bank', the two pieces I'd want are your books and your bank.
 >
 > Are you on QuickBooks today, or something else?"
 >
 > *(Owner: "Xero.")*
 >
-> "Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get cash-flow and payment work from your bank, but I couldn't reconcile your books against the bank or run month-end close from inside Claude. If you'd be open to QuickBooks, here's what'd unlock: a one-pass reconciliation, a P&L narrative, and an exported close packet. Up to you — want to try it, or skip the books for now?"
+> "Got it — we don't have a Xero connector yet. If you stayed on Xero, you'd still get balances, the year's cash by month and staged payments straight from your bank, but I couldn't tell you who owes you, what's due, or reconcile profit against the cash that actually moved. If you'd be open to QuickBooks, here's what'd unlock: the profit-to-cash bridge, this week's bills staged for one approval, and overdue-invoice reminder drafts. Up to you — want to try it, or skip the books for now?"
 
 States the function, checks what the owner uses, gives a clear gain/loss in plain English, leaves the decision with the owner. If the owner asks "what does QuickBooks actually do?" — that's an explicit invitation; answer it directly.
