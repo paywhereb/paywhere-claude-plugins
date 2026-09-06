@@ -44,7 +44,7 @@ loud: the card is the interface, the text is the judgement.
 If someone asks "so what can he actually spend?", that is the opening for the
 reserve check. Say the name; don't run it.
 
-## 2 — Pay the bills due this week (~40 s, the anchor)
+## 2 — Pay the bills due this week (~60-90 s, the anchor)
 
 ```
 Pay the bills due this week
@@ -66,7 +66,7 @@ Open the link, approve with the passkey, let the room watch the money move.
 One approval, mixed rails, nothing executed by the model. This is the beat the
 demo exists for.
 
-## 3 — Can I afford the van (~25 s)
+## 3 — Can I afford the van (~30-60 s)
 
 ```
 Can I afford the monthly payment on the van quoted in the email from Blue Springs Ford?
@@ -87,7 +87,7 @@ Both are set up in **Cowork Desktop → scheduled tasks**. Show the schedule
 first, then the run — scroll back to the last real run in Cowork, or fire it
 live with the same prompt.
 
-## 4 — Friday tax sweep
+## 4 — ~~Friday tax sweep~~ (NOT demoable yet, no incoming payments this week)
 
 | Field | Value |
 |---|---|
@@ -137,7 +137,7 @@ a yes/no with the arithmetic shown. Same terms as the savings sweep
 ([`_shared/AVAILABLE-CASH.md`](../paywhere-smb/skills/_shared/AVAILABLE-CASH.md)),
 so the two can never disagree on screen.
 
-## 7 — Loan application prep
+## 7 — Loan application prep (NOT consistent but try it for a save transcript)
 
 ```
 /credit-readiness I'm going to the bank about financing the van.
