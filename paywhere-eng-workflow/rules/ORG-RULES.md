@@ -55,6 +55,38 @@ file in `paywhere-claude-plugins` and ship it as a plugin release.
   `<repo-root>/.claude/memory/MEMORY.md` for the current working
   directory's repo. Treat the home-directory auto-memory path as
   deprecated.
+- **Never write a memory for a fact that lives in an always-loaded file**
+  (a `CLAUDE.md`, or a doc the root `CLAUDE.md` routes to). A memory is
+  for a lesson that is not derivable from the code, the git history, or
+  the docs. Before writing one, grep for the fact; if it exists, link to
+  it instead.
+
+## Documentation pattern — one fact, one home
+
+Every paywhereb repo uses the same split. State each fact once, in the
+file that owns it, and link from everywhere else. The loading column says
+what puts the file into an agent's context.
+
+| File | Loaded | Owns |
+|---|---|---|
+| `CLAUDE.md` (root) | Always, every session in the repo | Hard rules and cross-package facts an agent must not break. If it is here, do not restate it anywhere else. |
+| `<package>/CLAUDE.md` | When a session touches files under that package | The deep working manual for the package. |
+| `.claude/memory/MEMORY.md` | Always | One-line hooks only. Each hook makes the agent decide whether to open the file; it never carries the memory's content. |
+| `.claude/memory/*.md` | On demand, when a hook looks relevant | Lessons not derivable from code, git history or docs. |
+| `README.md` | On demand | How to build, run, test and deploy. |
+| `PROJECT.md` | On demand | The architecture and the reasoning behind it. The *why*, never a second copy of the rules. |
+| `docs/` | On demand, humans first | Onboarding walkthroughs, plans, briefs. Route to the files above; do not restate them. |
+
+- **Before adding a rule, a constraint, or a memory, grep for it.** If it
+  already exists, link to it. Two copies drift; the ENG-460 review found
+  the same rule stated in up to seven places in one repo.
+- **A doc that says "this does not restate X" must not restate X.** Route
+  with a section reference (`PROJECT.md §4`) and carry only what the
+  target does not.
+- **Agents and humans have different entry points.** The root `CLAUDE.md`
+  "read this first" table is for agents; a human onboarding doc is for
+  people. Do not add the human doc to the agent table — everything
+  factual in it should already live in the files the table lists.
 
 ## Org-wide headlines
 

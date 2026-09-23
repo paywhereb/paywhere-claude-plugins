@@ -35,7 +35,8 @@ TeamCity, and release skills.
 
 The plugin injects [`rules/ORG-RULES.md`](rules/ORG-RULES.md) — the
 Paywhere org-wide Claude rules (no attribution trailers, source-controlled
-memory, no PATs, IaC-managed branch protection, …) — into every Claude
+memory, the one-fact-one-home documentation pattern, no PATs, IaC-managed
+branch protection, …) — into every Claude
 session opened inside a paywhereb repo. Mechanics:
 
 - [`hooks/hooks.json`](hooks/hooks.json) registers a `SessionStart` hook
