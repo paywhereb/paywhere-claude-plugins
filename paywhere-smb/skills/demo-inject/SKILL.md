@@ -1,6 +1,6 @@
 ---
 name: demo-inject
-version: 2.0.0
+version: 2.0.1
 disable-model-invocation: true
 description: >
   PRESENTER-ONLY, demo deployments only. Prepares live "money just landed" or
@@ -24,23 +24,17 @@ world (`/demo-setup`).
 
 **The seeder page:** `https://paywhere-demo-seeder.poc.dev.paywhere.com`.
 
-## Guard: only against the presenter's own built world
-
-1. The presenter has built their world on the seeder page in this session
-   (the page shows **ready**). Live inject is greyed out until then.
-2. The Paywhere connector is signed in with that world's demo login:
-   `list_accounts` shows the same account numbers as the page.
-
 **Progress tracking:** call `TaskCreate` once for each of the four phases
-below ("1. Guard", "2. Read the live world", "3. Inject", "4. Confirm")
+below ("1. Read the live world", "2. Guard", "3. Inject", "4. Confirm")
 before starting the first, then `TaskUpdate` each to `in_progress` when you
 begin it and `completed` when it is done. It drives Cowork's progress display
 and does not happen unless you do it explicitly.
 
-## Read the live world first
+## 1. Read the live world first
 
-The **setup summary** the presenter pasted for `/demo-setup` (or pastes now,
-from the page's "Copy setup summary for /demo-setup") carries
+The **setup summary** the presenter pasted for `/demo-setup` in this
+conversation (or pastes now, from the page's "Copy setup summary for
+/demo-setup") carries `accounts[]`, `dateModel` and
 `answerKeySummary`: `ar.largestOverdue {customer, amount, invoiceRef}`,
 `liveSurface.overdueInvoices[]` (sorted by days past due; the largest amount
 is `ar.largestOverdue`, not `[0]`), `liveSurface.unbookedCheck`,
@@ -51,12 +45,27 @@ invoice). Without the summary, read the same facts through the owner's tools
 (`get_aged_receivables` for the largest overdue) or ask the presenter for the
 amount. **Never invent an amount.**
 
-## Ready injects
+The summary is a snapshot from the build: it does **not** reflect injects
+posted since. Keep a list of the injects posted in this conversation and
+never repeat one for the same customer (the books are read-only, so the
+largest overdue invoice stays "overdue" in QuickBooks after (a); posting (a)
+twice credits the customer twice).
+
+## 2. Guard: only against the presenter's own built world
+
+1. The page shows the world **ready** (Live inject is greyed out until then).
+2. The Paywhere connector is signed in with that world's demo login:
+   `list_accounts` shows the summary's `accounts[]` numbers. A mismatch →
+   stop; the presenter reconnects with the page's login.
+
+## 3. Inject: the ready injects
 
 Each block: what the presenter enters in **Live inject** on the seeder page,
 what changes in the answer key, then the owner-voice follow-up to paste.
 Show the values as a short table the presenter can copy field by field. The
-page asks for confirmation before it posts.
+page asks for confirmation before it posts. **Post date** is always the
+world's `dateModel.today` from the summary (normally today; the page fills
+in the presenter's local date, so change it only if they differ).
 
 ### (a) "Westport just paid": the largest overdue customer pays
 
@@ -70,7 +79,6 @@ fills the form from the world's largest overdue invoice. Otherwise:
 | Type | Transfer |
 | Amount | `ar.largestOverdue.amount` |
 | Statement description | `ACH CR <the customer's AP descriptor, e.g. AVIDXCHANGE CORNERSTONE PM>` |
-| Post date | today |
 
 Changes: `ar.largestOverdue` disappears from the chase list on the next run
 (the credit now matches the open invoice → "received, not yet booked");
@@ -142,11 +150,11 @@ authorizations in the current week; point at those instead.
   then a second, money-out row for the bank's inbound wire fee with
   `WIRE FEE IN`.
 
-## Confirm
+## 4. Confirm
 
 After the presenter posts, read it back on the connector before the owner
 follow-up: `query_transactions {descriptionContains: <the statement
-description>, dateFrom: <today>}` shows the row. If it is missing, the page
+description>, dateFrom: <dateModel.today>}` shows the row. If it is missing, the page
 showed an error; read it out and stop.
 
 ## Rules

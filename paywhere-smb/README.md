@@ -70,7 +70,7 @@ Wired in [`.mcp.json`](.mcp.json):
 
 | Connector | Role | Notes |
 |---|---|---|
-| **Paywhere** — `https://demo.dev.paywhere.com/mcp` | Your bank: balances, 12 months of cleared and pending activity, saved payees, ACH / wire / batch payments (staged for passkey approval), internal transfers, transaction enrichment | Staged payments are approved on the bank's `/confirm` page |
+| **Paywhere** — `https://demo.dev.paywhere.com/mcp` | Your bank: balances, 12 months of cleared and pending activity, saved payees, ACH / wire / batch payments (staged for passkey approval), internal transfers | Staged payments are approved on the bank's `/confirm` page |
 | **quickbooks** — `https://qbo.dev.paywhere.com/mcp` | Your books: invoices, payments, deposits, bills, bill payments, purchases, journal entries, estimates, aging, P&L, balance sheet, customers/vendors/employees | **Read-only**; skills narrate any booking they would make |
 | **gmail** — `https://gmailmcp.googleapis.com/mcp/v1` | Reminder drafts; vendor invoices, quotes, payroll summaries, renewal notices as evidence | **Drafts only** — never send/reply/forward |
 | **google calendar** — `https://calendarmcp.googleapis.com/mcp/v1` | Dated obligations: payroll, the remittance day, estimates, renewals, appointments | Read; a reminder event only when you ask, no attendees |

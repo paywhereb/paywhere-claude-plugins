@@ -13,8 +13,8 @@ Where the numbers come from:
   `answerKey.ts` = every number derived from the generated ledgers). A
   byte-identical copy lives in `paywhere-qbo-mcp/src/demo/world/` and seeds
   the books; the same module emits the Gmail and Calendar manifests.
-- **Answer key:** `answerKey` (shape: `types.ts` → `AnswerKey`). `/demo-setup`
-  prints `answerKeySummary` after seeding; the eval suite grades against the
+- **Answer key:** `answerKey` (shape: `types.ts` → `AnswerKey`). The seeder page
+  shows `answerKeySummary` after a build and `/demo-setup` reports it; the eval suite grades against the
   full key. Nothing in it is hand-entered.
 - **Date model:** two anchors, `today` and `horizon` (the most recent
   Sunday), plus a calendar-pinned annual layer (seasonality, stress periods,
@@ -209,7 +209,7 @@ authorizations in the current week.
 
 ## Verification
 
-`paywhere-mcp-api` ships `npm test` (`scripts/verify-demo.mjs`): the world
+paywhere-demo-seeder's world package ships `npm test` (`packages/world/scripts/verify-demo.mjs`): the world
 closes deterministically within a week, answer-key balances equal the running
 sums, deposits precede withdrawals per account, the operating balance never
 goes negative, the fixture deep-equals `buildWorld(fixture.dateModel)` in

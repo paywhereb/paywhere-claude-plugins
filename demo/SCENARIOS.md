@@ -139,7 +139,7 @@ day's demo drafts.
 | `get_demo_dates` → `seeded: false` | Books not reseeded yet | Wait for 5am ET or ask the QBO demo owner to run the manual reseed |
 | Balances ≠ `expectedClosing` in readback | Seed job had failures, or a rehearsal inject is still in the world | Rebuild on the seeder page, then `/demo-setup` again |
 | The page's password doesn't sign in | Login made before the seeder, or the seeder's secret changed | **Recreate login** on the page, then reconnect |
-| A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch | Readback catches it; re-run `/demo-setup` |
+| A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch in the connector's saved payees | Readback catches it; tell the connector owner (payees are not built by the seeder page, so a rebuild won't fix it) |
 | `/confirm` link 404 | Nonce dropped after `?` or copied partially, or proposal expired | Copy the full path form `/confirm/<id>/<nonce>`; re-stage if expired |
 | Money tool returns `{ error: "…no proposal store (stdio mode)…" }` | Running against a local stdio server | Use the HTTP demo deployment |
 | A transfer line fails on the confirm page with `Upstream HTTP 500` | Old connector build: the bank requires a transfer `description` the connector did not send | Redeploy the connector with the ENG-437 fix; the skills pass a description on every transfer |

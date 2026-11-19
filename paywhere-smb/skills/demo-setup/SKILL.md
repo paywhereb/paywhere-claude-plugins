@@ -1,6 +1,6 @@
 ---
 name: demo-setup
-version: 2.0.0
+version: 2.0.1
 disable-model-invocation: true
 description: >
   Walks the presenter through building their own Nick's HVAC demo bank world
@@ -81,7 +81,7 @@ block:
    untouched and the login stays the same.
 4. Wait until **Seed progress** shows **ready** (≈ 5 minutes; they can leave
    the page). "done with errors" or "failed" → read the first failures off the
-   page and press Rebuild once; a second failure → stop and report.
+   page and rebuild (see the retry rule below).
 
 Then **wait** for the presenter to say it is ready.
 
@@ -101,7 +101,8 @@ page and paste it here. It is JSON with `bankUsername`, `dateModel`,
 `accounts[]` (role, number, name), `expectedClosing` (`operating`,
 `taxReserve`, `savings`), `seedJob` and `answerKeySummary`. Check:
 
-- `seedJob.state` is `"done"` with `failed: 0`. Otherwise go back to step 2.
+- `seedJob.state` is `"done"` with `failed: 0`. Otherwise rebuild (see the
+  retry rule below).
 - `dateModel.today` / `dateModel.horizon` equal the books' `dateModel` from
   step 1. A mismatch means the date paste was missed: rebuild with it.
 
@@ -111,12 +112,13 @@ Never trust the seeder's own numbers; read them back on the same connector.
 
 1. **Balances.** `list_accounts` (then `get_account_balance` per account).
    Match accounts to the summary's `accounts[]` by account number. Assert
-   each balance **equals `expectedClosing`** for that role, to the cent
-   (pending authorizations are already deducted, as the bank shows them).
+   each balance **equals `expectedClosing`** for that role, to the cent.
+   `expectedClosing` already has this week's pending card authorizations
+   deducted, exactly as the bank's current balance does.
    Different account numbers altogether → the connector is signed in as
    another login: back to step 3.
-2. **Saved payees.** `list_saved_payees`. Expect the standing Nick's HVAC
-   payee list (≈ 27). Spot-check that the crane subcontractor ("Ironclad
+2. **Saved payees.** `list_saved_payees`. Assert the count **equals
+   `answerKeySummary.counts.recipients`**. Spot-check that the crane subcontractor ("Ironclad
    Crane & Rigging") resolves with `rail: "wire"` and the parts supplier
    ("Johnstone Supply") with `rail: "ach"`. A rail mismatch is exactly what
    makes `pay-bills` misreport a saved wire payee.
@@ -128,8 +130,13 @@ Never trust the seeder's own numbers; read them back on the same connector.
    unbooked check in plan-payroll).
 
 If **any** assertion fails, the world is not ready: say which check failed
-(expected vs actual), have the presenter rebuild once, and repeat from step
-4. A second failure → report and stop.
+(expected vs actual), have the presenter rebuild, and repeat from step 4.
+
+**Retry rule (whole run):** at most **one** rebuild per `/demo-setup` run,
+whichever step asked for it. If the world still isn't right after that one
+rebuild, report what failed and stop. A payee mismatch is not fixed by a
+rebuild (payees come from the connector, not the page): report it, don't
+rebuild for it.
 
 ### 6. Report
 
