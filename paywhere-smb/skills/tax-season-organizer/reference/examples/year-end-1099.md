@@ -30,7 +30,7 @@ stem:
 | Design by Mike | $2,100 | ACH | Not in QuickBooks |
 | Bob Nguyen | $480 | ACH | |
 
-No `get_transaction_detail` needed — every descriptor was readable.
+Every descriptor was readable, so no "unidentified payee" rows.
 
 ---
 

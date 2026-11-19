@@ -125,16 +125,18 @@ just happen.
 
 ### Demo setup (hosted sandbox only)
 
-The hosted sandbox (`demo.dev.paywhere.com`) carries seeder tools that build a
-per-presenter bank world for Nick's HVAC, a Kansas City owner-operator; the
-shared QuickBooks sandbox, mailbox and calendar are seeded to match. The demo
+The **Paywhere demo seeder** (a staff web page, Paywhere Google sign-in)
+builds a per-presenter bank world for Nick's HVAC, a Kansas City
+owner-operator, on the mock bank behind the hosted sandbox
+(`demo.dev.paywhere.com`); the shared QuickBooks sandbox, mailbox and calendar
+are seeded to match. The MCP server itself has no seeding tools. The demo
 persona lives in server data ([`DATASET.md`](DATASET.md)); no skill hardcodes
 it.
 
 | Skill | What it does |
 |---|---|
-| **demo-setup** | Builds your own Nick's HVAC bank world (async seed, polled), reads it back through the connector, reports the answer-key summary. |
-| **demo-inject** | Ready prompts for live moments: "Westport just paid", an emergency-call settlement, a failed autopay. |
+| **demo-setup** | Walks you through building your own Nick's HVAC bank world on the seeder page, reads it back through the connector, reports the answer-key summary. |
+| **demo-inject** | What to post from the seeder page's Live inject for live moments: "Westport just paid", an emergency-call settlement, a failed autopay. |
 
 To run the demo: [`../demo/LIVE-SCRIPT.md`](../demo/LIVE-SCRIPT.md) is what to
 type, in order; [`../demo/SCENARIOS.md`](../demo/SCENARIOS.md) covers the

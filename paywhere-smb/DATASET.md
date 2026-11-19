@@ -8,7 +8,7 @@ the mailbox and the calendar when they run.
 Where the numbers come from:
 
 - **Generator:** `buildWorld(dateModel)` in
-  `paywhere-mcp/paywhere-mcp-api/src/demo/world/` (`spec.ts` = the roster,
+  `paywhere-demo-seeder/packages/world/src/world/` (`spec.ts` = the roster,
   vendors and rules from blueprint §3 as data; `generate.ts` = the events;
   `answerKey.ts` = every number derived from the generated ledgers). A
   byte-identical copy lives in `paywhere-qbo-mcp/src/demo/world/` and seeds
@@ -24,13 +24,12 @@ Where the numbers come from:
 - **Blueprint:** `paywhere-mcp/docs/plans/nicks-hvac-demo-blueprint.md` §3 is
   the authoritative narrative; this file is the short form.
 
-**Where the numbers live.** For a given demo date the full answer key is
-checked into paywhere-mcp as
-`paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`
-(`answer-key-2026-09-02.json` for the September 2026 run — being
-generated); regenerate one with
-`buildWorld(computeDateModel("<today>")).answerKey`. At demo time
-`seed_demo_world` / `get_demo_world` return `answerKeySummary`, a subset
+**Where the numbers live.** For any demo date the seeder serves the full
+answer key (`GET /api/answer-key?today=<today>`), and the September 2026 one
+is checked into paywhere-demo-seeder as
+`packages/world/src/world/fixtures/answer-key-2026-09-02.json`. At demo time
+the seeder page shows `answerKeySummary` (and copies it in its setup
+summary for `/demo-setup`), a subset
 with the same paths (`balances`, `trueAvailable`, `tax.{reserveBalance,
 collectedNotRemitted, shortfall, missedSweeps, nextRemittance}`,
 `ar.{aging, largestOverdue, unbookedReceipt, chaseOrder}`,
@@ -40,10 +39,10 @@ collectedNotRemitted, shortfall, missedSweeps, nextRemittance}`,
 (`monthly`, `lows`, `cashBridge`, `forecast13w`, `van`, `whatIf`,
 `settlements`, `referrals`, `profitability`) is in the full key only.
 
-> Setup: `/demo-setup` reads the books' `dateModel` (`get_demo_dates`),
-> starts the async bank seed (`seed_demo_world`), polls `get_demo_world` to
-> completion (≈ 4–6 min for ≈ 1,000 rows), reads the world back through the
-> connector and reports the answer-key summary. Books are shared and
+> Setup: `/demo-setup` reads the books' `dateModel` (`get_demo_dates`), has
+> the presenter build the world on the seeder page with it (≈ 5 min for
+> ≈ 1,000 rows), reads the world back through the connector and reports the
+> answer-key summary. Books are shared and
 > read-only (reseeded 5am ET); the bank world is per presenter. Mail and
 > calendar are seeded by `paywhere-qbo-mcp/scripts/seed-google.mjs` into the
 > shared `demo-nick@paywhere.com` account.
@@ -190,9 +189,7 @@ has seven fields, so **statement descriptors carry the rail**: `POS DEBIT …`,
 `WIRE IN …` / `WIRE OUT …`, `INTUIT PYMT SOLN DEPOSIT`, `TRANSFER TO TAX
 RESERVE`, `SERVICE CHARGE`, `INTEREST PAID`. ≈ 100 rows/month, ≈ 1,000–1,200
 over 12 months across the three accounts, plus a handful of `pending` card
-authorizations in the current week. ≈ 200 targeted enrichment records
-(`get_transaction_detail`) cover settlements, remittances, referral fees and
-the recurring debits; enrichment is best-effort and may be `null`.
+authorizations in the current week.
 
 ## What reconciles across the four sources
 
@@ -224,5 +221,5 @@ asserts the same closings through the connector.
 The previous world (Meridian Staffing & Advisory, six months, one payroll
 squeeze) is kept for reference and not maintained; its books are no longer
 reseeded, and its `pay-and-bill` / `pay-commissions` skills left the plugin
-package in 1.0.8 (git history before that). The old
-generator is `paywhere-mcp-api/src/demo/legacy/meridianBankDataset.ts`.
+package in 1.0.8 (git history before that). Its generator was deleted from
+paywhere-mcp in ENG-473 (git history has it).

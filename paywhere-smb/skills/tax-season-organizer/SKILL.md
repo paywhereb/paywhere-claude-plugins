@@ -1,6 +1,6 @@
 ---
 name: tax-season-organizer
-version: 1.0.3
+version: 1.0.4
 description: >
   Prepares owner income-tax materials as markdown deliverables for the
   accountant, not tax advice. Two modes: (1) quarterly estimated-tax
@@ -58,7 +58,6 @@ User: "I need to send out 1099s"
     search_bill_payments {tax year}   search_purchases {tax year}       (what the books say was paid, per vendor)
     query_transactions {direction:"debit", dateFrom:<Jan 1>, dateTo:<Jun 30>}   (bank ACH/wire out, first half)
     query_transactions {direction:"debit", dateFrom:<Jul 1>, dateTo:<Dec 31>}   (second half — a year does not fit in one result)
-→ Optional 6th: get_transaction_detail on ONE unmatched counterparty if the descriptor is unreadable
 → Aggregate per payee, apply the $600 threshold, W-9 status
 → write_file tax/1099-prep-{YYYY}.md
 → Reply: candidate count, missing W-9 count, bank-only payees, the file path.
@@ -172,9 +171,9 @@ referral partners, rent).
 dateFrom: <Jan 1>, dateTo: <Jun 30>}` and the same for July–December — a
 full year rarely fits one result; two halves do. Keep ACH and wire debits;
 drop card, payroll-processor and internal-transfer rows. The counterparty is
-the descriptor stem (`ACH DEBIT <PAYEE>`, `WIRE OUT <PAYEE>`); call
-`get_transaction_detail` on at most **one** row whose descriptor cannot be
-read. Then:
+the descriptor stem (`ACH DEBIT <PAYEE>`, `WIRE OUT <PAYEE>`); a row whose
+descriptor cannot be read goes to the accountant as "unidentified payee".
+Then:
 
 - **Bank line matches a QuickBooks vendor** → confirms the record; spot-check the total.
 - **Bank line has no QuickBooks vendor** → "possible contractor payment not in the books" for the accountant. Common cause: a contractor paid by wire and never booked.
