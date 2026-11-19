@@ -54,8 +54,8 @@ back truncated, note it in the deliverable rather than adding calls). Keep
 rows whose type is ACH or wire; drop card purchases, payroll-processor
 debits (they produce W-2s), and transfers between the owner's own accounts.
 The counterparty is the descriptor stem (`ACH DEBIT <PAYEE>`,
-`WIRE OUT <PAYEE>`). `get_transaction_detail` on at most one row whose
-descriptor cannot be read.
+`WIRE OUT <PAYEE>`). A row whose descriptor cannot be read is listed as
+"unidentified payee" for the accountant.
 
 Cross-reference each counterparty against the vendor list:
 

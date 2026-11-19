@@ -7,9 +7,12 @@ troubleshooting and beats that are not in this cut.
 **Before the room:** Cowork project with
 [`cowork-project-prompt.md`](cowork-project-prompt.md) pasted into the
 instructions · four connectors signed in as demo-nick · side-load
-`dist/paywhere-smb-1.0.23.plugin` · **model Claude Sonnet 5 at MEDIUM
-effort** · `/demo-setup`, wait for it to finish · `/demo-inject` (the Friday
-tax sweep needs it, or it correctly sweeps nothing).
+`dist/paywhere-smb-1.1.0.plugin` · **model Claude Sonnet 5 at MEDIUM
+effort** · your world built on the
+[demo seeder page](https://paywhere-demo-seeder.poc.dev.paywhere.com) and
+Paywhere signed in with its demo login (`/demo-setup` walks you through both
+and checks the result) · `/demo-inject` (the Friday tax sweep needs it, or it
+correctly sweeps nothing).
 
 ---
 

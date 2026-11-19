@@ -4,16 +4,17 @@ What the presenter needs that is not a prompt. The prompts, in order, with
 timings and what to point at, are [`LIVE-SCRIPT.md`](LIVE-SCRIPT.md). Persona
 and data: [`../paywhere-smb/DATASET.md`](../paywhere-smb/DATASET.md).
 
-**How to read the answer key.** `/demo-setup` prints `answerKeySummary`; its
-paths are the `AnswerKey` shape in
-`paywhere-mcp-api/src/demo/world/types.ts`, and the full key for a demo date
-is `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`.
+**How to read the answer key.** The seeder page and `/demo-setup` show
+`answerKeySummary`; its paths are the `AnswerKey` shape in
+paywhere-demo-seeder `packages/world/src/world/types.ts`, and the seeder serves
+the full key for any demo date (`GET /api/answer-key?today=<today>`).
 Numbers roll with the date model, so read them from the setup report or the
 fixture, never from a document. The **fixed** figures — agreement amounts and
 the staged live-surface amounts — are in DATASET.md.
 
 **Voice.** In the room the owner is talking to his finance agent in Claude
-Cowork; only `/demo-setup` and the injects are presenter commands. A vendor
+Cowork; only `/demo-setup`, the seeder page and the injects are presenter
+actions. A vendor
 payment ends with a `/confirm/<id>/<nonce>` link, opened on the bank,
 approved with a passkey. Say once, early: *"Nothing pays a vendor from chat.
 The bank's page is where the approval happens."*
@@ -26,10 +27,15 @@ The bank's page is where the approval happens."*
 
 | Connector | What it is | Sign in as |
 |---|---|---|
-| **Paywhere** (`https://demo.dev.paywhere.com/mcp`) | The demo bank via the Paywhere MCP; carries the demo-seeder tools | The bank user `/demo-setup` returns (rotates per run; also posted to the demo Slack channel and kept in 1Password) |
+| **Paywhere** (`https://demo.dev.paywhere.com/mcp`) | The demo bank via the Paywhere MCP | Your demo login from the seeder page (`demo-<name>`; fixed, survives rebuilds) |
 | **quickbooks** (`https://qbo.dev.paywhere.com/mcp`) | Custom, read-only QBO MCP over the shared sandbox company; reseeds daily 5am ET | QBO sandbox OAuth (1Password) |
 | **gmail** (`https://gmailmcp.googleapis.com/mcp/v1`) | Google's Gmail MCP | **demo-nick@paywhere.com** ("Nick Adler (Nick's HVAC)") |
 | **google calendar** (`https://calendarmcp.googleapis.com/mcp/v1`) | Google's Calendar MCP | demo-nick@paywhere.com |
+
+The bank world itself is built on the **Paywhere demo seeder** page,
+`https://paywhere-demo-seeder.poc.dev.paywhere.com` (sign in with your Paywhere
+Google account). It shows your demo login, builds and rebuilds your world,
+shows the answer key, and posts live injects.
 
 No Google Drive. Files (briefs, sweep records, the bank package — all
 markdown) are written into the **Cowork working folder** by Cowork itself.
@@ -54,11 +60,11 @@ same `dateModel`; run `--check` in the demo week.
    ```bash
    git clone https://github.com/paywhereb/paywhere-claude-plugins.git
    cd paywhere-claude-plugins
-   ./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.0.23.plugin
+   ./scripts/package.sh paywhere-smb        # → dist/paywhere-smb-1.1.0.plugin
    ```
 
    In Cowork, use the "side-load a plugin file" picker and choose
-   `dist/paywhere-smb-1.0.23.plugin`; pick a working folder (the skills write
+   `dist/paywhere-smb-1.1.0.plugin`; pick a working folder (the skills write
    `briefs/`, `sweeps/`, `savings/` and `bank/` under it). Any plugin change
    bumps the version, or clients keep the old behaviour.
 4. **Set the model to Claude Sonnet 5 at MEDIUM effort.** This is measured,
@@ -72,12 +78,12 @@ same `dateModel`; run `--check` in the demo week.
    ```
    /demo-setup
    ```
-   (optional: `/demo-setup username: brett`)
 
-   Approve the gate. The seed is **asynchronous**: the skill polls
-   `get_demo_world` for ≈ 4–6 minutes and shows progress, then reads the
-   world back through the connector and reports. Record the **bank
-   username/password** (also posted to the demo Slack channel).
+   The skill reads the books' dates and walks you through the seeder page:
+   paste the dates, **Build world** (or **Rebuild world**), wait for
+   **ready** (≈ 5 minutes), connect Paywhere with your demo login if it
+   isn't already, then paste the page's **setup summary**. It reads the
+   world back through the connector and reports.
 
    You should see, from the report:
 
@@ -89,8 +95,8 @@ same `dateModel`; run `--check` in the demo week.
    | Largest overdue invoice; the received-but-unbooked check | `ar.largestOverdue`, `ar.unbookedReceipt` |
    | Bills due this week with rails; hold candidates | `ap.dueThisWeek`, `ap.holdCandidates` |
    | Payroll date, estimate, headroom | `payroll.nextPayDate`, `payroll.estimatedTotal`, `payroll.headroomAfterPayroll` |
-   | Readback ✓ ×4: balances, payees (count + wire/ACH spot-check), enrichment, unbooked check | — |
-   | `dateModelSource: "provided"` | — |
+   | Readback ✓ ×3: balances, payees (count + wire/ACH spot-check), unbooked check | — |
+   | Dates match the books (`dateModel.today` / `horizon`) | — |
 
    If `get_demo_dates` says `seeded: false`, the books have not reseeded yet —
    wait or ping the QBO demo owner; do not demo on unaligned dates.
@@ -129,11 +135,11 @@ day's demo drafts.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `/demo-setup` stops at preflight: seeder tools absent | Not a demo deployment / wrong connector URL | Point Paywhere at `demo.dev.paywhere.com/mcp` |
+| Readback account numbers ≠ the page's | Paywhere connector signed in with another login | Reconnect with the page's demo login |
 | `get_demo_dates` → `seeded: false` | Books not reseeded yet | Wait for 5am ET or ask the QBO demo owner to run the manual reseed |
-| Balances ≠ `expectedClosing` in readback | Seed job had failures, or the connector re-authorized with old credentials | Re-run `/demo-setup`; re-auth with the NEW credentials |
-| `get_transaction_detail` → `null` on the recurring debit | Enrichment keyed to another world (old creds) | Re-run `/demo-setup` |
-| A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch | Readback catches it; re-run `/demo-setup` |
+| Balances ≠ `expectedClosing` in readback | Seed job had failures, or a rehearsal inject is still in the world | Rebuild on the seeder page, then `/demo-setup` again |
+| The page's password doesn't sign in | Login made before the seeder, or the seeder's secret changed | **Recreate login** on the page, then reconnect |
+| A saved wire payee reported as "ACH" or unresolved | Payee rail mismatch in the connector's saved payees | Readback catches it; tell the connector owner (payees are not built by the seeder page, so a rebuild won't fix it) |
 | `/confirm` link 404 | Nonce dropped after `?` or copied partially, or proposal expired | Copy the full path form `/confirm/<id>/<nonce>`; re-stage if expired |
 | Money tool returns `{ error: "…no proposal store (stdio mode)…" }` | Running against a local stdio server | Use the HTTP demo deployment |
 | A transfer line fails on the confirm page with `Upstream HTTP 500` | Old connector build: the bank requires a transfer `description` the connector did not send | Redeploy the connector with the ENG-437 fix; the skills pass a description on every transfer |
@@ -177,14 +183,15 @@ just done is appended live.
 
 ## Live injects (presenter, via `demo-inject`)
 
-Presenter-voice prompts (they call the demo-seeder tools on the Paywhere
-connector; the skill resolves the Operating account and reads amounts from
-the live answer key). Injects are permanent for this world — re-run
-`/demo-setup` before the real demo if you inject in rehearsal.
+Presenter-voice prompts. `/demo-inject` reads the amount from the live answer
+key and tells you what to enter in the seeder page's **Live inject** (the
+page has a one-click preset for the largest overdue customer paying); you
+post it there. Injects are permanent for this world: rebuild on the seeder
+page before the real demo if you inject in rehearsal.
 
 **Westport just paid** (before the tax sweep, or to move the payroll headroom live):
 ```
-Inject a deposit: simulate Westport paying its largest overdue invoice — post an ACH credit to Operating with the customer's AP descriptor.
+Inject a deposit: simulate Westport paying its largest overdue invoice.
 ```
 Then, owner voice: `Westport just paid — check again`. Effect:
 `ar.largestOverdue` clears; `trueAvailable` and payroll headroom rise by the
@@ -192,13 +199,13 @@ amount; the tax sweep has real tax to stage.
 
 **Emergency call invoice** (cash side only — the books are read-only):
 ```
-Inject a deposit: an emergency-call card settlement landed today — post a merchant settlement deposit to Operating for the emergency job amount.
+Inject a deposit: an emergency-call card settlement landed today.
 ```
 Owner voice: `Anything new land today?`
 
 **Blue Line autopay failed**:
 ```
-Inject a withdrawal: Blue Line's card autopay failed — reverse the agreement amount from Operating with a merchant return descriptor.
+Inject a withdrawal: Blue Line's card autopay failed.
 ```
 Owner voice: `Did Blue Line's payment go through?`
 

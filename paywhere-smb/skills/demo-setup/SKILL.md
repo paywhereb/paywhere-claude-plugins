@@ -1,49 +1,50 @@
 ---
 name: demo-setup
-version: 1.0.3
+version: 2.0.1
 disable-model-invocation: true
 description: >
-  Builds the presenter's own Nick's HVAC demo bank world on the Paywhere
-  connector's demo-seeder tools (present only on demo deployments):
-  preflight, one approval, an ASYNC seed job polled to completion, then a
-  readback that asserts balances, saved payees and enrichment through the
-  same connector the demo runs on, and reports the answer-key summary (true
-  available cash, reserve shortfall, largest overdue, bills due this week,
-  Friday payroll). Date-aligned to the shared read-only QuickBooks books via
-  get_demo_dates. Presenter use only. Use when someone says "set up the
-  demo," "reset the demo," "seed the demo world," "rebuild the sandbox," or
-  "/demo-setup."
+  Walks the presenter through building their own Nick's HVAC demo bank world
+  on the Paywhere demo seeder page, then checks it through the Paywhere
+  connector the demo runs on: balances equal the seeder's expected closing
+  balances, the saved payees are there, the unbooked check landed. Reports
+  the answer-key summary (true available cash, reserve shortfall, largest
+  overdue, bills due this week, Friday payroll). Date-aligned to the shared
+  read-only QuickBooks books via get_demo_dates. Presenter use only. Use when
+  someone says "set up the demo," "reset the demo," "seed the demo world,"
+  "rebuild the sandbox," or "/demo-setup."
 ---
 
 # Demo Setup (Act 0)
 
-Sets up the caller's own demo bank world for the **Nick's HVAC** persona.
-Everything about the world — roster, amounts, dates, payees, enrichment, the
-answer key — lives in **server code** (`buildWorld(dateModel)` in
-paywhere-mcp); this skill makes the calls, waits for the job, checks the
-result and reports. The QuickBooks books are **shared and read-only**
-(reseeded server-side daily) and are never touched here; their `dateModel` is
-read so the bank lands on the same dates. Each presenter gets an isolated
-bank world, so parallel demos and re-runs are fine. What the world contains
+Gets the presenter's own demo bank world ready for the **Nick's HVAC**
+persona. The world is built by the **Paywhere demo seeder**, a staff web page
+(sign in with your Paywhere Google account). The MCP server has no seeding
+tools. Everything about the world (roster, amounts, dates, payees, the answer
+key) lives in the seeder's code; this skill gets the dates from the books,
+tells the presenter what to do on the page, and then checks the result
+through the connector. The QuickBooks books are **shared and read-only**
+(reseeded server-side daily) and never touched here. What the world contains
 is described qualitatively in [`../../DATASET.md`](../../DATASET.md); never
-hardcode any of it here — read it back.
+hardcode any of it here: read it back.
 
-## Arguments
+**The seeder page:** `https://paywhere-demo-seeder.poc.dev.paywhere.com`
+(ask the presenter if they use another one).
 
-- `username` (optional) — a label folded into the generated bank login
-  (`demo-<label>-<uid>-gN`; sanitized server-side to lowercase
-  letters/digits/hyphens, max 20 chars). Labels the caller's own world only.
+Each presenter has **one fixed demo login** on the page (`demo-<name>`,
+password shown there). Rebuilding resets that login in place, so a connector
+already signed in with it **stays connected**. Other presenters' worlds are
+unaffected.
 
 ## Quick start
 
 ```
-"/demo-setup" (optionally "… username brett")
-→ 1 Preflight: seeder tools present on Paywhere; get_demo_dates (quickbooks) → dateModel verbatim
-→ 2 Approval gate (replaces the caller's own bank world; books untouched)
-→ 3 seed_demo_world {confirm:true, dateModel, username?} → returns at once: jobId, creds, expectedClosing, answerKeySummary
-→ 4 Poll get_demo_world every ~20 s until seedJob.state == "done" (≈ 4–6 min)
-→ 5 Readback through the demo connector: balances == expectedClosing; payees == recipientsConfigured; enrichment; the unbooked check
-→ 6 Report the answer-key summary + point at demo/SCENARIOS.md
+"/demo-setup"
+→ 1 Preflight: get_demo_dates (quickbooks) → dateModel verbatim; Paywhere connector responds
+→ 2 On the seeder page: paste the dateModel, Build (or Rebuild) world, wait for "ready" (≈ 5 min)
+→ 3 Connect: the Paywhere connector must be signed in with the page's demo login
+→ 4 Presenter pastes the page's setup summary ("Copy setup summary for /demo-setup")
+→ 5 Readback through the connector: balances == expectedClosing; saved payees; the unbooked check
+→ 6 Report the answer-key summary + point at demo/LIVE-SCRIPT.md
 ```
 
 ## Workflow
@@ -51,117 +52,104 @@ hardcode any of it here — read it back.
 **Progress tracking:** call `TaskCreate` once per numbered step below before
 starting step 1 (subject = the step's name, e.g. "1. Preflight"), then
 `TaskUpdate` it to `in_progress` when you begin that step and `completed`
-when it's done. During step 4, update the task's description with the
-poll progress ("posted 412 / 1,040, eta 3 min") so Cowork shows movement.
-This is what drives Cowork's visible progress display — it does not happen
-unless you do it explicitly.
+when it's done. This is what drives Cowork's visible progress display; it
+does not happen unless you do it explicitly.
 
-### 1. Preflight — connectors and the books' dates
+### 1. Preflight: the books' dates
 
-- **Demo deployment check (no call needed):** the Paywhere connector's tool
-  list must include `seed_demo_world` and `get_demo_world`. If absent, this
-  is not a demo deployment — **stop**; never try to seed a real connector.
 - **quickbooks:** call `get_demo_dates` (read-only). It is the liveness probe
   and the alignment contract:
   - `{seeded: true, seededAt, dateModel}` → capture `dateModel` **verbatim**.
   - `{seeded: false}` → the books have not been seeded server-side yet (they
-    reseed daily, 5am ET) — say so and **stop**. A bank world on unknown
-    book dates misaligns every beat.
+    reseed daily, 5am ET). Say so and **stop**: a bank world on unknown book
+    dates misaligns every beat.
 - **Paywhere:** `list_accounts` must respond (any result is fine).
-- Note which optional connectors are present (gmail, google calendar); the
-  demo's Gmail/Calendar content is seeded separately by the Google seed
-  script and is shared, so their absence does not block the bank seed —
-  mention it in the report.
+- Note which optional connectors are present (gmail, google calendar). The
+  demo's Gmail/Calendar content is seeded separately and shared, so their
+  absence does not block the bank world; mention it in the report.
 
-### 2. Approval gate
+### 2. Build the world on the seeder page
 
-Say plainly: this **replaces the caller's own demo bank world** with a fresh
-generation and fresh credentials; the shared books are untouched; other
-presenters' worlds are unaffected. Confirm the `username` label if given.
-**Wait for explicit approval** (the tool also requires `confirm: true`).
+Tell the presenter, in this order, and show the `dateModel` as a copyable
+block:
 
-### 3. Kick off the seed — `seed_demo_world {confirm: true, dateModel, username?}`
+1. Open the seeder page and sign in with their Paywhere Google account.
+2. Under **Nick's HVAC world**, open "Line dates up with QuickBooks" and paste
+   the `dateModel` (it wins over the run date).
+3. Press **Build world** (first time) or **Rebuild world**. A rebuild wipes
+   their own world's accounts and history and seeds a fresh one; the books are
+   untouched and the login stays the same.
+4. Wait until **Seed progress** shows **ready** (≈ 5 minutes; they can leave
+   the page). "done with errors" or "failed" → read the first failures off the
+   page and rebuild (see the retry rule below).
 
-The call is **asynchronous** and returns immediately with:
+Then **wait** for the presenter to say it is ready.
 
-```
-{ ok, jobId, seedState: "running", bankUsername, bankPassword, generation,
-  accounts[], dateModel, dateModelSource, migratedFromSharedDemo, totalRows,
-  expectedClosing: {operating, taxReserve, savings}, answerKeySummary,
-  recipientsConfigured, enrichmentWritten, beatsReady[], note }
-```
+### 3. Connect with the demo login
 
-- **Surface `bankUsername` / `bankPassword` prominently** at the top of the
-  reply (mock-only credentials, shown once; if `slackNotified` is false or
-  absent, tell the presenter to record them now).
-- `dateModelSource` must be `"provided"`. `"computed"` means the server
-  self-computed — treat as a bug in this run and restart from step 1.
-- `migratedFromSharedDemo: true` → this caller just moved off the shared
-  read-only backdrop onto their own world; say so.
-- Keep `expectedClosing`, `recipientsConfigured` and `answerKeySummary` for
-  steps 5–6. Payees and enrichment are written synchronously before the call
-  returns; only the transaction rows post in the background.
+The Paywhere connector must be signed in with the **demo login the page
+shows** (`demo-<name>` and its password), through the bank sign-in screen.
+If it was already signed in with that login, nothing to do: rebuilds keep the
+login. If not (first time, or another login), the presenter reconnects the
+Paywhere connector and signs in with it. If the page's password does not sign
+in, the page's **Recreate login** fixes it (then reconnect).
 
-### 4. Poll until done — `get_demo_world`
+### 4. Get the setup summary
 
-Call `get_demo_world` every **~20 seconds**. The response carries
-`seedJob: null | { jobId, state: "running" | "done" | "failed", total,
-posted, failed, etaSeconds, failureSamples[] }` plus `bankUsername`,
-`generation`, `accounts[]`, and (when present) `expectedClosing` /
-`answerKeySummary`.
+Ask the presenter to press **Copy setup summary for /demo-setup** on the
+page and paste it here. It is JSON with `bankUsername`, `dateModel`,
+`accounts[]` (role, number, name), `expectedClosing` (`operating`,
+`taxReserve`, `savings`), `seedJob` and `answerKeySummary`. Check:
 
-- Update the step-4 task description with `posted / total` and the eta on
-  every poll. Expect **≈ 4–6 minutes for ≈ 1,000 rows**.
-- `state: "done"` → continue. `failed > 0` with `state: "done"` → report the
-  `failureSamples` and treat the readback in step 5 as the arbiter (a few
-  failed rows will show up as a balance mismatch).
-- `state: "failed"` → report `failureSamples`, then re-run from step 1 once
-  (the reset is idempotent). Twice failed → stop and report.
-- Do not start the readback before `done`: balances are moving.
+- `seedJob.state` is `"done"` with `failed: 0`. Otherwise rebuild (see the
+  retry rule below).
+- `dateModel.today` / `dateModel.horizon` equal the books' `dateModel` from
+  step 1. A mismatch means the date paste was missed: rebuild with it.
 
-### 5. Readback — assert through the connector the demo will use
+### 5. Readback: assert through the connector the demo will use
 
 Never trust the seeder's own numbers; read them back on the same connector.
 
 1. **Balances.** `list_accounts` (then `get_account_balance` per account).
-   Identify the three accounts by role (primary checking = Operating; the
-   savings account named for tax = Tax Reserve; the other savings = Business
-   Savings). Assert each balance **equals `expectedClosing`** for that role
-   (to the cent). Pending authorizations are excluded from `expectedClosing`
-   by design.
+   Match accounts to the summary's `accounts[]` by account number. Assert
+   each balance **equals `expectedClosing`** for that role, to the cent.
+   `expectedClosing` already has this week's pending card authorizations
+   deducted, exactly as the bank's current balance does.
+   Different account numbers altogether → the connector is signed in as
+   another login: back to step 3.
 2. **Saved payees.** `list_saved_payees`. Assert the count **equals
-   `recipientsConfigured`**. Spot-check that the crane subcontractor
-   ("Ironclad Crane & Rigging") resolves with `rail: "wire"` and the parts
-   supplier ("Johnstone Supply") with `rail: "ach"` — a rail mismatch is
-   exactly what makes `pay-bills` misreport a saved wire payee.
-3. **Enrichment.** `query_transactions {direction: "debit",
-   descriptionContains: "ANGI LEADS", limit: 1}` → take that row →
-   `get_transaction_detail`. Assert `detail` is **non-null** (the
-   subscription-audit beat depends on it).
-4. **The unbooked check.** `query_transactions {direction: "credit",
+   `answerKeySummary.counts.recipients`**. Spot-check that the crane subcontractor ("Ironclad
+   Crane & Rigging") resolves with `rail: "wire"` and the parts supplier
+   ("Johnstone Supply") with `rail: "ach"`. A rail mismatch is exactly what
+   makes `pay-bills` misreport a saved wire payee.
+3. **The unbooked check.** `query_transactions {direction: "credit",
    descriptionContains: "MOBILE CHECK DEPOSIT", dateFrom: <today − 7
    days>}`. Assert a row exists whose amount equals
    `answerKeySummary.ar.unbookedReceipt.amount` and whose descriptor carries
    `answerKeySummary.ar.unbookedReceipt.checkNumber` (the received-but-
    unbooked check in plan-payroll).
 
-If **any** assertion fails, the seed did not land — **do not report
-`beatsReady`**. Re-run from step 1 once; on a second failure report the
-mismatch (expected vs actual per check) and stop.
+If **any** assertion fails, the world is not ready: say which check failed
+(expected vs actual), have the presenter rebuild, and repeat from step 4.
+
+**Retry rule (whole run):** at most **one** rebuild per `/demo-setup` run,
+whichever step asked for it. If the world still isn't right after that one
+rebuild, report what failed and stop. A payee mismatch is not fixed by a
+rebuild (payees come from the connector, not the page): report it, don't
+rebuild for it.
 
 ### 6. Report
 
-From the responses (never from memory), report:
+From the pasted summary and the readback (never from memory), report:
 
-- **Credentials** (`bankUsername`, password shown once) and the generation.
+- **The demo login** (`bankUsername`; the password stays on the page).
 - **Balances by role** with account numbers, confirmed by readback, and the
   pending-authorization total if `answerKeySummary.balances.pendingAuthorizations`
   is present.
-- **Alignment:** `dateModelSource: "provided"`, the books' `seededAt`, and
-  `dateModel.today` / `dateModel.horizon`.
-- **The answer-key summary** — the numbers the presenter should hear back in
-  Act 1 (field paths are the same as `AnswerKey` in
-  `paywhere-mcp-api/src/demo/world/types.ts`):
+- **Alignment:** the books' `seededAt`, and `dateModel.today` /
+  `dateModel.horizon`.
+- **The answer-key summary**, the numbers the presenter should hear back in
+  Act 1:
   - `trueAvailable.amount` (+ `formula`) — beat 1.1
   - `tax.reserveBalance`, `tax.collectedNotRemitted.total`, `tax.shortfall`,
     `tax.missedSweeps`, `tax.nextRemittance` — beat 1.6 / 3.5
@@ -172,14 +160,10 @@ From the responses (never from memory), report:
     three lines.
   - `payroll.nextPayDate`, `payroll.estimatedTotal`, `payroll.headroomAfterPayroll` — beat 1.5
   - `subscriptions.monthlyTotal` — beat 1.7
-  - `liveSurface` (the staged items) and `counts` (rows, payees, enrichment)
-  - The summary is a subset (`balances`, `trueAvailable`, `tax`, `ar`, `ap`,
-    `payroll`, `subscriptions.monthlyTotal`, `liveSurface`, `counts`); the
-    full key for a given date lives in paywhere-mcp at
-    `paywhere-mcp-api/src/demo/world/fixtures/answer-key-<today>.json`.
+  - `liveSurface` (the staged items) and `counts` (rows, payees)
 - **Readback checks:** balances ✓, payees ✓ (count + the two rails),
-  enrichment ✓, unbooked check ✓.
-- **Beats ready** (`beatsReady`) and the pointer: what to type, in order, is
+  unbooked check ✓.
+- The pointer: what to type, in order, is
   [`../../../demo/LIVE-SCRIPT.md`](../../../demo/LIVE-SCRIPT.md); setup, the
   FI seat and the injects are [`../../../demo/SCENARIOS.md`](../../../demo/SCENARIOS.md).
 - If Gmail or Calendar were not connected in preflight, one line saying the
@@ -188,18 +172,15 @@ From the responses (never from memory), report:
 
 ## Edge cases
 
-- **Seeder tools absent** → not a demo deployment; stop.
 - **`get_demo_dates` → `seeded: false`** → books not seeded yet; stop.
-- **Shared backdrop** (`get_demo_world` → `sharedEnvWorld: true`, or a
-  demo-mutating tool refusing) → this skill is the fix; expect
-  `migratedFromSharedDemo: true`.
-- **Poll shows no progress for > 2 minutes** (`posted` unchanged) → keep
-  polling to 10 minutes total, then report and re-run once.
-- **Re-authorizing the connector with old credentials** points the session at
-  an old world; balances will not match `expectedClosing` — re-run.
-- **The books rotated mid-setup** (5am ET reseed between steps 1 and 3): if
-  the report's dates look off by a day, re-run so a fresh `dateModel` is used.
-- **Username label rejected** → re-run with a simpler label or none.
-- **Live injects** (`deposit_to_mock_account`, `withdraw_from_mock_account`)
-  are permanent for a world; after a rehearsal with injects, re-run this
-  skill before the real demo. See [`../demo-inject`](../demo-inject/SKILL.md).
+- **The presenter can't open the seeder page** (not a Paywhere Google
+  account, or no access) → stop; the world can only be built there.
+- **Balances off by the same amount on one account** → a live inject from a
+  rehearsal is still in the world. Rebuild before the real demo.
+- **Signed in with an old login** (a `demo-<uid>-gN` login from before the
+  seeder) → those worlds are orphaned; reconnect with the page's login.
+- **The books rotated mid-setup** (5am ET reseed between steps 1 and 2): if
+  the dates do not match in step 4, rebuild with a fresh `dateModel`.
+- **Live injects** are permanent for a world until the next rebuild; after a
+  rehearsal with injects, rebuild before the real demo. See
+  [`../demo-inject`](../demo-inject/SKILL.md).
