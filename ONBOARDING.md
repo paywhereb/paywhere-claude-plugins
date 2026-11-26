@@ -82,8 +82,9 @@ catalog itself if a brand-new plugin was added.
 
 - **Org-wide rules, always on** — no attribution trailers in
   commits/PRs, source-controlled memory convention, the documentation
-  pattern (which root doc owns what, and what is always loaded), no PATs
-  in workflows, IaC-managed branch protection, and the other headlines in
+  pattern (which root doc owns what, and what is always loaded), the
+  `production` / `release/*` branch rules, no PATs in workflows,
+  IaC-managed branch protection, and the other headlines in
   [`paywhere-eng-workflow/rules/ORG-RULES.md`](paywhere-eng-workflow/rules/ORG-RULES.md).
 - **The shared eng workflow** — Linear-ticket-driven branching
   (`/paywhere-eng-workflow:start` … `:finish`), `safe-deps`,

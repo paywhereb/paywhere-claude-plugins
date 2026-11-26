@@ -88,6 +88,27 @@ what puts the file into an agent's context.
   people. Do not add the human doc to the agent table — everything
   factual in it should already live in the files the table lists.
 
+## Release branches — `production` and `release/*`
+
+Repos with a promotion line (`paywhere-admin` today) release `main` →
+`production` and hotfix a released version on its `release/X.Y` branch.
+Refuse or flag these, say which rule it breaks, and offer the fix-branch
+or cherry-pick path instead:
+
+- **A PR into `production` from anything but `main`.** A fix for a
+  released version goes into `release/X.Y`.
+- **Merging `main`, `production` or another `release/*` branch into a
+  release branch,** directly or through a fix branch. Fix branches are cut
+  from `release/X.Y` and carry only the fix; changes on `production` ship
+  in its next minor release.
+- **Merging a `release/*` branch into `main`.** A release-branch fix
+  reaches `main` by `git cherry-pick -x` in its own PR.
+
+The required `release-flow / release-flow` check blocks a wrong head
+branch on PRs into `production` and `release/*`. It can't tell where a fix
+branch was cut from. Full process: `paywhere-devops/docs/release-workflow.md`
+§5–§6.
+
 ## Org-wide headlines
 
 These are promoted headlines — the canonical body of each rule lives in
