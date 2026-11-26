@@ -88,6 +88,31 @@ what puts the file into an agent's context.
   people. Do not add the human doc to the agent table — everything
   factual in it should already live in the files the table lists.
 
+## Release branches — `production` and `release/*`
+
+Repos with a promotion line (`paywhere-admin` today) release through
+`main` → `production`, and hotfix a released version on its
+`release/X.Y` branch. A required check (`release-flow / release-flow`)
+enforces the first two rules; refuse or flag a violation before it gets
+that far.
+
+- **`production` only takes PRs from `main`.** Never open, or suggest, a PR
+  into `production` from any other branch, including a hotfix branch or a
+  `release/*` branch. A fix for a released version goes into
+  `release/X.Y` instead.
+- **`release/X.Y` only takes short-lived fix branches.** Cut the fix branch
+  from `release/X.Y` and PR it back. Never merge `main`, `production` or
+  another `release/*` branch into a release branch. A "catch-up" merge
+  pulls uncertified features into the patch line; changes on `production`
+  ship in its next release (X.(Y+1).0) instead.
+- **A release-branch fix reaches `main` by `git cherry-pick -x`,** on a
+  branch from `main` with its own PR. Never merge a `release/*` branch into
+  `main` as a whole branch.
+- If someone asks for one of these merges, say which rule it breaks and
+  offer the fix-branch or cherry-pick path. The org-admin ruleset bypass is
+  the audited emergency path, not a way around the flow. Full process:
+  `paywhere-devops/docs/release-workflow.md` §5–§6.
+
 ## Org-wide headlines
 
 These are promoted headlines — the canonical body of each rule lives in
